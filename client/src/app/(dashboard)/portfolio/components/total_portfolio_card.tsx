@@ -1,6 +1,6 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { TotalPortfolioCardProps } from '@/types/portfolio';
+import { TotalPortfolioCardProps } from '@/types/types';
 
 export const TotalPortfolioCard = ({
   totalPortfolio,

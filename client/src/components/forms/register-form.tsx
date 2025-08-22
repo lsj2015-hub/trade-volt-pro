@@ -7,17 +7,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
-import { RegisterRequest } from '@/types/auth';
+import { RegisterRequest } from '@/types/types';
 
 interface RegisterFormProps {
   onSuccess?: () => void;
   onSwitchToLogin?: () => void;
 }
 
-export function RegisterForm({
+export const RegisterForm = ({
   onSuccess,
   onSwitchToLogin,
-}: RegisterFormProps) {
+}: RegisterFormProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const { register: registerUser, isLoading } = useAuth();
 
@@ -197,4 +197,4 @@ export function RegisterForm({
       </div>
     </div>
   );
-}
+};

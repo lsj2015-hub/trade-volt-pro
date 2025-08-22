@@ -14,12 +14,12 @@ interface AuthModalProps {
   onSuccess?: () => void; // 추가된 속성
 }
 
-export function AuthModal({
+export const AuthModal = ({
   isOpen,
   onClose,
   defaultMode = 'login',
   onSuccess,
-}: AuthModalProps) {
+}: AuthModalProps) => {
   const [mode, setMode] = useState<AuthMode>(defaultMode);
 
   const handleSuccess = () => {
@@ -52,4 +52,4 @@ export function AuthModal({
       </DialogContent>
     </Dialog>
   );
-}
+};

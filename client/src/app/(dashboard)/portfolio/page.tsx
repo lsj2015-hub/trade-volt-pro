@@ -4,7 +4,7 @@ import { DollarSign, Banknote } from 'lucide-react';
 import { PortfolioSummaryCard } from './components/portfolio_summary_card';
 import { TotalPortfolioCard } from './components/total_portfolio_card';
 import { StockTable } from './components/stock-table';
-import { StockData } from '@/types/portfolio';
+import { StockData } from '@/types/types';
 
 export default function PortfolioPage() {
   const EXCHANGE_RATE = 1400; // USD to KRW
@@ -136,9 +136,11 @@ export default function PortfolioPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">My Portfolio</h1>
-        <p className="text-muted-foreground mt-2">
+      <div className="text-center sm:text-left ">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+          My Portfolio
+        </h1>
+        <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
           포트폴리오 현황을 확인하고 관리하세요
         </p>
       </div>
@@ -154,7 +156,7 @@ export default function PortfolioPage() {
         />
 
         {/* 국내/해외 카드 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {portfolioCards.map((card, index) => (
             <PortfolioSummaryCard key={index} {...card} />
           ))}

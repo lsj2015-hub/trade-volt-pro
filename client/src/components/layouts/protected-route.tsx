@@ -12,11 +12,11 @@ interface ProtectedRouteProps {
   redirectTo?: string;
 }
 
-export function ProtectedRoute({
+export const ProtectedRoute = ({
   children,
   fallback,
   redirectTo = '/',
-}: ProtectedRouteProps) {
+}: ProtectedRouteProps) => {
   const { isAuthenticated, isLoading, requireAuth } = useRequireAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const router = useRouter();
@@ -61,4 +61,4 @@ export function ProtectedRoute({
       />
     </>
   );
-}
+};

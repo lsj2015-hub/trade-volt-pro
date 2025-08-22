@@ -7,7 +7,7 @@ import {
   LoginRequest,
   RegisterRequest,
   User,
-} from '@/types/auth';
+} from '@/types/types';
 import { AuthAPI } from '@/lib/auth-api';
 import { toast } from 'sonner';
 

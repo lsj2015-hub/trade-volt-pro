@@ -10,21 +10,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Stock, StockSearchModalProps } from '@/types/types';
 
-interface Stock {
-  ticker: string;
-  name: string;
-  name_en: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  market: string;
-}
-
-interface StockSearchModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
 
 // 임시 종목 데이터 (실제로는 API에서 가져와야 함)
 const mockStocks: Stock[] = [
@@ -119,10 +106,10 @@ const mockStocks: Stock[] = [
     market: 'NASDAQ',
   },
 ];
-export function StockSearchModal({
+export const StockSearchModal = ({
   open,
   onOpenChange,
-}: StockSearchModalProps) {
+}: StockSearchModalProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredStocks, setFilteredStocks] = useState<Stock[]>([]);
 

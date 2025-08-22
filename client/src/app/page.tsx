@@ -12,16 +12,15 @@ import {
   LogIn,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { AuthModal } from '@/components/layouts/auth-modal';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
+import { ApiStatus } from '@/types/types';
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
-  const [apiStatus, setApiStatus] = useState<'loading' | 'connected' | 'error'>(
-    'loading'
-  );
+  const [apiStatus, setApiStatus] = useState<ApiStatus>('loading');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
@@ -135,7 +134,9 @@ export default function HomePage() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center space-x-2">
             <Zap className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">Trade Volt</span>
+            <span className="text-xl font-bold hidden sm:block">
+              Trade Volt
+            </span>
           </div>
 
           <div className="flex items-center space-x-4">
@@ -147,7 +148,7 @@ export default function HomePage() {
             ) : isAuthenticated && user ? (
               // 로그인된 상태
               <div className="flex items-center space-x-3">
-                <span className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground hidden sm:block">
                   안녕하세요, {user.name}님
                 </span>
                 <Avatar className="h-8 w-8">
