@@ -2,51 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  ChevronLeft,
-  ChevronRight,
-  Home,
-  Briefcase,
-  BarChart3,
-  LineChart,
-  Target,
-  Search as SearchIcon,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { navigationItems } from '../../../constants/navigation';
 
-const sidebarItems = [
-  {
-    icon: Home,
-    label: '홈',
-    href: '/',
-  },
-  {
-    icon: Briefcase,
-    label: 'Portfolio',
-    href: '/portfolio',
-  },
-  {
-    icon: BarChart3,
-    label: 'Basic Analysis',
-    href: '/basic-analysis',
-  },
-  {
-    icon: LineChart,
-    label: 'Trading Strategies',
-    href: '/trading-strategies',
-  },
-  {
-    icon: Target,
-    label: 'Benchmark Testing',
-    href: '/benchmark-testing',
-  },
-  {
-    icon: SearchIcon,
-    label: 'Deep Searching',
-    href: '/deep-searching',
-  },
-];
+const sidebarItems = navigationItems;
 
 interface SidebarProps {
   sidebarOpen: boolean;

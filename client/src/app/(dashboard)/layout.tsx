@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/components/layouts/protected-route';
-import { TopNavigation } from '@/components/layouts/top-navigation';
-import { Sidebar } from '@/components/layouts/sidebar';
+import { TopNavigation } from '@/app/(dashboard)/components/top-navigation';
+import { Sidebar } from '@/app/(dashboard)/components/sidebar';
 import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 import { StockSearchModal } from './components/stock-search-modal';

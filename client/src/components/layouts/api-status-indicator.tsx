@@ -1,4 +1,4 @@
-import { Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { Wifi, WifiOff, Loader2, CircleIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ApiStatus } from '@/types/types';
 
@@ -15,21 +15,21 @@ export const ApiStatusIndicator = ({
     switch (status) {
       case 'loading':
         return {
-          icon: Loader2,
+          icon: CircleIcon,
           text: '연결중',
-          className: 'text-gray-500 animate-spin',
+          className: 'text-gray-50 fill-gray-50',
         };
       case 'connected':
         return {
-          icon: Wifi,
+          icon: CircleIcon,
           text: '연결됨',
-          className: 'text-green-600',
+          className: 'text-green-600 fill-green-600',
         };
       case 'error':
         return {
-          icon: WifiOff,
+          icon: CircleIcon,
           text: '연결실패',
-          className: 'text-red-600',
+          className: 'text-red-600 fill-red-600',
         };
     }
   };

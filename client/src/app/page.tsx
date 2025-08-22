@@ -2,21 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Zap,
-  Activity,
-  TrendingUp,
-  Shield,
-  User,
-  LogOut,
-  LogIn,
-} from 'lucide-react';
+import { Zap, User, LogOut, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { AuthModal } from '@/components/layouts/auth-modal';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 import { ApiStatus } from '@/types/types';
+import { navigationItems } from '../constants/navigation';
+import { ApiStatusIndicator } from '../components/layouts/api-status-indicator';
 
 export default function HomePage() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -96,36 +90,15 @@ export default function HomePage() {
     }, 3000);
   };
 
-  const features = [
-    {
-      icon: <Zap className="h-8 w-8 text-primary" />,
-      title: 'Basic Analysis',
-      description: '회사 및 종목에 대한 기본정보',
-      path: '/basic-analysis',
-      requireAuth: true,
-    },
-    {
-      icon: <Activity className="h-8 w-8 text-primary" />,
-      title: 'Trading Strategies',
-      description: '시장 동향을 실시간으로 추적해 성공적인 트레이딩 전략 구사',
-      path: '/trading-strategies',
-      requireAuth: true,
-    },
-    {
-      icon: <TrendingUp className="h-8 w-8 text-primary" />,
-      title: 'Benchmark Testing',
-      description: '전문적인 차트와 기술적 분석 도구',
-      path: '/benchmark-testing',
-      requireAuth: true,
-    },
-    {
-      icon: <Shield className="h-8 w-8 text-primary" />,
-      title: 'Deep Searching',
-      description: '최고 수준의 분석 기법을 통해 중장기 종목 발굴',
-      path: '/deep-searching',
-      requireAuth: true,
-    },
-  ];
+  const features = navigationItems
+    .filter((item) => item.href !== '/')
+    .map((item) => ({
+      icon: <item.icon className="h-8 w-8 text-primary" />,
+      title: item.label,
+      description: item.description,
+      path: item.href,
+      requireAuth: item.requireAuth,
+    }));
 
   return (
     <div className="h-screen flex flex-col">
@@ -140,6 +113,8 @@ export default function HomePage() {
           </div>
 
           <div className="flex items-center space-x-4">
+            <ApiStatusIndicator status={apiStatus} />
+
             {/* 인증 영역 */}
             {isLoading ? (
               <div className="flex items-center space-x-2">

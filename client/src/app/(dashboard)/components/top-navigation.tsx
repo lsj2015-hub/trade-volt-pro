@@ -26,8 +26,7 @@ import { cn } from '@/lib/utils';
 import { ApiStatus } from '@/types/types';
 
 import { useEffect, useState } from 'react';
-import { ApiStatusIndicator } from '../../app/(dashboard)/components/api-status-indicator';
-
+import { ApiStatusIndicator } from '../../../components/layouts/api-status-indicator';
 
 interface TopNavigationProps {
   sidebarOpen: boolean;
@@ -45,28 +44,27 @@ export const TopNavigation = ({
   onLogout,
 }: TopNavigationProps) => {
   const [apiStatus, setApiStatus] = useState<ApiStatus>('loading');
-  
+
   const { user } = useAuth();
 
   useEffect(() => {
-      checkApiConnection();
-      // 주기적으로 API 상태 체크 (선택사항)
-      const interval = setInterval(checkApiConnection, 30000); // 30초마다
-      return () => clearInterval(interval);
-    }, []);
-  
-    const checkApiConnection = async () => {
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`);
-        if (response.ok) {
-          setApiStatus('connected');
-        } else {
-          setApiStatus('error');
-        }
-      } catch (error) {
+    checkApiConnection();
+    const interval = setInterval(checkApiConnection, 30000); // 30초마다
+    return () => clearInterval(interval);
+  }, []);
+
+  const checkApiConnection = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`);
+      if (response.ok) {
+        setApiStatus('connected');
+      } else {
         setApiStatus('error');
       }
-    };
+    } catch (error) {
+      setApiStatus('error');
+    }
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -169,4 +167,4 @@ export const TopNavigation = ({
       </div>
     </header>
   );
-}
+};
