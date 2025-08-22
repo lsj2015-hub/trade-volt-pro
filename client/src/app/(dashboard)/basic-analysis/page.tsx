@@ -1,5 +1,3 @@
 export default function BasicAnalysis() {
-  return (
-    <div>Aasic Analysis</div>
-  )
+  return <div>Basic Analysis</div>;
 }

@@ -1,13 +1,24 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { navigationItems } from '../../../constants/navigation';
 
-const sidebarItems = navigationItems;
+import {
+  Sidebar as ShadcnSidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+} from '@/components/ui/sidebar';
+import { navigationItems } from '@/constants/navigation';
+import { Zap } from 'lucide-react';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -21,74 +32,67 @@ export const Sidebar = ({
   setSidebarOpen,
   sidebarCollapsed,
   setSidebarCollapsed,
+  ...props
 }: SidebarProps) => {
   const pathname = usePathname();
 
+  // 대시보드에서만 표시할 네비게이션 아이템들 (홈 제외)
+  const dashboardItems = navigationItems.filter((item) => item.requireAuth);
+
   return (
-    <>
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          'fixed top-16 left-0 z-40 h-[calc(100vh-4rem)] bg-background border-r transition-all duration-300 ease-in-out md:translate-x-0',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
-          sidebarCollapsed ? 'md:w-16' : 'md:w-64',
-          'w-64' // 모바일에서는 기본 사이드바 너비
-        )}
-      >
-        <div className="flex flex-col h-full py-6">
-          {/* Collapse Button - Desktop Only */}
-          <div className="hidden lg:flex justify-end px-4 pb-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="h-8 w-8"
-            >
-              {sidebarCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-
-          <nav className="flex-1 px-4 space-y-2">
-            {sidebarItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    'flex items-center rounded-lg text-sm font-medium transition-colors',
-                    sidebarCollapsed
-                      ? 'px-3 py-2 justify-center'
-                      : 'px-3 py-2 space-x-3',
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                  )}
-                  onClick={() => setSidebarOpen(false)}
-                  title={sidebarCollapsed ? item.label : undefined}
-                >
-                  <Icon className="h-5 w-5 flex-shrink-0" />
-                  {!sidebarCollapsed && <span>{item.label}</span>}
-                </Link>
-              );
-            })}
-          </nav>
+    <ShadcnSidebar collapsible="icon" {...props}>
+      <SidebarHeader>
+        <div className="flex h-12 items-center justify-center px-2">
+          <Link href="/">
+            <div className="flex items-center justify-center gap-2 min-w-0 w-full">
+              <Zap className="h-6 w-6 text-primary" />
+              <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden">
+                <span className="font-bold text-sm text-foreground truncate">
+                  Trade Volt Pro
+                </span>
+              </div>
+            </div>
+          </Link>
         </div>
-      </aside>
+      </SidebarHeader>
 
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 top-16 z-30 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-    </>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>투자 도구</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {dashboardItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.label}
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <Link href={item.href}>
+                        <Icon />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter>
+        <div className="p-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+          © 2025 Trade Volt v1.0
+        </div>
+      </SidebarFooter>
+
+      <SidebarRail />
+    </ShadcnSidebar>
   );
-}
+};

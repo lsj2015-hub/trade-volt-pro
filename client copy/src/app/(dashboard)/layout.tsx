@@ -6,7 +6,7 @@ import { ProtectedRoute } from '@/components/layouts/protected-route';
 import { TopNavigation } from '@/app/(dashboard)/components/top-navigation';
 import { Sidebar } from '@/app/(dashboard)/components/sidebar';
 import { useAuth } from '@/hooks/use-auth';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 import { StockSearchModal } from './components/stock-search-modal';
 
 export default function DashboardLayout({
@@ -37,8 +37,17 @@ export default function DashboardLayout({
         </div>
       }
     >
-      <SidebarProvider>
-        <div className="min-h-screen flex w-full">
+      <div className="min-h-screen bg-background">
+        {/* Top Navigation */}
+        <TopNavigation
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          sidebarCollapsed={sidebarCollapsed}
+          setStockSearchOpen={setStockSearchOpen}
+          onLogout={handleLogout}
+        />
+
+        <div className="flex pt-16">
           {/* Sidebar */}
           <Sidebar
             sidebarOpen={sidebarOpen}
@@ -47,21 +56,15 @@ export default function DashboardLayout({
             setSidebarCollapsed={setSidebarCollapsed}
           />
 
-          <SidebarInset className="flex flex-col w-full">
-            {/* Top Navigation */}
-            <TopNavigation
-              sidebarOpen={sidebarOpen}
-              setSidebarOpen={setSidebarOpen}
-              sidebarCollapsed={sidebarCollapsed}
-              setStockSearchOpen={setStockSearchOpen}
-              onLogout={handleLogout}
-            />
-
-            {/* Main Content */}
-            <main className="flex-1 p-2">
-              <div className="container py-2">{children}</div>
-            </main>
-          </SidebarInset>
+          {/* Main Content */}
+          <main
+            className={cn(
+              'flex-1 transition-all duration-300 ease-in-out',
+              sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
+            )}
+          >
+            <div className="p-6">{children}</div>
+          </main>
         </div>
 
         {/* Stock Search Modal */}
@@ -69,8 +72,7 @@ export default function DashboardLayout({
           open={stockSearchOpen}
           onOpenChange={setStockSearchOpen}
         />
-      </SidebarProvider>
+      </div>
     </ProtectedRoute>
   );
 }
-

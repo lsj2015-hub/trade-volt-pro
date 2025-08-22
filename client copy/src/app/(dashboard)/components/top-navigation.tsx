@@ -1,6 +1,16 @@
 'use client';
 
-import { Search, User, LogOut, Settings, ChevronDown } from 'lucide-react';
+import Link from 'next/link';
+import {
+  Search,
+  Menu,
+  X,
+  User,
+  LogOut,
+  Settings,
+  ChevronDown,
+  Zap,
+} from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -11,12 +21,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/use-auth';
+import { cn } from '@/lib/utils';
 import { ApiStatus } from '@/types/types';
 
 import { useEffect, useState } from 'react';
-import { ApiStatusIndicator } from '@/components/layouts/api-status-indicator';
+import { ApiStatusIndicator } from '../../../components/layouts/api-status-indicator';
 
 interface TopNavigationProps {
   sidebarOpen: boolean;
@@ -57,15 +67,45 @@ export const TopNavigation = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-16">
-        {/* Left Section - Logo and Sidebar Trigger */}
-        <div className="flex items-center justify-between px-1 min-w-0">
-          <SidebarTrigger className="ml-2" />
+        {/* Left Section - Logo Area (matches sidebar width) */}
+        <div
+          className={cn(
+            'flex items-center justify-center border-r transition-all duration-300 ease-in-out',
+            sidebarCollapsed ? 'lg:w-16' : 'lg:w-64',
+            'w-full md:w-auto'
+          )}
+        >
+          {/* Mobile menu button - 모바일에서만, 맨 왼쪽 */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden absolute left-4"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            {sidebarOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
+          </Button>
+
+          {/* Logo */}
+          <Link href="/" className="flex items-center space-x-2">
+            <Zap className="h-6 w-6 text-primary" />
+            {/* 태블릿 이상에서는 사이드바 상태에 따라 텍스트 표시 */}
+            {!sidebarCollapsed && (
+              <span className="text-xl font-bold hidden md:block">
+                Trade Volt
+              </span>
+            )}
+            {/* <span className="text-xl font-bold md:hidden ml-8">Trade Volt</span> */}
+          </Link>
         </div>
 
         {/* Right Section - Search and User */}
-        <div className="flex-1 flex items-center justify-between px-1 lg:px-6">
+        <div className="flex-1 flex items-center justify-between px-4 lg:px-6 ml-1">
           {/* Search Input */}
           <div className="flex-1 max-w-md">
             <div className="relative">
