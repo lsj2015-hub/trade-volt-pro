@@ -135,8 +135,9 @@ export default function PortfolioPage() {
   ];
 
   return (
-    <div className="space-y-8">
-      <div className="text-center sm:text-left ">
+    <div className="p-4 md:p-6 space-y-6">
+      {/* 페이지 제목 */}
+      <div className="text-center sm:text-left">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
           My Portfolio
         </h1>
