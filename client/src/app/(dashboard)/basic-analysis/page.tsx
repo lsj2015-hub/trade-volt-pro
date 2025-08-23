@@ -12,13 +12,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Search, Calendar, MessageSquare, Sheet, Rss } from 'lucide-react';
 
 export default function BasicAnalysisPage() {
   const [searchTicker, setSearchTicker] = useState('');
   const [selectedInfo, setSelectedInfo] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -34,7 +35,7 @@ export default function BasicAnalysisPage() {
       {/* 기본정보 조회 */}
       <Card className="min-h-[200px]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Search className="h-5 w-5" />
             종목검색 및 정보조회
           </CardTitle>
@@ -93,7 +94,7 @@ export default function BasicAnalysisPage() {
       {/* 재무제표 상세 */}
       <Card className="min-h-[200px]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Sheet className="h-5 w-5" />
             재무제표 상세
           </CardTitle>
@@ -108,21 +109,21 @@ export default function BasicAnalysisPage() {
             <TabsContent value="income" className="mt-4">
               <div className="border rounded-lg p-4 min-h-[100px] bg-muted/20">
                 <p className="text-muted-foreground text-center">
-                  상단의 비트맵을 클릭하여 재무제표를 조회하세요.
+                  상단의 종목검색에서 종목을 선택하여 재무제표를 조회하세요.
                 </p>
               </div>
             </TabsContent>
             <TabsContent value="balance" className="mt-4">
               <div className="border rounded-lg p-4 min-h-[200px] bg-muted/20">
                 <p className="text-muted-foreground text-center">
-                  상단의 비트맵을 클릭하여 재무제표를 조회하세요.
+                  상단의 종목검색에서 종목을 선택하여 재무제표를 조회하세요.
                 </p>
               </div>
             </TabsContent>
             <TabsContent value="cashflow" className="mt-4">
               <div className="border rounded-lg p-4 min-h-[200px] bg-muted/20">
                 <p className="text-muted-foreground text-center">
-                  상단의 비트맵을 클릭하여 재무제표를 조회하세요.
+                  상단의 종목검색에서 종목을 선택하여 재무제표를 조회하세요.
                 </p>
               </div>
             </TabsContent>
@@ -133,7 +134,7 @@ export default function BasicAnalysisPage() {
       {/* 기간별 주가 히스토리 조회 */}
       <Card className="min-h-[200px]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Calendar className="h-5 w-5" />
             기간별 주가 히스토리 조회
           </CardTitle>
@@ -141,14 +142,12 @@ export default function BasicAnalysisPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
             <div className="md:col-span-3">
-              <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium whitespace-nowrap">
-                  시작일
-                </label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">시작일</label>
+                <DatePicker
+                  date={startDate}
+                  onSelect={setStartDate}
+                  placeholder="시작일 선택"
                   className="h-11"
                 />
               </div>
@@ -157,22 +156,23 @@ export default function BasicAnalysisPage() {
               <span className="text-muted-foreground text-lg">~</span>
             </div>
             <div className="md:col-span-3">
-              <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium whitespace-nowrap">
-                  종료일
-                </label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">종료일</label>
+                <DatePicker
+                  date={endDate}
+                  onSelect={setEndDate}
+                  placeholder="종료일 선택"
                   className="h-11"
                 />
               </div>
             </div>
             <div className="md:col-span-3 md:col-start-11">
-              <Button variant="basic" className="w-full h-11">
-                주가 데이터 조회
-              </Button>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">&nbsp;</label>
+                <Button variant="basic" className="w-full h-11">
+                  주가 데이터 조회
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -188,7 +188,7 @@ export default function BasicAnalysisPage() {
       {/* 관련 최신 뉴스 */}
       <Card className="min-h-[200px]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Rss className="w-5 h-5" />
             관련 최신 뉴스
           </CardTitle>
@@ -205,7 +205,7 @@ export default function BasicAnalysisPage() {
       {/* David에게 자유롭게 질문하세요 */}
       <Card className="min-h-[200px]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <MessageSquare className="h-5 w-5" />
             David에게 자유롭게 질문하세요
           </CardTitle>

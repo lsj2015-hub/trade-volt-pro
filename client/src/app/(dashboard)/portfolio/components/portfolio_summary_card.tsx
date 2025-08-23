@@ -1,5 +1,5 @@
-import { TrendingUp, TrendingDown, LucideIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { PortfolioSummaryCardProps } from '@/types/types';
 
 export const PortfolioSummaryCard = ({
@@ -12,60 +12,68 @@ export const PortfolioSummaryCard = ({
   totalGainPercent,
   formatAmount,
 }: PortfolioSummaryCardProps) => {
-  
-  const formatPercent = (percent: number) => {
-    return `${percent.toFixed(2)}%`;
-  };
+  const gainColor = dayGain >= 0 ? 'text-green-600' : 'text-red-600';
+  const totalGainColor = totalGain >= 0 ? 'text-green-600' : 'text-red-600';
 
   return (
-    <Card className="border-0 px-10 shadow-md space-y-3 hover:shadow-lg transition-shadow">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center space-x-2">
-          <Icon className="h-5 w-5 text-primary" />
-          <span>{title}</span>
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-lg sm:text-xl font-medium">
+          {title}
         </CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
-      <CardContent className="space-y-4 flex justify-end">
+      <CardContent>
         <div className="space-y-3">
-          <div className="text-3xl font-bold">{totalAmount}</div>
+          <p className="text-sm sm:text-base md:text-lg lg:text-2xl font-bold">
+            {totalAmount}
+          </p>
+
           <div className="space-y-2">
-            <div
-              className={`flex items-center space-x-1 text-sm ${
-                dayGain >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}
-            >
-              {dayGain >= 0 ? (
-                <TrendingUp className="h-4 w-4" />
-              ) : (
-                <TrendingDown className="h-4 w-4" />
-              )}
-              <span className="font-semibold">
-                {formatAmount(Math.abs(dayGain))}
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm text-muted-foreground">
+                Day&apos;s Gain
               </span>
-              <span className="text-xs">({formatPercent(dayGainPercent)})</span>
-              <span className="">Day&apos;s Gain</span>
+              <div className="flex items-center space-x-1 flex-wrap">
+                <span
+                  className={`text-xs sm:text-sm font-medium ${gainColor} whitespace-nowrap`}
+                >
+                  {formatAmount(Math.abs(dayGain))}
+                </span>
+                <span className={`text-xs ${gainColor} whitespace-nowrap`}>
+                  ({dayGainPercent.toFixed(2)}%)
+                </span>
+                {dayGain >= 0 ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+              </div>
             </div>
-            <div
-              className={`flex items-center space-x-1 text-sm ${
-                totalGain >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}
-            >
-              {totalGain >= 0 ? (
-                <TrendingUp className="h-4 w-4" />
-              ) : (
-                <TrendingDown className="h-4 w-4" />
-              )}
-              <span className="font-semibold">
-                {formatAmount(Math.abs(totalGain))}
+
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm text-muted-foreground">
+                Total Gain
               </span>
-              <span className="text-xs">
-                ({formatPercent(totalGainPercent)})
-              </span>
-              <span className="">Total Gain</span>
+              <div className="flex items-center space-x-1 flex-wrap">
+                <span
+                  className={`text-xs sm:text-sm font-medium ${totalGainColor} whitespace-nowrap`}
+                >
+                  {formatAmount(Math.abs(totalGain))}
+                </span>
+                <span className={`text-xs ${totalGainColor} whitespace-nowrap`}>
+                  ({totalGainPercent.toFixed(2)}%)
+                </span>
+                {totalGain >= 0 ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+              </div>
             </div>
           </div>
         </div>
       </CardContent>
     </Card>
   );
-}
+};

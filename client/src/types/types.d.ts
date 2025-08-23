@@ -101,6 +101,16 @@ export interface StockData {
   totalGainPercent: number;
 }
 
+export interface StockResult {
+  symbol: string;
+  company: string;
+  price: number;
+  change: number;
+  marketCap: string;
+  per: string;
+  sector: string;
+}
+
 export interface StockTableProps {
   domesticStocks: StockData[];
   overseasStocks: StockData[];
@@ -150,6 +160,29 @@ export interface ButtonProps extends React.ComponentProps<'button'> {
     | 'link';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   asChild?: boolean;
+}
+
+// Strategy
+export interface AdjustmentCondition {
+  id: string;
+  label: string;
+  type: 'number' | 'text';
+  defaultValue: string;
+}
+
+export interface TradingStrategy {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface TradingResult {
+  stock: string;
+  buyPrice: number;
+  sellPrice: number;
+  quantity: number;
+  profit: number;
+  returnRate: number;
 }
 
 export interface AvatarProps extends BaseComponentProps {

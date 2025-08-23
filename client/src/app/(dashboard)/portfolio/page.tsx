@@ -135,43 +135,45 @@ export default function PortfolioPage() {
   ];
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
-      {/* 페이지 제목 */}
-      <div className="text-center sm:text-left">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-          My Portfolio
-        </h1>
-        <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
-          포트폴리오 현황을 확인하고 관리하세요
-        </p>
-      </div>
-
-      {/* 상단 포트폴리오 섹션 */}
-      <section className="space-y-6">
-        {/* 전체 포트폴리오 카드 */}
-        <TotalPortfolioCard
-          totalPortfolio={totalPortfolio}
-          totalDayGain={totalDayGain}
-          totalTotalGain={totalTotalGain}
-          formatCurrency={formatCurrency}
-        />
-
-        {/* 국내/해외 카드 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {portfolioCards.map((card, index) => (
-            <PortfolioSummaryCard key={index} {...card} />
-          ))}
+    <div className="min-h-screen w-full overflow-x-hidden">
+      <div className="max-w-full px-3 sm:px-4 md:px-6 py-4 md:py-6 space-y-4 sm:space-y-6">
+        {/* 페이지 제목 */}
+        <div className="text-center sm:text-left">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
+            My Portfolio
+          </h1>
+          <p className="text-muted-foreground mt-1 md:mt-2 text-xs sm:text-sm md:text-base">
+            포트폴리오 현황을 확인하고 관리하세요
+          </p>
         </div>
-      </section>
 
-      {/* 하단 주식 목록 섹션 */}
-      <section>
-        <StockTable
-          domesticStocks={domesticStocks}
-          overseasStocks={overseasStocks}
-          formatCurrency={formatCurrency}
-        />
-      </section>
+        {/* 상단 포트폴리오 섹션 */}
+        <section className="space-y-4 sm:space-y-6">
+          {/* 전체 포트폴리오 카드 */}
+          <TotalPortfolioCard
+            totalPortfolio={totalPortfolio}
+            totalDayGain={totalDayGain}
+            totalTotalGain={totalTotalGain}
+            formatCurrency={formatCurrency}
+          />
+
+          {/* 국내/해외 카드 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+            {portfolioCards.map((card, index) => (
+              <PortfolioSummaryCard key={index} {...card} />
+            ))}
+          </div>
+        </section>
+
+        {/* 하단 주식 목록 섹션 */}
+        <section>
+          <StockTable
+            domesticStocks={domesticStocks}
+            overseasStocks={overseasStocks}
+            formatCurrency={formatCurrency}
+          />
+        </section>
+      </div>
     </div>
   );
 }

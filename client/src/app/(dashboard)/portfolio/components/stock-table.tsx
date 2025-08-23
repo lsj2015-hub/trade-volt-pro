@@ -18,7 +18,7 @@ export const StockTable = ({
   const renderContent = (stocks: StockData[], isOverseas: boolean) => (
     <>
       {/* 모바일: 카드 레이아웃 */}
-      <div className="block md:hidden space-y-4">
+      <div className="block lg:hidden space-y-4">
         {stocks.map((stock, index) => (
           <MobileStockCard
             key={index}
@@ -30,7 +30,7 @@ export const StockTable = ({
       </div>
 
       {/* 데스크톱: 테이블 레이아웃 */}
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <DesktopStockTable
           stocks={stocks}
           isOverseas={isOverseas}
@@ -45,16 +45,16 @@ export const StockTable = ({
       <TabsList className="grid w-full grid-cols-2 mb-4 md:mb-6">
         <TabsTrigger
           value="domestic"
-          className="flex items-center space-x-2 text-sm md:text-base"
+          className="flex items-center space-x-2 text-xs sm:text-sm lg:text-base"
         >
-          <Banknote className="h-3 w-3 md:h-4 md:w-4" />
+          <Banknote className="h-4 w-4" />
           <span>국내주식</span>
         </TabsTrigger>
         <TabsTrigger
           value="overseas"
-          className="flex items-center space-x-2 text-sm md:text-base"
+          className="flex items-center space-x-2 text-xs sm:text-sm lg:text-base"
         >
-          <DollarSign className="h-3 w-3 md:h-4 md:w-4" />
+          <DollarSign className="h-4 w-4" />
           <span>해외주식</span>
         </TabsTrigger>
       </TabsList>
