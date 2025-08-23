@@ -203,7 +203,7 @@ export default function BenchmarkTestingPage() {
       </Card>
 
       {/* 종목 및 지수 수익률 비교 */}
-      <Card className="min-h-[200px] border-orange-200">
+      <Card className="min-h-[200px]">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Activity className="h-5 w-5" />
