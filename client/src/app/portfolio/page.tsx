@@ -1,8 +1,8 @@
 'use client';
 
 import { DollarSign, Banknote } from 'lucide-react';
-import { PortfolioSummaryCard } from './components/portfolio_summary_card';
-import { TotalPortfolioCard } from './components/total_portfolio_card';
+import { PortfolioSummaryCard } from './components/portfolio-summary-card';
+import { TotalPortfolioCard } from './components/total-portfolio-card';
 import { StockTable } from './components/stock-table';
 import { StockData } from '@/types/types';
 

@@ -1,8 +1,8 @@
 import { DollarSign, Banknote } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StockData } from '@/types/types';
-import { MobileStockCard } from '../../components/mobile-stock-card';
-import { DesktopStockTable } from '../../components/desktop-stock-table';
+import { MobileStockCard } from './mobile-stock-card';
+import { DesktopStockTable } from './desktop-stock-table';
 
 interface StockTableProps {
   domesticStocks: StockData[];

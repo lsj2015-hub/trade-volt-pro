@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/auth-context';
 import './globals.css';
+import { LayoutWrapper } from '@/components/layout-wrapper';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -27,7 +28,7 @@ export default function RootLayout({
     <html lang="ko" suppressHydrationWarning>
       <body className={inter.className}>
         <AuthProvider>
-          <div className="min-h-screen bg-background">{children}</div>
+          <LayoutWrapper>{children}</LayoutWrapper>
           <Toaster position="top-right" richColors closeButton />
         </AuthProvider>
       </body>

@@ -26,7 +26,7 @@ import { TradingResult, TradingStrategy } from '@/types/types';
 export const tradingStrategies: TradingStrategy[] = [
   {
     id: 'news-scalping',
-    name: 'Newsfeed Scalping By AI Evaluation Trading',
+    name: 'Newsfeed Scalping Trading',
     description: 'AI가 뉴스를 분석하여 급등 가능성이 있는 종목을 스캘핑합니다.',
   },
   {

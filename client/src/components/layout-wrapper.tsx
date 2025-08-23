@@ -1,24 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { ProtectedRoute } from '@/components/layouts/protected-route';
-import { TopNavigation } from '@/app/(dashboard)/components/top-navigation';
-import { Sidebar } from '@/app/(dashboard)/components/sidebar';
+import { TopNavigation } from '@/components/dashboard/top-navigation';
+import { Sidebar } from '@/components/dashboard/sidebar';
 import { useAuth } from '@/hooks/use-auth';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { StockSearchModal } from './components/stock-search-modal';
+import { StockSearchModal } from '@/components/dashboard/stock-search-modal';
 
-export default function DashboardLayout({
-  children,
-}: {
+interface LayoutWrapperProps {
   children: React.ReactNode;
-}) {
+}
+
+export const LayoutWrapper = ({ children }: LayoutWrapperProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [stockSearchOpen, setStockSearchOpen] = useState(false);
 
   const router = useRouter();
+  const pathname = usePathname();
   const { logout } = useAuth();
 
   const handleLogout = async () => {
@@ -26,6 +27,12 @@ export default function DashboardLayout({
     router.push('/');
   };
 
+  // 홈페이지는 다른 레이아웃 사용
+  if (pathname === '/') {
+    return <div className="min-h-screen bg-background">{children}</div>;
+  }
+
+  // 대시보드 페이지들은 인증 필요
   return (
     <ProtectedRoute
       fallback={
@@ -72,5 +79,4 @@ export default function DashboardLayout({
       </SidebarProvider>
     </ProtectedRoute>
   );
-}
-
+};
