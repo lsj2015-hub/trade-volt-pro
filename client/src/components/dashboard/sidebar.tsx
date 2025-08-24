@@ -58,7 +58,9 @@ export const Sidebar = ({
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>투자 도구</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-blue-500">
+            The trend is your friend
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {dashboardItems.map((item) => {

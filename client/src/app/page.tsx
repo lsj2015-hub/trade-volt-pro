@@ -108,7 +108,7 @@ export default function HomePage() {
           <div className="flex items-center space-x-2">
             <Zap className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold hidden sm:block">
-              Trade Volt
+              Trade Volt Pro
             </span>
           </div>
 

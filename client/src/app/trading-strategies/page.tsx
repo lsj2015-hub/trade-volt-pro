@@ -96,7 +96,7 @@ export default function StrategyPage() {
     totalInvestment > 0 ? (totalProfit / totalInvestment) * 100 : 0;
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* 페이지 제목 */}
       <div className="text-center sm:text-left">
         <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
@@ -188,10 +188,7 @@ export default function StrategyPage() {
           </div>
 
           <div className="flex justify-center sm:justify-start">
-            <Button
-              size="lg"
-              className="bg-primary hover:bg-primary/90 px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-base font-medium"
-            >
+            <Button size="lg" variant="basic">
               <Play className="mr-2 h-4 w-4" />
               매매실행
             </Button>

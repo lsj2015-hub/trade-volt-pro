@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { AuthProvider } from '@/contexts/auth-context';
 import './globals.css';
 import { LayoutWrapper } from '@/components/layout-wrapper';
+import { FloatingScrollToTop } from '../components/dashboard/floating-scroll-to-top';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -29,6 +30,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <AuthProvider>
           <LayoutWrapper>{children}</LayoutWrapper>
+          <FloatingScrollToTop />
           <Toaster position="top-right" richColors closeButton />
         </AuthProvider>
       </body>

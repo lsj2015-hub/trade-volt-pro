@@ -15,18 +15,13 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Target, BarChart, TrendingUp, Activity, Gauge } from 'lucide-react';
 
 export default function BenchmarkTestingPage() {
-  const [selectedSector, setSelectedSector] = useState('');
   const [selectedMarket, setSelectedMarket] = useState('');
-  const [selectedMetric, setSelectedMetric] = useState('');
-  const [selectedIndex, setSelectedIndex] = useState('');
 
   // Date states
   const [benchmarkStartDate, setBenchmarkStartDate] = useState<Date>();
   const [benchmarkEndDate, setBenchmarkEndDate] = useState<Date>();
   const [performanceStartDate, setPerformanceStartDate] = useState<Date>();
   const [performanceEndDate, setPerformanceEndDate] = useState<Date>();
-  const [analysisStartDate, setAnalysisStartDate] = useState<Date>();
-  const [analysisEndDate, setAnalysisEndDate] = useState<Date>();
   const [comparisonStartDate, setComparisonStartDate] = useState<Date>();
   const [comparisonEndDate, setComparisonEndDate] = useState<Date>();
   const [investmentStartDate1, setInvestmentStartDate1] = useState<Date>();
