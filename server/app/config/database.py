@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from typing import AsyncGenerator  # 추가
+from typing import AsyncGenerator
 from .settings import get_settings
 
 settings = get_settings()

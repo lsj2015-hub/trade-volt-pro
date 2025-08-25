@@ -1,5 +1,6 @@
 import httpx
 import logging
+import asyncio
 from typing import Dict, Optional
 from datetime import datetime, timedelta
 from app.core.exceptions import CustomHTTPException
@@ -249,24 +250,23 @@ class KISAPIService:
   def _parse_domestic_price(self, response_data: Dict, symbol: str, is_historical: bool = False) -> Dict:
     """국내주식 응답 데이터 파싱"""
     if is_historical:
-      # 과거 시세 파싱 로직
       output = response_data.get("output", [])
       if output:
-        data = output[0]  # 첫 번째 데이터
+        data = output[0]
         return {
           "symbol": symbol,
           "market_type": "DOMESTIC",
-          "current_price": float(data.get("stck_clpr", 0)),  # 종가
-          "previous_close": float(data.get("stck_prpr", 0)),  # 전일종가
+          "current_price": float(data.get("stck_clpr", 0)),
+          "previous_close": float(data.get("stck_prpr", 0)),
+          "daily_return_rate": float(data.get("prdy_ctrt", 0)),
           "day_change": float(data.get("prdy_vrss", 0)),
-          "day_change_rate": float(data.get("prdy_ctrt", 0)),
           "volume": int(data.get("acml_vol", 0)),
           "high_price": float(data.get("stck_hgpr", 0)),
           "low_price": float(data.get("stck_lwpr", 0)),
           "open_price": float(data.get("stck_oprc", 0)),
           "currency": "KRW",
           "updated_at": datetime.now().isoformat(),
-          "query_date": data.get("stck_bsop_date")  # 영업일자
+          "query_date": data.get("stck_bsop_date")
         }
       else:
         raise CustomHTTPException(
@@ -275,19 +275,18 @@ class KISAPIService:
           error_code="NO_PRICE_DATA"
         )
     else:
-      # 기존 현재가 파싱 로직
       output = response_data.get("output", {})
       return {
         "symbol": symbol,
         "market_type": "DOMESTIC",
-        "current_price": float(output.get("stck_prpr", 0)),  # 주식 현재가
-        "previous_close": float(output.get("stck_sdpr", 0)),  # 전일 종가
-        "day_change": float(output.get("prdy_vrss", 0)),  # 전일 대비
-        "day_change_rate": float(output.get("prdy_ctrt", 0)),  # 전일 대비율
-        "volume": int(output.get("acml_vol", 0)),  # 누적 거래량
-        "high_price": float(output.get("stck_hgpr", 0)),  # 최고가
-        "low_price": float(output.get("stck_lwpr", 0)),  # 최저가
-        "open_price": float(output.get("stck_oprc", 0)),  # 시가
+        "current_price": float(output.get("stck_prpr", 0)),
+        "previous_close": float(output.get("stck_sdpr", 0)),
+        "daily_return_rate": float(output.get("prdy_ctrt", 0)),
+        "day_change": float(output.get("prdy_vrss", 0)),
+        "volume": int(output.get("acml_vol", 0)),
+        "high_price": float(output.get("stck_hgpr", 0)),
+        "low_price": float(output.get("stck_lwpr", 0)),
+        "open_price": float(output.get("stck_oprc", 0)),
         "currency": "KRW",
         "updated_at": datetime.now().isoformat()
       }
@@ -295,24 +294,23 @@ class KISAPIService:
   def _parse_overseas_price(self, response_data: Dict, symbol: str, is_historical: bool = False) -> Dict:
     """해외주식 응답 데이터 파싱"""
     if is_historical:
-      # 과거 시세 파싱 로직
       output = response_data.get("output", [])
       if output:
-        data = output[0]  # 첫 번째 데이터
+        data = output[0]
         return {
           "symbol": symbol,
-          "market_type": "OVERSEAS",
-          "current_price": float(data.get("clos", 0)),  # 종가
-          "previous_close": float(data.get("base", 0)),  # 전일종가
+          "market_type": "OVERSEAS", 
+          "current_price": float(data.get("clos", 0)),
+          "previous_close": float(data.get("base", 0)),
+          "daily_return_rate": float(data.get("rate", 0)),  # day_change_rate -> daily_return_rate로 변경
           "day_change": float(data.get("diff", 0)),
-          "day_change_rate": float(data.get("rate", 0)),
           "volume": int(data.get("tvol", 0)),
           "high_price": float(data.get("high", 0)),
           "low_price": float(data.get("low", 0)),
           "open_price": float(data.get("open", 0)),
-          "currency": "USD",  # 기본값 (추후 개선 필요)
+          "currency": "USD",
           "updated_at": datetime.now().isoformat(),
-          "query_date": data.get("xymd")  # 날짜
+          "query_date": data.get("xymd")
         }
       else:
         raise CustomHTTPException(
@@ -321,20 +319,20 @@ class KISAPIService:
           error_code="NO_PRICE_DATA"
         )
     else:
-      # 기존 현재가 파싱 로직
       output = response_data.get("output", {})
       return {
         "symbol": symbol,
         "market_type": "OVERSEAS",
-        "current_price": float(output.get("last", 0)),  # 현재가
-        "previous_close": float(output.get("base", 0)),  # 전일 종가
-        "day_change": float(output.get("diff", 0)),  # 전일 대비
-        "day_change_rate": float(output.get("rate", 0)),  # 전일 대비율
-        "volume": int(output.get("tvol", 0)),  # 거래량
-        "high_price": float(output.get("high", 0)),  # 최고가
-        "low_price": float(output.get("low", 0)),  # 최저가
-        "open_price": float(output.get("open", 0)),  # 시가
-        "currency": "USD",  # 기본값 (추후 개선 필요)
+        "current_price": float(output.get("last", 0)),
+        "previous_close": float(output.get("base", 0)),
+        "daily_return_rate": float(output.get("rate", 0)),  # day_change_rate -> daily_return_rate로 변경
+        "day_change": float(output.get("diff", 0)),
+        "volume": int(output.get("tvol", 0)),
+        "high_price": float(output.get("high", 0)),
+        "low_price": float(output.get("low", 0)),
+        "open_price": float(output.get("open", 0)),
+        "currency": "USD",
+        "currency": "USD",
         "updated_at": datetime.now().isoformat()
       }
   
@@ -362,7 +360,6 @@ class KISAPIService:
         }
     
     return results
-
 
 # 싱글톤 인스턴스
 kis_api_service = KISAPIService()

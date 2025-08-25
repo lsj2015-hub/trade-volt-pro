@@ -11,7 +11,6 @@ from .api.v1.router import api_router
 
 settings = get_settings()
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
   # Startup

@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     env="KIS_BASE_URL"
   )
 
+  # OPENAI API Configuration
+  openai_api_key: str = Field(..., env="OPENAI_API_KEY")
+
   # JWT Configuration
   secret_key: str = Field(..., env="SECRET_KEY")
   algorithm: str = Field(default="HS256", env="ALGORITHM")

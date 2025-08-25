@@ -25,3 +25,19 @@ class BaseEntityResponse(BaseModel):
 
   class Config:
     from_attributes = True
+
+# ========== Stock 관련 ==========
+
+class StockInfo(BaseModel):
+ """종목 정보 스키마 (DB Stock)"""
+ symbol: str                    # 종목코드 (Stock.symbol)
+ company_name: str              # 종목명 (Stock.company_name)
+ company_name_en: str           # 영문 종목명 (Stock.company_name_en)
+ corp_cord: str                 # Dart 회사 조회 코드 (Stock.corp_cord)
+ country_code: str              # 국가 (Stock.country_code)
+ exchange_code: str             # 거래소 (Stock.exchange_code)
+ currency: str                  # 거래통화 (Stock.currency)
+ market_type: MarketType        # 시장 구분 (기존 정의된 MarketType 사용)
+
+ class Config:
+   from_attributes = True

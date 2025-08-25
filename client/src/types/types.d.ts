@@ -81,11 +81,27 @@ export interface Stock {
   market: string;
 }
 
+export interface StockBasicInfo {
+  symbol: string; // 종목코드
+  company_name: string; // 종목명
+  company_name_en: string; // 영문 종목명
+  corp_cord: string; // Dart 회사 조회 코드
+  country_code: string; // 국가 코드
+  exchange_code: string; // 거래소 코드
+  currency: string; // 거래통화
+  market_type: 'DOMESTIC' | 'OVERSEAS'; // 시장 구분
+}
+
+export interface StockSearchResponse {
+  stocks: StockInfo[];
+  total: number;
+  query: string;
+}
+
 export interface StockSearchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
 
 // ====== 포트폴리오 관련 타입 ======
 export interface StockData {

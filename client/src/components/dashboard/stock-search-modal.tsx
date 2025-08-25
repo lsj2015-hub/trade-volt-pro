@@ -1,7 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Search, X, TrendingUp, TrendingDown } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  Search,
+  Star,
+  Loader2,
+  AlertCircle,
+  Building2,
+  Globe,
+  X,
+} from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,215 +17,273 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Stock, StockSearchModalProps } from '@/types/types';
+import { StockBasicInfo, StockSearchModalProps } from '@/types/types';
+import { StockAPI, StockAPIError } from '@/lib/stock-api';
 
-
-// 임시 종목 데이터 (실제로는 API에서 가져와야 함)
-const mockStocks: Stock[] = [
-  {
-    ticker: '005930',
-    name: '삼성전자',
-    name_en: 'Samsung Electronics Co., Ltd.',
-    price: 74000,
-    change: 1000,
-    changePercent: 1.37,
-    market: 'KOSPI',
-  },
-  {
-    ticker: '000660',
-    name: 'SK하이닉스',
-    name_en: 'SK Hynix Inc.',
-    price: 89000,
-    change: -2000,
-    changePercent: -2.20,
-    market: 'KOSPI',
-  },
-  {
-    ticker: '035420',
-    name: '네이버',
-    name_en: 'NAVER Corporation',
-    price: 196000,
-    change: 3000,
-    changePercent: 1.55,
-    market: 'KOSPI',
-  },
-  {
-    ticker: '051910',
-    name: 'LG화학',
-    name_en: 'LG Chem Ltd.',
-    price: 425000,
-    change: -5000,
-    changePercent: -1.16,
-    market: 'KOSPI',
-  },
-  {
-    ticker: '006400',
-    name: '삼성SDI',
-    name_en: 'Samsung SDI Co., Ltd.',
-    price: 387000,
-    change: 8000,
-    changePercent: 2.11,
-    market: 'KOSPI',
-  },
-  {
-    ticker: 'AAPL',
-    name: '애플',
-    name_en: 'Apple Inc.',
-    price: 185.25,
-    change: 2.15,
-    changePercent: 1.17,
-    market: 'NASDAQ',
-  },
-  {
-    ticker: 'MSFT',
-    name: '마이크로소프트',
-    name_en: 'Microsoft Corporation',
-    price: 415.30,
-    change: -3.25,
-    changePercent: -0.78,
-    market: 'NASDAQ',
-  },
-  {
-    ticker: 'GOOGL',
-    name: '알파벳',
-    name_en: 'Alphabet Inc.',
-    price: 142.80,
-    change: 1.85,
-    changePercent: 1.31,
-    market: 'NASDAQ',
-  },
-  {
-    ticker: 'TSLA',
-    name: '테슬라',
-    name_en: 'Tesla Inc.',
-    price: 248.50,
-    change: -5.75,
-    changePercent: -2.26,
-    market: 'NASDAQ',
-  },
-  {
-    ticker: 'NVDA',
-    name: '엔비디아',
-    name_en: 'NVIDIA Corporation',
-    price: 875.4,
-    change: 12.6,
-    changePercent: 1.46,
-    market: 'NASDAQ',
-  },
-];
-export const StockSearchModal = ({
-  open,
-  onOpenChange,
-}: StockSearchModalProps) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filteredStocks, setFilteredStocks] = useState<Stock[]>([]);
+// debounce 커스텀 훅
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
 
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredStocks([]);
-    } else {
-      const filtered = mockStocks.filter(
-        (stock) =>
-          stock.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          stock.name_en.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          stock.ticker.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredStocks(filtered);
-    }
-  }, [searchQuery]);
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
 
-  const handleStockSelect = (stock: Stock) => {
-    console.log('Selected stock:', stock);
-    // 여기에 종목 선택 로직 추가
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
+export const StockSearchModal = ({ open, onOpenChange }: StockSearchModalProps) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [stocks, setStocks] = useState<StockBasicInfo[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [favoriteStocks, setFavoriteStocks] = useState<Set<string>>(new Set());
+
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // 모달이 열릴 때마다 초기화
+  useEffect(() => {
+    if (open) {
+      setSearchQuery('');
+      setStocks([]);
+      setError(null);
+      setLoading(false);
+    }
+  }, [open]);
+
+  // 검색 API 호출
+  useEffect(() => {
+    const searchStocks = async () => {
+      if (debouncedSearchQuery.trim() === '') {
+        setStocks([]);
+        setError(null);
+        return;
+      }
+
+      if (debouncedSearchQuery.trim().length < 1) {
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const results = await StockAPI.searchStocks({
+          query: debouncedSearchQuery.trim(),
+          limit: 20,
+        });
+
+        setStocks(results);
+        console.log('종목 검색 완료:', results.length, '개 결과');
+      } catch (error) {
+        console.error('종목 검색 오류:', error);
+
+        if (error instanceof StockAPIError) {
+          if (error.status === 401) {
+            setError('로그인이 필요합니다.');
+          } else if (error.status === 0) {
+            setError('서버에 연결할 수 없습니다. 네트워크를 확인해주세요.');
+          } else {
+            setError(error.message || '검색 중 오류가 발생했습니다.');
+          }
+        } else {
+          setError('검색 중 오류가 발생했습니다.');
+        }
+
+        setStocks([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    searchStocks();
+  }, [debouncedSearchQuery]);
+
+  const toggleFavorite = useCallback((symbol: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFavoriteStocks((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(symbol)) {
+        newSet.delete(symbol);
+      } else {
+        newSet.add(symbol);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const handleStockSelect = (stock: StockBasicInfo) => {
+    console.log('선택된 종목:', stock);
     onOpenChange(false);
   };
 
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('ko-KR');
+  // 검색창 초기화
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setStocks([]);
+    setError(null);
   };
 
-  const formatChange = (change: number, changePercent: number) => {
-    const sign = change >= 0 ? '+' : '';
-    return `${sign}${change.toLocaleString(
-      'ko-KR'
-    )} (${sign}${changePercent.toFixed(2)}%)`;
+  // 거래소명 변환
+  const getExchangeDisplayName = (exchangeCode: string) => {
+    const exchangeNames: Record<string, string> = {
+      KRX: 'KOSPI',
+      KOSDAQ: 'KOSDAQ',
+      NYSE: 'NYSE',
+      NASDAQ: 'NASDAQ',
+    };
+    return exchangeNames[exchangeCode] || exchangeCode;
+  };
+
+  // 시장 타입 아이콘
+  const getMarketIcon = (marketType: string) => {
+    return marketType === 'DOMESTIC' ? (
+      <Building2 className="h-3 w-3 text-blue-500" />
+    ) : (
+      <Globe className="h-3 w-3 text-green-500" />
+    );
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] p-0">
-        <DialogHeader className="p-6 pb-4">
+      <DialogContent className="max-w-lg h-[60vh] p-0 flex flex-col">
+        <DialogHeader className="p-6 pb-4 flex-shrink-0">
           <DialogTitle className="text-xl font-semibold">종목 검색</DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 pb-4">
+        <div className="px-6 pb-4 flex-shrink-0">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="종목명 또는 종목코드를 입력하세요"
+              placeholder="종목명, 영문명 또는 종목코드를 입력하세요 (예: 삼성전자, Samsung, 005930)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 pr-10"
               autoFocus
             />
+            {/* 검색창 초기화 버튼 */}
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearSearch}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted rounded-full"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto px-6 pb-6">
-          {filteredStocks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              검색 결과가 없습니다.
-            </div>
-          ) : filteredStocks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              검색 결과가 없습니다.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredStocks.map((stock) => (
-                <div
-                  key={stock.ticker}
-                  onClick={() => handleStockSelect(stock)}
-                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <div>
-                        <h3 className="font-medium text-sm">{stock.name}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          {stock.ticker} · {stock.market}
-                        </p>
+        {/* 스크롤 가능한 영역 - 핵심 수정 */}
+        <div className="flex-1 overflow-hidden">
+          <div className="h-full overflow-y-auto px-6 pb-6">
+            {/* 로딩 상태 */}
+            {loading && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                <span className="text-muted-foreground">검색 중...</span>
+              </div>
+            )}
+
+            {/* 에러 상태 */}
+            {error && !loading && (
+              <div className="flex items-center justify-center py-8 text-red-500">
+                <AlertCircle className="h-5 w-5 mr-2" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* 검색 결과 없음 */}
+            {!loading &&
+              !error &&
+              debouncedSearchQuery.trim() !== '' &&
+              stocks.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Search className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>검색 결과가 없습니다.</p>
+                  <p className="text-sm">다른 검색어를 시도해보세요.</p>
+                </div>
+              )}
+
+            {/* 초기 상태 */}
+            {!loading && !error && debouncedSearchQuery.trim() === '' && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Search className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>종목명, 영문명 또는 종목코드를 입력하세요</p>
+                <p className="text-sm">
+                  예: 삼성전자, Samsung Electronics, 005930
+                </p>
+              </div>
+            )}
+
+            {/* 검색 결과 */}
+            {!loading && !error && stocks.length > 0 && (
+              <div className="space-y-2">
+                {stocks.map((stock) => (
+                  <div
+                    key={`${stock.symbol}_${stock.exchange_code}`}
+                    onClick={() => handleStockSelect(stock)}
+                    className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent cursor-pointer transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2">
+                          {getMarketIcon(stock.market_type)}
+                          <div>
+                            <h3 className="font-medium text-sm">
+                              {stock.company_name}
+                            </h3>
+                            {stock.company_name_en && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {stock.company_name_en}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              {stock.symbol} ·{' '}
+                              {getExchangeDisplayName(stock.exchange_code)}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="text-right">
-                    <div className="font-medium text-sm">
-                      {formatPrice(stock.price)}원
-                    </div>
-                    <div
-                      className={cn(
-                        'text-xs flex items-center justify-end space-x-1',
-                        stock.change >= 0 ? 'text-red-500' : 'text-blue-500'
-                      )}
-                    >
-                      {stock.change >= 0 ? (
-                        <TrendingUp className="h-3 w-3" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3" />
-                      )}
-                      <span>
-                        {formatChange(stock.change, stock.changePercent)}
-                      </span>
+                    <div className="flex items-center space-x-3">
+                      <div className="text-right">
+                        <div className="text-xs text-muted-foreground">
+                          {stock.currency} ·{' '}
+                          {stock.market_type === 'DOMESTIC' ? '국내' : '해외'}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={(e) => toggleFavorite(stock.symbol, e)}
+                        className="p-1 hover:bg-accent rounded transition-colors"
+                      >
+                        <Star
+                          className={cn(
+                            'h-4 w-4 transition-colors',
+                            favoriteStocks.has(stock.symbol)
+                              ? 'fill-yellow-500 text-yellow-500'
+                              : 'text-muted-foreground hover:text-yellow-500'
+                          )}
+                        />
+                      </button>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
   );
-}
+};
