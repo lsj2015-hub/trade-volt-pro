@@ -1,4 +1,4 @@
-import { StockBasicInfo } from '@/types/types';
+import { StockInfo } from '@/types/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -86,9 +86,7 @@ export class StockAPI {
    * @param params 검색 파라미터
    * @returns 검색된 종목 리스트
    */
-  static async searchStocks(
-    params: StockSearchParams
-  ): Promise<StockBasicInfo[]> {
+  static async searchStocks(params: StockSearchParams): Promise<StockInfo[]> {
     const { query, limit = 20 } = params;
 
     const searchParams = new URLSearchParams({
@@ -96,7 +94,7 @@ export class StockAPI {
       limit: limit.toString(),
     });
 
-    return this.request<StockBasicInfo[]>(
+    return this.request<StockInfo[]>(
       `/api/v1/stocks/search?${searchParams.toString()}`
     );
   }

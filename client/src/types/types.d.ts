@@ -81,7 +81,7 @@ export interface Stock {
   market: string;
 }
 
-export interface StockBasicInfo {
+export interface StockInfo {
   symbol: string; // 종목코드
   company_name: string; // 종목명
   company_name_en: string; // 영문 종목명

@@ -19,7 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { StockBasicInfo, StockSearchModalProps } from '@/types/types';
+import { StockInfo, StockSearchModalProps } from '@/types/types';
 import { StockAPI, StockAPIError } from '@/lib/stock-api';
 
 // debounce 커스텀 훅
@@ -39,9 +39,12 @@ const useDebounce = (value: string, delay: number) => {
   return debouncedValue;
 };
 
-export const StockSearchModal = ({ open, onOpenChange }: StockSearchModalProps) => {
+export const StockSearchModal = ({
+  open,
+  onOpenChange,
+}: StockSearchModalProps) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [stocks, setStocks] = useState<StockBasicInfo[]>([]);
+  const [stocks, setStocks] = useState<StockInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [favoriteStocks, setFavoriteStocks] = useState<Set<string>>(new Set());
@@ -119,7 +122,7 @@ export const StockSearchModal = ({ open, onOpenChange }: StockSearchModalProps) 
     });
   }, []);
 
-  const handleStockSelect = (stock: StockBasicInfo) => {
+  const handleStockSelect = (stock: StockInfo) => {
     console.log('선택된 종목:', stock);
     onOpenChange(false);
   };
