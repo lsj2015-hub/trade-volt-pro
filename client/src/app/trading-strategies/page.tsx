@@ -108,7 +108,7 @@ export default function StrategyPage() {
       </div>
 
       {/* Strategy Choices */}
-      <Card>
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
             <BrainCircuit className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -149,7 +149,7 @@ export default function StrategyPage() {
       </Card>
 
       {/* Adjustment Details */}
-      <Card>
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
             <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -171,7 +171,7 @@ export default function StrategyPage() {
       </Card>
 
       {/* Trading Execute */}
-      <Card>
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
             <Play className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -197,7 +197,7 @@ export default function StrategyPage() {
       </Card>
 
       {/* Trading Results */}
-      <Card>
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
             <History className="h-4 w-4 sm:h-5 sm:w-5" />

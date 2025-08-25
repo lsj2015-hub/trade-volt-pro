@@ -33,7 +33,7 @@ export default function BasicAnalysisPage() {
       </div>
 
       {/* 기본정보 조회 */}
-      <Card className="min-h-[200px]">
+      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Search className="h-5 w-5" />
@@ -92,7 +92,7 @@ export default function BasicAnalysisPage() {
       </Card>
 
       {/* 재무제표 상세 */}
-      <Card className="min-h-[200px]">
+      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Sheet className="h-5 w-5" />
@@ -132,7 +132,7 @@ export default function BasicAnalysisPage() {
       </Card>
 
       {/* 기간별 주가 히스토리 조회 */}
-      <Card className="min-h-[200px]">
+      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Calendar className="h-5 w-5" />
@@ -147,7 +147,7 @@ export default function BasicAnalysisPage() {
                 <DatePicker
                   date={startDate}
                   onSelect={setStartDate}
-                  placeholder="시작일 선택"
+                  placeholder="2025년 08월 16일"
                   className="h-11"
                 />
               </div>
@@ -161,7 +161,7 @@ export default function BasicAnalysisPage() {
                 <DatePicker
                   date={endDate}
                   onSelect={setEndDate}
-                  placeholder="종료일 선택"
+                  placeholder="2025년 08월 23일"
                   className="h-11"
                 />
               </div>
@@ -186,7 +186,7 @@ export default function BasicAnalysisPage() {
       </Card>
 
       {/* 관련 최신 뉴스 */}
-      <Card className="min-h-[200px]">
+      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Rss className="w-5 h-5" />
@@ -203,7 +203,7 @@ export default function BasicAnalysisPage() {
       </Card>
 
       {/* David에게 자유롭게 질문하세요 */}
-      <Card className="min-h-[200px]">
+      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <MessageSquare className="h-5 w-5" />

@@ -44,7 +44,7 @@ export default function BenchmarkTestingPage() {
       </div>
 
       {/* 섹터 수익률 비교 분석 */}
-      <Card className="min-h-[200px]">
+      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <BarChart className="h-5 w-5" />
@@ -113,7 +113,7 @@ export default function BenchmarkTestingPage() {
       </Card>
 
       {/* 수익률 종목 분석 */}
-      <Card className="min-h-[200px]">
+      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <TrendingUp className="h-5 w-5" />
@@ -198,7 +198,7 @@ export default function BenchmarkTestingPage() {
       </Card>
 
       {/* 종목 및 지수 수익률 비교 */}
-      <Card className="min-h-[200px]">
+      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Activity className="h-5 w-5" />
@@ -273,7 +273,7 @@ export default function BenchmarkTestingPage() {
       </Card>
 
       {/* 투자지표 매매현황 */}
-      <Card className="min-h-[200px]">
+      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Target className="h-5 w-5" />
@@ -419,7 +419,7 @@ export default function BenchmarkTestingPage() {
       </Card>
 
       {/* 변동성 종목 분석 */}
-      <Card className="min-h-[200px] border-cyan-200">
+      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Gauge className="h-5 w-5" />
