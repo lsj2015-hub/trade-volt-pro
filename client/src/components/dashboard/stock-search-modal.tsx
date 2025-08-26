@@ -42,6 +42,7 @@ const useDebounce = (value: string, delay: number) => {
 export const StockSearchModal = ({
   open,
   onOpenChange,
+  onStockSelect,
 }: StockSearchModalProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [stocks, setStocks] = useState<StockInfo[]>([]);
@@ -109,18 +110,27 @@ export const StockSearchModal = ({
     searchStocks();
   }, [debouncedSearchQuery]);
 
-  const toggleFavorite = useCallback((symbol: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFavoriteStocks((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(symbol)) {
-        newSet.delete(symbol);
-      } else {
-        newSet.add(symbol);
+  const toggleFavorite = useCallback(
+    (stock: StockInfo, e: React.MouseEvent) => {
+      e.stopPropagation();
+
+      // Star 클릭 시 AddLotModal 열기
+      if (onStockSelect) {
+        onStockSelect(stock);
       }
-      return newSet;
-    });
-  }, []);
+
+      setFavoriteStocks((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(stock.symbol)) {
+          newSet.delete(stock.symbol);
+        } else {
+          newSet.add(stock.symbol);
+        }
+        return newSet;
+      });
+    },
+    [onStockSelect]
+  );
 
   const handleStockSelect = (stock: StockInfo) => {
     console.log('선택된 종목:', stock);
@@ -267,7 +277,7 @@ export const StockSearchModal = ({
                       </div>
 
                       <button
-                        onClick={(e) => toggleFavorite(stock.symbol, e)}
+                        onClick={(e) => toggleFavorite(stock, e)}
                         className="p-1 hover:bg-accent rounded transition-colors"
                       >
                         <Star
