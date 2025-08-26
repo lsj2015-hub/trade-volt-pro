@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -19,30 +21,33 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { StockInfo } from '@/types/types';
-import { Calendar } from 'lucide-react';
 import { Separator } from '../ui/separator';
+import { StockInfo, BrokerResponse } from '@/types/types';
+import { TransactionAPI, TransactionAPIError } from '@/lib/transaction-api';
+import {
+  calculateCommission,
+  calculateCommissionWithDefaults,
+  getCurrencySymbol,
+} from '@/lib/utils';
 
 interface AddLotModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedStock: StockInfo | null;
+  onTransactionCreated?: () => void;
 }
-
-// 증권사 목록 (실제로는 API에서 가져와야 함)
-const BROKERS = [
-  { id: 1, name: 'KIS', displayName: '한국투자증권' },
-  { id: 2, name: 'NH', displayName: 'NH투자증권' },
-  { id: 3, name: 'SAMSUNG', displayName: '삼성증권' },
-  { id: 4, name: 'MIRAE', displayName: '미래에셋증권' },
-  { id: 5, name: 'KB', displayName: 'KB증권' },
-];
 
 export const AddLotModal = ({
   open,
   onOpenChange,
   selectedStock,
+  onTransactionCreated,
 }: AddLotModalProps) => {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [brokers, setBrokers] = useState<BrokerResponse[]>([]);
+  const [brokersLoading, setBrokersLoading] = useState(false);
+
   const [formData, setFormData] = useState({
     shares: '',
     costPerShare: '',
@@ -51,39 +56,116 @@ export const AddLotModal = ({
     comment: '',
   });
 
-  const [commission, setCommission] = useState(0);
+  const [commissionRates, setCommissionRates] = useState<{
+    feeRate: number;
+    transactionTaxRate: number;
+  } | null>(null);
 
-  // 수수료 계산 (예시: 0.015% 기본 수수료율)
+  const [commissionData, setCommissionData] = useState({
+    commission: 0,
+    transactionTax: 0,
+    totalFees: 0,
+    netAmount: 0,
+  });
+
+  // 브로커 목록 가져오기
+  useEffect(() => {
+    const fetchBrokers = async () => {
+      if (!open) return; // 모달이 열릴 때만 API 호출
+
+      setBrokersLoading(true);
+      try {
+        const brokersData = await TransactionAPI.getBrokers();
+        setBrokers(brokersData);
+        console.log('브로커 목록 조회 완료:', brokersData);
+      } catch (error) {
+        console.error('브로커 목록 조회 실패:', error);
+        if (error instanceof TransactionAPIError) {
+          toast.error('브로커 목록 조회 실패', {
+            description: error.message,
+          });
+        } else {
+          toast.error('브로커 목록을 불러오는데 실패했습니다.');
+        }
+      } finally {
+        setBrokersLoading(false);
+      }
+    };
+
+    fetchBrokers();
+  }, [open]);
+
+  // 증권사가 변경되면 수수료율 가져오기
+  useEffect(() => {
+    const fetchCommissionRates = async () => {
+      const brokerId = parseInt(formData.broker);
+
+      if (brokerId && selectedStock) {
+        try {
+          const rates = await TransactionAPI.getCommissionRate({
+            broker_id: brokerId,
+            market_type: selectedStock.market_type,
+            transaction_type: 'BUY',
+          });
+
+          setCommissionRates({
+            feeRate: rates.fee_rate,
+            transactionTaxRate: rates.transaction_tax_rate,
+          });
+        } catch (error) {
+          console.error('수수료율 조회 실패:', error);
+          // 실패시 기본값 사용
+          setCommissionRates({
+            feeRate: 0.00015, // 0.015%
+            transactionTaxRate:
+              selectedStock.market_type === 'DOMESTIC' ? 0.0023 : 0, // 0.23%
+          });
+        }
+      }
+    };
+
+    fetchCommissionRates();
+  }, [formData.broker, selectedStock]);
+
+  // 수량, 가격이 변경되면 수수료 계산
   useEffect(() => {
     const shares = parseFloat(formData.shares) || 0;
-    const costPerShare = parseFloat(formData.costPerShare) || 0;
-    const totalAmount = shares * costPerShare;
+    const pricePerShare = parseFloat(formData.costPerShare) || 0;
 
-    if (totalAmount > 0) {
-      // 기본 수수료율 0.015% (실제로는 증권사별로 다름)
-      const commissionRate = 0.00015;
-      const calculatedCommission = Math.ceil(totalAmount * commissionRate);
-      setCommission(calculatedCommission);
+    if (shares > 0 && pricePerShare > 0) {
+      if (commissionRates) {
+        // 서버에서 받은 수수료율로 계산
+        const result = calculateCommission({
+          shares,
+          pricePerShare,
+          feeRate: commissionRates.feeRate,
+          transactionTaxRate: commissionRates.transactionTaxRate,
+          transactionType: 'BUY',
+        });
+
+        setCommissionData(result);
+      } else {
+        // 기본값으로 계산 (수수료율 로딩 중)
+        const result = calculateCommissionWithDefaults(
+          shares,
+          pricePerShare,
+          'BUY',
+          selectedStock?.market_type
+        );
+
+        setCommissionData(result);
+      }
     } else {
-      setCommission(0);
+      setCommissionData({
+        commission: 0,
+        transactionTax: 0,
+        totalFees: 0,
+        netAmount: 0,
+      });
     }
-  }, [formData.shares, formData.costPerShare]);
+  }, [formData.shares, formData.costPerShare, commissionRates, selectedStock]);
 
-  // 통화 표시 함수
-  const getCurrencySymbol = (currency: string) => {
-    const symbols: Record<string, string> = {
-      KRW: '₩',
-      USD: '$',
-      JPY: '¥',
-      EUR: '€',
-      GBP: '£',
-      HKD: 'HK$',
-      CNY: '¥',
-    };
-    return symbols[currency] || currency;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // 폼 검증
@@ -93,35 +175,78 @@ export const AddLotModal = ({
       !formData.costPerShare ||
       !formData.broker
     ) {
+      toast.error('필수 항목을 모두 입력해주세요.');
       return;
     }
 
-    // 매매 등록 로직 (API 호출)
-    const transactionData = {
-      symbol: selectedStock.symbol,
-      shares: parseInt(formData.shares),
-      cost_per_share: parseFloat(formData.costPerShare),
-      broker_id: parseInt(formData.broker),
-      date: formData.date,
-      comment: formData.comment,
-      commission: commission,
-      transaction_type: 'BUY', // 일단 매수로 고정
-      market_type: selectedStock.market_type,
-    };
+    setIsLoading(true);
 
-    console.log('매매 등록 데이터:', transactionData);
+    try {
+      // 거래 데이터 준비
+      const transactionData = {
+        symbol: selectedStock.symbol,
+        quantity: parseInt(formData.shares),
+        price: parseFloat(formData.costPerShare),
+        broker_id: parseInt(formData.broker),
+        transaction_type: 'BUY' as const,
+        market_type: selectedStock.market_type,
+        transaction_date: new Date(formData.date).toISOString(),
+        notes: formData.comment || undefined,
+        commission: commissionData.commission || undefined,
+        exchange_rate:
+          selectedStock.market_type === 'OVERSEAS' ? 1.0 : undefined,
+      };
 
-    // API 호출 후 성공시 모달 닫기
-    onOpenChange(false);
+      console.log('거래 생성 요청:', transactionData);
 
-    // 폼 초기화
-    setFormData({
-      shares: '',
-      costPerShare: '',
-      broker: '',
-      date: format(new Date(), 'yyyy-MM-dd'),
-      comment: '',
-    });
+      // API 호출
+      const result = await TransactionAPI.createTransaction(transactionData);
+
+      console.log('거래 생성 완료:', result);
+
+      // 성공 토스트 표시 (액션 버튼 포함)
+      toast.success('거래가 성공적으로 등록되었습니다!', {
+        description: `${selectedStock.company_name} ${formData.shares}주 매수 완료`,
+        action: {
+          label: '포트폴리오 보기',
+          onClick: () => router.push('/portfolio'),
+        },
+        duration: 5000,
+      });
+
+      // 모달 닫기
+      onOpenChange(false);
+
+      // 폼 초기화
+      setFormData({
+        shares: '',
+        costPerShare: '',
+        broker: '',
+        date: format(new Date(), 'yyyy-MM-dd'),
+        comment: '',
+      });
+
+      // 포트폴리오 목록 새로고침 콜백 호출
+      if (onTransactionCreated) {
+        onTransactionCreated();
+      }
+    } catch (error) {
+      console.error('거래 생성 실패:', error);
+
+      if (error instanceof TransactionAPIError) {
+        toast.error('거래 생성 실패', {
+          description: error.message,
+          duration: 4000,
+        });
+      } else {
+        toast.error('오류 발생', {
+          description: '알 수 없는 오류가 발생했습니다.',
+          duration: 4000,
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -181,14 +306,23 @@ export const AddLotModal = ({
               <Select
                 value={formData.broker}
                 onValueChange={(value) => handleInputChange('broker', value)}
+                disabled={brokersLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="증권사를 선택하세요" />
+                  <SelectValue
+                    placeholder={
+                      brokersLoading
+                        ? '로딩 중...'
+                        : brokers.length === 0
+                        ? '브로커 없음'
+                        : '증권사를 선택하세요'
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {BROKERS.map((broker) => (
+                  {brokers.map((broker) => (
                     <SelectItem key={broker.id} value={broker.id.toString()}>
-                      {broker.displayName}
+                      {broker.display_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -242,7 +376,7 @@ export const AddLotModal = ({
               Commission ({currencySymbol})
             </Label>
             <div className="text-base font-medium text-foreground/50">
-              {commission.toLocaleString()}
+              {commissionData.commission.toLocaleString()}
             </div>
           </div>
 
@@ -260,14 +394,16 @@ export const AddLotModal = ({
                 <span className="text-sm text-muted-foreground">수수료:</span>
                 <span className="text-sm">
                   {currencySymbol}
-                  {commission.toLocaleString()}
+                  {commissionData.commission.toLocaleString()}
                 </span>
               </div>
               <div className="border-t mt-2 pt-2 flex justify-between items-center">
                 <span className="font-medium">최종 금액:</span>
                 <span className="font-semibold text-primary">
                   {currencySymbol}
-                  {(totalAmount + commission).toLocaleString()}
+                  {commissionData.netAmount > 0
+                    ? commissionData.netAmount.toLocaleString()
+                    : (totalAmount + commissionData.totalFees).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -293,13 +429,15 @@ export const AddLotModal = ({
             type="submit"
             className="w-full"
             disabled={
+              isLoading ||
+              brokersLoading ||
               !selectedStock ||
               !formData.shares ||
               !formData.costPerShare ||
               !formData.broker
             }
           >
-            Add Lot
+            {isLoading ? 'Creating...' : 'Add Lot'}
           </Button>
         </form>
       </DialogContent>

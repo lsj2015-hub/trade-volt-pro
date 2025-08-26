@@ -18,9 +18,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, getExchangeDisplayName } from '@/lib/utils';
 import { StockInfo, StockSearchModalProps } from '@/types/types';
 import { StockAPI, StockAPIError } from '@/lib/stock-api';
+import { TransactionAPI, TransactionAPIError } from '@/lib/transaction-api';
 
 // debounce 커스텀 훅
 const useDebounce = (value: string, delay: number) => {
@@ -48,7 +49,9 @@ export const StockSearchModal = ({
   const [stocks, setStocks] = useState<StockInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [favoriteStocks, setFavoriteStocks] = useState<Set<string>>(new Set());
+  const [stocksInPortfolio, setStocksInPortfolio] = useState<Set<string>>(
+    new Set()
+  );
 
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
@@ -59,8 +62,32 @@ export const StockSearchModal = ({
       setStocks([]);
       setError(null);
       setLoading(false);
+
+      // 포트폴리오에 있는 종목들 조회
+      fetchGetTransactions();
     }
   }, [open]);
+
+  // 포트폴리오에 있는 종목들 조회 (별표 표시용)
+  const fetchGetTransactions = async () => {
+    try {
+      const portfolioSummary = await TransactionAPI.getPortfolioSummary();
+
+      // holdings에서 stock_symbol들만 추출해서 Set으로 변환
+      const symbolsSet = new Set(
+        portfolioSummary.holdings.map((holding) => holding.stock_symbol)
+      );
+      setStocksInPortfolio(symbolsSet);
+
+      console.log('포트폴리오 종목 조회 완료:', symbolsSet);
+    } catch (error) {
+      console.error('포트폴리오 종목 조회 실패:', error);
+      if (error instanceof TransactionAPIError) {
+        console.error('API 에러:', error.message);
+      }
+      setStocksInPortfolio(new Set());
+    }
+  };
 
   // 검색 API 호출
   useEffect(() => {
@@ -110,49 +137,37 @@ export const StockSearchModal = ({
     searchStocks();
   }, [debouncedSearchQuery]);
 
-  const toggleFavorite = useCallback(
+  // 종목 선택 시 AddLotModal로 이동
+  const handleStockSelect = (stock: StockInfo) => {
+    console.log('선택된 종목:', stock);
+    if (onStockSelect) {
+      onStockSelect(stock);
+    }
+    onOpenChange(false);
+  };
+
+  // 별표 클릭 시 (포트폴리오 상태만 표시, 실제 액션은 없음)
+  const handleStarClick = useCallback(
     (stock: StockInfo, e: React.MouseEvent) => {
       e.stopPropagation();
 
-      // Star 클릭 시 AddLotModal 열기
-      if (onStockSelect) {
-        onStockSelect(stock);
-      }
-
-      setFavoriteStocks((prev) => {
-        const newSet = new Set(prev);
-        if (newSet.has(stock.symbol)) {
-          newSet.delete(stock.symbol);
-        } else {
-          newSet.add(stock.symbol);
-        }
-        return newSet;
-      });
+      // 별표는 시각적 표시용으로만 사용
+      // 실제 즐겨찾기 기능은 나중에 구현할 수 있음
+      console.log(
+        '별표 클릭:',
+        stock.symbol,
+        '포트폴리오 보유:',
+        stocksInPortfolio.has(stock.symbol)
+      );
     },
-    [onStockSelect]
+    [stocksInPortfolio]
   );
-
-  const handleStockSelect = (stock: StockInfo) => {
-    console.log('선택된 종목:', stock);
-    onOpenChange(false);
-  };
 
   // 검색창 초기화
   const handleClearSearch = () => {
     setSearchQuery('');
     setStocks([]);
     setError(null);
-  };
-
-  // 거래소명 변환
-  const getExchangeDisplayName = (exchangeCode: string) => {
-    const exchangeNames: Record<string, string> = {
-      KRX: 'KOSPI',
-      KOSDAQ: 'KOSDAQ',
-      NYSE: 'NYSE',
-      NASDAQ: 'NASDAQ',
-    };
-    return exchangeNames[exchangeCode] || exchangeCode;
   };
 
   // 시장 타입 아이콘
@@ -195,7 +210,7 @@ export const StockSearchModal = ({
           </div>
         </div>
 
-        {/* 스크롤 가능한 영역 - 핵심 수정 */}
+        {/* 스크롤 가능한 영역 */}
         <div className="flex-1 overflow-hidden">
           <div className="h-full overflow-y-auto px-6 pb-6">
             {/* 로딩 상태 */}
@@ -277,13 +292,13 @@ export const StockSearchModal = ({
                       </div>
 
                       <button
-                        onClick={(e) => toggleFavorite(stock, e)}
+                        onClick={(e) => handleStarClick(stock, e)}
                         className="p-1 hover:bg-accent rounded transition-colors"
                       >
                         <Star
                           className={cn(
                             'h-4 w-4 transition-colors',
-                            favoriteStocks.has(stock.symbol)
+                            stocksInPortfolio.has(stock.symbol)
                               ? 'fill-yellow-500 text-yellow-500'
                               : 'text-muted-foreground hover:text-yellow-500'
                           )}

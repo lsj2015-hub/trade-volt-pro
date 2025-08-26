@@ -5,8 +5,8 @@ from sqlalchemy import select, and_
 
 from app.models.broker_fee import BrokerFee
 
-class FeeCalculatorService:
-  """수수료 계산 서비스 (새로운 BrokerFee 구조에 맞춤)"""
+class FeeTaxCRUD:
+  """수수료 계산 CRUD (새로운 BrokerFee 구조에 맞춤)"""
   
   async def get_broker_fee_info(
     self,
@@ -107,4 +107,4 @@ class FeeCalculatorService:
     }
 
 # 싱글톤 인스턴스
-fee_calculator_service = FeeCalculatorService()
+fee_tax_crud = FeeTaxCRUD()

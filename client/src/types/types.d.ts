@@ -210,3 +210,94 @@ export interface SidebarItem {
   label: string;
   href: string;
 }
+
+// Transaction 관련 타입들
+export interface TransactionCreateRequest {
+  symbol: string;
+  quantity: number;
+  price: number;
+  broker_id: number;
+  transaction_type: 'BUY' | 'SELL';
+  market_type: 'DOMESTIC' | 'OVERSEAS';
+  transaction_date: string; // ISO 8601 format
+  notes?: string;
+  commission?: number;
+  transaction_tax?: number;
+  exchange_rate?: number;
+}
+
+export interface TransactionResponse {
+  id: number;
+  user_id: number;
+  broker_id: number;
+  stock_id: number;
+  transaction_type: string;
+  quantity: number;
+  price: number;
+  commission: number;
+  transaction_tax: number;
+  exchange_rate: number;
+  transaction_date: string;
+  notes?: string;
+  created_at: string;
+  broker_name?: string;
+  stock_symbol?: string;
+  company_name?: string;
+}
+
+// Broker 관련 타입
+export interface BrokerResponse {
+  id: number;
+  broker_name: string;
+  display_name: string;
+}
+
+// Commission 관련 타입
+export interface CommissionRateRequest {
+  broker_id: number;
+  market_type: 'DOMESTIC' | 'OVERSEAS';
+  transaction_type: 'BUY' | 'SELL';
+}
+
+export interface CommissionRateResponse {
+  fee_rate: number; // 수수료율 (예: 0.00015)
+  transaction_tax_rate: number; // 거래세율 (예: 0.0023)
+  broker_name: string; // 증권사명
+}
+
+// 수수료 계산 파라미터
+export interface CommissionCalculationParams {
+  shares: number;
+  pricePerShare: number;
+  feeRate: number;           // 서버에서 받은 수수료율
+  transactionTaxRate: number; // 서버에서 받은 거래세율
+  transactionType: 'BUY' | 'SELL';
+}
+
+export interface CommissionResult {
+  commission: number;
+  transactionTax: number;
+  totalFees: number;
+  grossAmount: number;
+  netAmount: number;
+}
+
+// Portfolio 관련 타입
+export interface PortfolioHoldingResponse {
+  stock_id: number;
+  broker_id: number;
+  stock_symbol: string;
+  company_name: string;
+  company_name_en?: string;
+  broker_name: string;
+  total_quantity: number;
+  total_cost_amount: number;
+  average_cost_price: number;
+  market_type: string;
+  currency: string;
+}
+
+export interface PortfolioSummaryResponse {
+  holdings: PortfolioHoldingResponse[];
+  total_holdings_count: number;
+}
