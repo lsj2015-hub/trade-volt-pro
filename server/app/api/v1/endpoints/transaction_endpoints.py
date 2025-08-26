@@ -122,7 +122,7 @@ async def get_commission_rate(
   broker_id: int,
   market_type: str,
   transaction_type: str,
-  current_user: User = Depends(get_current_user),
+  # current_user: User = Depends(get_current_user),
   db: AsyncSession = Depends(get_async_session)
 ):
   """

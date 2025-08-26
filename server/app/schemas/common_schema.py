@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict
 from datetime import datetime
 from enum import Enum
 from decimal import Decimal
@@ -148,6 +148,26 @@ class StockPriceResponse(BaseModel):
   currency: str = Field(..., description="통화")
   updated_at: str = Field(..., description="업데이트 시간")
   query_date: Optional[str] = Field(None, description="조회 날짜 (과거 시세의 경우)")
+  
+  class Config:
+    from_attributes = True
+
+class ExchangeRateResponse(BaseModel):
+  """환율 정보 응답 스키마"""
+  currency_code: str = Field(..., description="통화 코드")
+  exchange_rate: float = Field(..., description="환율")
+  search_date: str = Field(..., description="조회 날짜")
+  updated_at: str = Field(..., description="업데이트 시간")
+  
+  class Config:
+    from_attributes = True
+
+class ExchangeRatesResponse(BaseModel):
+  """전체 환율 정보 응답 스키마"""
+  search_date: str = Field(..., description="조회 날짜")
+  data_count: int = Field(..., description="환율 데이터 개수")
+  exchange_rates: Dict = Field(..., description="환율 정보")
+  retrieved_at: str = Field(..., description="조회 시간")
   
   class Config:
     from_attributes = True

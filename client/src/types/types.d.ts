@@ -301,3 +301,26 @@ export interface PortfolioSummaryResponse {
   holdings: PortfolioHoldingResponse[];
   total_holdings_count: number;
 }
+
+export interface StockPriceResponse {
+  symbol: string;
+  market_type: string;
+  current_price: number;
+  previous_close: number;
+  daily_return_rate: number;
+  day_change: number;
+  volume: number;
+  high_price: number;
+  low_price: number;
+  open_price: number;
+  currency: string;
+  updated_at: string;
+  query_date?: string;
+}
+
+export interface ExchangeRateResponse {
+  currency_code: string;
+  exchange_rate: number;
+  search_date: string;
+  updated_at: string;
+}

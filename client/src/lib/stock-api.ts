@@ -1,4 +1,4 @@
-import { StockInfo } from '@/types/types';
+import { StockInfo, StockPriceResponse } from '@/types/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -96,6 +96,25 @@ export class StockAPI {
 
     return this.request<StockInfo[]>(
       `/api/v1/stocks/search?${searchParams.toString()}`
+    );
+  }
+
+  /**
+   * 종목 현재가 조회
+   * @param symbol 종목코드
+   * @param marketType 시장타입
+   * @returns 현재가 정보
+   */
+  static async getStockPrice(
+    symbol: string,
+    marketType: 'DOMESTIC' | 'OVERSEAS'
+  ): Promise<StockPriceResponse> {
+    const searchParams = new URLSearchParams({
+      market_type: marketType,
+    });
+
+    return this.request<StockPriceResponse>(
+      `/api/v1/stocks/price/${symbol}?${searchParams.toString()}`
     );
   }
 }

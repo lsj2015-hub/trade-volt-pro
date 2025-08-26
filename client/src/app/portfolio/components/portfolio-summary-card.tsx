@@ -44,9 +44,9 @@ export const PortfolioSummaryCard = ({
                   ({dayGainPercent.toFixed(2)}%)
                 </span>
                 {dayGain >= 0 ? (
-                  <TrendingUp className="h-3 w-3" />
+                  <TrendingUp className="h-3 w-3 text-green-600" />
                 ) : (
-                  <TrendingDown className="h-3 w-3" />
+                  <TrendingDown className="h-3 w-3 text-red-600" />
                 )}
               </div>
             </div>
@@ -65,9 +65,9 @@ export const PortfolioSummaryCard = ({
                   ({totalGainPercent.toFixed(2)}%)
                 </span>
                 {totalGain >= 0 ? (
-                  <TrendingUp className="h-3 w-3" />
+                  <TrendingUp className="h-3 w-3 text-green-600" />
                 ) : (
-                  <TrendingDown className="h-3 w-3" />
+                  <TrendingDown className="h-3 w-3 text-red-600" />
                 )}
               </div>
             </div>
