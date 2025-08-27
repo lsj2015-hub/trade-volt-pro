@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from typing import Dict, List
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 
 from app.crud.transaction_crud import transaction_crud
@@ -52,15 +52,14 @@ class PortfolioService:
       for i, holding in enumerate(aggregated_holdings):
         price_data = price_results[i]
         
-        # 현재가 조회 실패 시 기본값
-        if isinstance(price_data, Exception) or not price_data:
-          current_price = holding["average_cost_price"]
-          day_change = 0.0
-          daily_return_rate = 0.0
-        else:
-          current_price = price_data["current_price"]
-          day_change = price_data["day_change"]
-          daily_return_rate = price_data["daily_return_rate"]
+        # API 조회 실패한 종목은 건너뛰기
+        if isinstance(price_data, Exception) or price_data is None:
+          logger.warning(f"종목 {holding['stock_symbol']} 가격 조회 실패, 포트폴리오에서 제외")
+          continue
+        
+        current_price = price_data["current_price"]
+        day_change = price_data["day_change"]
+        daily_return_rate = price_data["daily_return_rate"]
         
         # StockData 계산
         stock_data = PortfolioService._calculate_stock_data(
@@ -165,19 +164,14 @@ class PortfolioService:
     
     aggregated = []
     for group in symbol_groups.values():
-      # 총 수량
       total_quantity = sum(h["total_quantity"] for h in group)
-      
-      # 총 투자금액
       total_cost_amount = sum(h["total_cost_amount"] for h in group)
-      
-      # 가중평균 매입단가
       weighted_avg_cost = total_cost_amount / total_quantity if total_quantity > 0 else 0
-      
       # 합산된 데이터
       aggregated.append({
         "stock_symbol": group[0]["stock_symbol"],
         "company_name": group[0]["company_name"],
+        "company_name_en": group[0]["company_name_en"],
         "market_type": group[0]["market_type"],
         "currency": group[0]["currency"],
         "total_quantity": total_quantity,
@@ -189,20 +183,95 @@ class PortfolioService:
   
   @staticmethod
   async def _get_price_safe(user_id: int, symbol: str, market_type: str) -> Dict:
-    """안전한 주가 조회"""
+    """안전한 주가 조회 - 완전한 거래 데이터가 있는 날짜 찾기"""
     try:
-      price_data = await kis_api_service.get_stock_price(user_id, symbol, market_type)
-      logger.info(f"KIS API 응답 성공: {symbol} = {price_data}")
-      return price_data
-    except Exception as e:
-      logger.warning(f"주가 조회 실패: {symbol}, error={str(e)}")
+      # 1. 현재가 조회 시도
+      current_data = await kis_api_service.get_stock_price(user_id, symbol, market_type)
+      logger.info(f"현재가 조회: {symbol} = {current_data}")
       
-      # KIS API 실패 시 임시 데이터 반환 (None 대신)
-      return {
-        "current_price": 100.0,  # 기본값
-        "day_change": 1.0,       # 0이 아닌 값
-        "daily_return_rate": 1.0 # 0이 아닌 값
-      }
+      # 2. 휴장 상태 확인
+      current_price = current_data.get("current_price", 0)
+      previous_close = current_data.get("previous_close", 0) 
+      day_change = current_data.get("day_change", 0)
+      volume = current_data.get("volume", 0)
+      
+      # 3. 휴장 조건 확인
+      if (current_price == previous_close and 
+          day_change == 0.0 and 
+          volume == 0):
+        
+        logger.info(f"휴장 감지: {symbol}, 완전한 거래 데이터 검색 시작")
+        
+        # 4. 완전한 거래 데이터가 있는 과거 날짜 찾기
+        complete_data = await PortfolioService._find_complete_trading_data(
+          user_id, symbol, market_type, max_days=10
+        )
+        
+        if complete_data:
+          logger.info(f"완전한 거래 데이터 발견: {symbol}, "
+                     f"날짜={complete_data.get('query_date')}, "
+                     f"변동률={complete_data.get('daily_return_rate')}")
+          return complete_data
+        else:
+          logger.warning(f"완전한 거래 데이터 없음: {symbol}, 현재 데이터 사용")
+          return current_data
+      
+      # 5. 정상 거래 중인 경우 현재 데이터 반환
+      return current_data
+      
+    except Exception as e:
+      logger.error(f"주가 조회 실패: {symbol}, {str(e)}")
+      # API 실패 시 None 반환하여 에러 상황 명확히 표시
+      return None
+
+  @staticmethod
+  async def _find_complete_trading_data(user_id: int, symbol: str, market_type: str, max_days: int = 10) -> Dict:
+    """완전한 거래 데이터가 있는 날짜 찾기"""
+    current_date = datetime.now()
+    days_checked = 0
+    
+    while days_checked < max_days:
+      days_checked += 1
+      check_date = current_date - timedelta(days=days_checked)
+      
+      # 주말 건너뛰기
+      if check_date.weekday() >= 5:  # 토/일요일
+        continue
+      
+      date_str = check_date.strftime("%Y%m%d")
+      
+      try:
+        logger.info(f"완전한 거래 데이터 검색: {symbol}, 날짜={date_str}")
+        
+        # 과거 날짜 데이터 조회
+        historical_data = await kis_api_service.get_stock_price(
+          user_id, symbol, market_type, date_str
+        )
+        
+        # 완전한 거래 데이터 조건 확인
+        current_price = historical_data.get("current_price", 0)
+        previous_close = historical_data.get("previous_close", 0)
+        day_change = historical_data.get("day_change", 0)
+        volume = historical_data.get("volume", 0)
+        daily_return_rate = historical_data.get("daily_return_rate", 0)
+        
+        # 완전한 데이터 조건: 거래량이 있고, 변동률이 계산되어 있음
+        if (current_price > 0 and 
+            volume > 0 and 
+            not (current_price == previous_close and day_change == 0.0 and daily_return_rate == 0.0)):
+          
+          logger.info(f"완전한 거래 데이터 발견: {symbol}, 날짜={date_str}, "
+                     f"거래량={volume:,}, 변동률={daily_return_rate}%")
+          return historical_data
+        
+        logger.info(f"불완전한 데이터: {symbol}, 날짜={date_str}, 계속 검색...")
+        
+      except Exception as e:
+        logger.warning(f"과거 데이터 조회 실패: {symbol}, 날짜={date_str}, {str(e)}")
+        continue
+    
+    logger.warning(f"완전한 거래 데이터 찾기 실패: {symbol}, {max_days}일 내 데이터 없음")
+    return None
 
   @staticmethod
   def _calculate_stock_data(holding: Dict, current_price: float, day_change: float, daily_return_rate: float) -> StockDataResponse:
@@ -218,10 +287,19 @@ class PortfolioService:
     
     # 일일 손익
     day_gain = shares * day_change
+
+    # 시장 타입에 따른 회사명 선택
+    market_type = holding.get("market_type", "DOMESTIC")
+    if market_type == "OVERSEAS":
+      # 해외주식: 영문 회사명 사용 (없으면 한글명)
+      company_name = holding.get("company_name_en") or holding["company_name"]
+    else:
+      # 국내주식: 한글 회사명 사용
+      company_name = holding["company_name"]
     
     return StockDataResponse(
       symbol=holding["stock_symbol"],
-      company_name=holding["company_name"],
+      company_name=company_name,
       shares=shares,
       avg_cost=avg_cost,
       current_price=current_price,
