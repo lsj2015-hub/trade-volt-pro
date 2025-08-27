@@ -65,11 +65,7 @@ async def get_stock_price(
     logger.info(f"주가 조회 요청: user_id={current_user.id}, symbol={symbol}, market_type={market_type}, date={date}")
     
     # KIS API를 통해 주가 정보 조회
-    price_data = await kis_api_service.get_stock_price(
-      symbol=symbol,
-      market_type=market_type,
-      date=date
-    )
+    price_data = await kis_api_service.get_stock_price(current_user.id, symbol, market_type, date)
     
     # StockPriceResponse 형태로 변환
     stock_price = StockPriceResponse(

@@ -3,8 +3,11 @@ import logging
 import asyncio
 from typing import Dict, Optional
 from datetime import datetime, timedelta
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, delete
 from app.core.exceptions import CustomHTTPException
 from app.config.settings import get_settings
+from app.config.database import get_async_session
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +18,86 @@ class KISAPIService:
   def __init__(self):
     self.access_token: Optional[str] = None
     self.token_expired_time: Optional[datetime] = None
+  
+  async def get_valid_token_from_db(self, user_id: int) -> Optional[str]:
+    """DB에서 사용자의 유효한 토큰 조회"""
+    async for db in get_async_session():
+      try:
+        from app.models.kis_token import KisToken
+        
+        # 만료 5분 전까지 유효한 토큰 조회
+        buffer_time = datetime.now() + timedelta(minutes=5)
+        
+        query = select(KisToken).where(
+          KisToken.user_id == user_id,
+          KisToken.expires_at > buffer_time
+        ).order_by(KisToken.created_at.desc())
+        
+        result = await db.execute(query)
+        token_record = result.scalar_one_or_none()
+        
+        if token_record:
+          # 메모리에도 저장
+          self.access_token = token_record.access_token
+          self.token_expired_time = token_record.expires_at
+          logger.info(f"DB에서 유효한 토큰 발견: user_id={user_id}, expires_at={token_record.expires_at}")
+          return token_record.access_token
+          
+        return None
+      except Exception as e:
+        logger.error(f"DB 토큰 조회 오류: {str(e)}")
+        return None
+
+  async def save_token_to_db(self, user_id: int) -> None:
+    """토큰을 DB에 저장"""
+    if not self.access_token or not self.token_expired_time:
+      return
+      
+    async for db in get_async_session():
+      try:
+        from app.models.kis_token import KisToken
+        
+        # 기존 토큰들 삭제
+        await db.execute(
+          delete(KisToken).where(KisToken.user_id == user_id)
+        )
+        
+        # 새 토큰 저장
+        new_token = KisToken(
+          user_id=user_id,
+          access_token=self.access_token,
+          expires_at=self.token_expired_time
+        )
+        
+        db.add(new_token)
+        await db.commit()
+        logger.info(f"토큰이 DB에 저장됨: user_id={user_id}, expires_at={self.token_expired_time}")
+        
+      except Exception as e:
+        await db.rollback()
+        logger.error(f"토큰 저장 오류: {str(e)}")
+
+  async def get_access_token_for_user(self, user_id: int, app_key: Optional[str] = None, app_secret: Optional[str] = None) -> Dict:
+    """사용자별 토큰 발급/재사용"""
+    # 1. DB에서 유효한 토큰 확인
+    existing_token = await self.get_valid_token_from_db(user_id)
+    if existing_token:
+      logger.info(f"DB 토큰 재사용: user_id={user_id}")
+      return {
+        "access_token": existing_token,
+        "token_type": "bearer",
+        "expires_at": self.token_expired_time.isoformat(),
+        "source": "database"
+      }
+    
+    # 2. 새 토큰 발급 (기존 get_access_token 로직 재사용)
+    token_data = await self.get_access_token(app_key, app_secret)
+    
+    # 3. DB에 저장
+    await self.save_token_to_db(user_id)
+    
+    token_data["source"] = "api"
+    return token_data
   
   async def get_access_token(self, app_key: Optional[str] = None, app_secret: Optional[str] = None) -> Dict:
     """KIS Open API 접근 토큰 발급"""
@@ -126,12 +209,22 @@ class KISAPIService:
       )
   
   def is_token_valid(self) -> bool:
-    """토큰 유효성 검사"""
+    has_token = bool(self.access_token)
+    has_expire_time = bool(self.token_expired_time)
+    
+    logger.info(f"토큰 검사: has_token={has_token}, has_expire_time={has_expire_time}")
+    
     if not self.access_token or not self.token_expired_time:
+      logger.info("토큰 또는 만료시간 없음 -> False 반환")
       return False
     
-    # 만료 5분 전을 기준으로 토큰 유효성 판단
-    return datetime.now() < (self.token_expired_time - timedelta(minutes=5))
+    now = datetime.now()
+    buffer_time = self.token_expired_time - timedelta(minutes=5)
+    is_valid = now < buffer_time
+    
+    logger.info(f"토큰 유효성: now={now}, expires={self.token_expired_time}, buffer={buffer_time}, valid={is_valid}")
+    
+    return is_valid
   
   def get_current_token(self) -> Optional[str]:
     """현재 유효한 토큰 반환"""
@@ -141,14 +234,15 @@ class KISAPIService:
 
   async def get_stock_price(
     self, 
+    user_id: int,
     symbol: str, 
     market_type: str = "DOMESTIC",
     date: Optional[str] = None  # YYYYMMDD 형식, None이면 현재가 조회
   ) -> Dict:
     """주식 현재가/과거가 조회"""
-    if not self.is_token_valid():
-      await self.get_access_token()
-    
+    # 사용자별 토큰 확인/발급
+    await self.get_access_token_for_user(user_id)
+      
     settings = get_settings()
     base_url = settings.kis_base_url
     
@@ -302,7 +396,7 @@ class KISAPIService:
           "market_type": "OVERSEAS", 
           "current_price": float(data.get("clos", 0)),
           "previous_close": float(data.get("base", 0)),
-          "daily_return_rate": float(data.get("rate", 0)),  # day_change_rate -> daily_return_rate로 변경
+          "daily_return_rate": float(data.get("rate", 0)),
           "day_change": float(data.get("diff", 0)),
           "volume": int(data.get("tvol", 0)),
           "high_price": float(data.get("high", 0)),
@@ -325,32 +419,30 @@ class KISAPIService:
         "market_type": "OVERSEAS",
         "current_price": float(output.get("last", 0)),
         "previous_close": float(output.get("base", 0)),
-        "daily_return_rate": float(output.get("rate", 0)),  # day_change_rate -> daily_return_rate로 변경
+        "daily_return_rate": float(output.get("rate", 0)),
         "day_change": float(output.get("diff", 0)),
         "volume": int(output.get("tvol", 0)),
         "high_price": float(output.get("high", 0)),
         "low_price": float(output.get("low", 0)),
         "open_price": float(output.get("open", 0)),
         "currency": "USD",
-        "currency": "USD",
         "updated_at": datetime.now().isoformat()
       }
   
-  async def get_multiple_stock_prices(self, stocks: list) -> Dict[str, Dict]:
+  async def get_multiple_stock_prices(self, user_id: int, stocks: list) -> Dict[str, Dict]:
     """여러 주식의 현재가 일괄 조회"""
     results = {}
     
     for stock_info in stocks:
       symbol = stock_info.get("symbol")
       market_type = stock_info.get("market_type", "DOMESTIC")
-      date = stock_info.get("date")  # 날짜 인수 추가
+      date = stock_info.get("date")
       
       try:
-        price_data = await self.get_stock_price(symbol, market_type, date)
+        price_data = await self.get_stock_price(user_id, symbol, market_type, date)
         results[symbol] = price_data
       except Exception as e:
         logger.error(f"주식 {symbol} 가격 조회 실패: {str(e)}")
-        # 실패한 경우 기본값 설정
         results[symbol] = {
           "symbol": symbol,
           "market_type": market_type,

@@ -9,6 +9,7 @@ from .exchange import Exchange
 from .stock import Stock
 from .transaction import Transaction
 from .holding import Holding
+from .kis_token import KisToken
 from .broker_fee import BrokerFee
 from .stock_price import StockPrice
 from .token_blacklist import TokenBlacklist
@@ -16,6 +17,7 @@ from .token_blacklist import TokenBlacklist
 # Alembic이 감지할 수 있도록 모든 모델 import
 __all__ = [
   "User",
+  "KisToken",
   "Country",
   "Exchange",
   "Broker", 

@@ -18,6 +18,7 @@ class User(Base):
   # 관계 설정
   holdings = relationship("Holding", back_populates="user", cascade="all, delete-orphan")
   transactions = relationship("Transaction", back_populates="user", cascade="all, delete-orphan")
+  kis_tokens = relationship("KisToken", back_populates="user")
 
   __table_args__ = (
     {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"},

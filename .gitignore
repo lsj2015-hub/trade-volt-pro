@@ -70,3 +70,6 @@ alembic/versions/*
 
 # 서버 스크립트 폴더 무시
 server/scripts/
+
+# alembic.ini
+alembic.ini
