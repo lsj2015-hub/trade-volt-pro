@@ -12,7 +12,7 @@ from app.crud.transaction_crud import transaction_crud
 from app.models.user import User
 from app.schemas.common_schema import (
   TransactionCreateRequest, TransactionResponse, BrokerResponse, CommissionRateResponse,
-  PortfolioHoldingResponse, PortfolioSummaryResponse 
+  CompletePortfolioResponse 
 )
 from app.core.dependencies import get_current_user
 
@@ -151,45 +151,29 @@ async def get_commission_rate(
     logger.error(f"수수료율 조회 중 오류: {str(e)}")
     raise HTTPException(status_code=500, detail="수수료율 조회 실패")
   
-@router.get("/", response_model=PortfolioSummaryResponse)
-async def get_portfolio_summary(
-  current_user: User = Depends(get_current_user),
-  db: AsyncSession = Depends(get_async_session)
+@router.get("/", response_model=CompletePortfolioResponse)
+async def get_portfolio(
+  current_user: User = Depends(get_current_user)
 ):
   """
-  사용자의 포트폴리오 요약 조회 (stock_id별, broker별 합산)
-  - 총 보유수량 (매수량 - 매도량)
-  - 총 매입금액 (매수금액 + 수수료)
-  - 평균 매입단가 (매입금액 / 보유수량)
+  사용자 완전한 포트폴리오 조회 API
+  - Symbol별 합산된 보유 종목
+  - 실시간 현재가 정보
+  - 카드별 요약 데이터 (총/국내/해외)
+  - USD/KRW 환율 정보
   """
   try:
-    portfolio_data = await transaction_crud.get_user_portfolio_summary(db, current_user.id)
+    logger.info(f"포트폴리오 조회 요청: user_id={current_user.id}")
     
-    # PortfolioHoldingResponse 형태로 변환
-    holdings = []
-    for item in portfolio_data:
-      holding = PortfolioHoldingResponse(
-        stock_id=item["stock_id"],
-        broker_id=item["broker_id"],
-        stock_symbol=item["stock_symbol"],
-        company_name=item["company_name"],
-        company_name_en=item["company_name_en"],
-        broker_name=item["broker_name"],
-        total_quantity=item["total_quantity"],
-        total_cost_amount=item["total_cost_amount"],
-        average_cost_price=item["average_cost_price"],
-        market_type=item["market_type"],
-        currency=item["currency"]
-      )
-      holdings.append(holding)
+    from app.services.portfolio_service import portfolio_service
+    portfolio_data = await portfolio_service.get_complete_portfolio(current_user.id)
     
-    logger.info(f"포트폴리오 요약 조회: user_id={current_user.id}, 보유 종목 수={len(holdings)}")
-    
-    return PortfolioSummaryResponse(
-      holdings=holdings,
-      total_holdings_count=len(holdings)
-    )
+    logger.info(f"포트폴리오 조회 완료: user_id={current_user.id}")
+    return portfolio_data
     
   except Exception as e:
-    logger.error(f"포트폴리오 요약 조회 중 오류: {str(e)}")
-    raise HTTPException(status_code=500, detail="포트폴리오 조회 실패")
+    logger.error(f"포트폴리오 조회 중 오류: user_id={current_user.id}, error={str(e)}")
+    raise HTTPException(
+      status_code=500,
+      detail="포트폴리오 정보를 불러올 수 없습니다."
+    )

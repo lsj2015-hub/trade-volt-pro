@@ -7,7 +7,7 @@ from collections import defaultdict
 from app.crud.transaction_crud import transaction_crud
 from app.external.kis_api import kis_api_service
 from app.external.exchange_rate_api import exchange_rate_service
-from app.schemas.common_schema import StockDataResponse, PortfolioResponse
+from app.schemas.common_schema import StockDataResponse, CompletePortfolioResponse, PortfolioSummaryData
 from app.core.exceptions import CustomHTTPException
 from app.config.database import get_async_session
 
@@ -17,7 +17,7 @@ class PortfolioService:
   """포트폴리오 서비스 - Symbol별 합산 + 현재가 + 환율 통합 처리"""
   
   @staticmethod
-  async def get_complete_portfolio(user_id: int) -> PortfolioResponse:
+  async def get_complete_portfolio(user_id: int) -> CompletePortfolioResponse:
     """완전한 포트폴리오 정보 조회"""
     db_gen = get_async_session()
     db = await db_gen.__anext__()
@@ -40,7 +40,7 @@ class PortfolioService:
       
       # 3. 각 Symbol의 현재가 조회 (병렬)
       price_tasks = [
-        PortfolioService._get_price_safe(holding["stock_symbol"], holding["market_type"])
+        PortfolioService._get_price_safe(user_id, holding["stock_symbol"], holding["market_type"])
         for holding in aggregated_holdings
       ]
       price_results = await asyncio.gather(*price_tasks, return_exceptions=True)
@@ -76,13 +76,34 @@ class PortfolioService:
       # 5. 전체 합계 계산 (KRW 기준)
       totals = PortfolioService._calculate_totals(domestic_stocks, overseas_stocks, exchange_rate)
       
-      return PortfolioResponse(
+      # 6. 국내/해외 요약 데이터 계산
+      domestic_summary = PortfolioService._calculate_domestic_summary(domestic_stocks)
+      overseas_summary = PortfolioService._calculate_overseas_summary(overseas_stocks)
+      
+      # 7. 전체 수익률 계산
+      total_cost_krw = sum(stock.avg_cost * stock.shares for stock in domestic_stocks) + \
+                       sum(stock.avg_cost * stock.shares for stock in overseas_stocks) * exchange_rate
+      total_gain_percent = (totals["total_total_gain"] / total_cost_krw * 100) if total_cost_krw > 0 else 0.0
+      total_day_gain_percent = (totals["total_day_gain"] / totals["total_portfolio"] * 100) if totals["total_portfolio"] > 0 else 0.0
+      
+      return CompletePortfolioResponse(
+        # 전체 포트폴리오 카드
+        total_portfolio_value_krw=totals["total_portfolio"],
+        total_day_gain_krw=totals["total_day_gain"],
+        total_day_gain_percent=total_day_gain_percent,
+        total_total_gain_krw=totals["total_total_gain"],
+        total_total_gain_percent=total_gain_percent,
+        
+        # 요약 카드
+        domestic_summary=domestic_summary,
+        overseas_summary=overseas_summary,
+        
+        # 테이블 데이터
         domestic_stocks=domestic_stocks,
         overseas_stocks=overseas_stocks,
+        
+        # 메타 데이터
         exchange_rate=exchange_rate,
-        total_portfolio_krw=totals["total_portfolio"],
-        total_day_gain_krw=totals["total_day_gain"],
-        total_total_gain_krw=totals["total_total_gain"],
         updated_at=datetime.now().isoformat()
       )
       
@@ -97,15 +118,38 @@ class PortfolioService:
       await db.close()
   
   @staticmethod
-  def _empty_response(exchange_rate: float) -> PortfolioResponse:
+  def _empty_response(exchange_rate: float) -> CompletePortfolioResponse:
     """빈 포트폴리오 응답"""
-    return PortfolioResponse(
+    return CompletePortfolioResponse(
+      # 전체 포트폴리오 카드
+      total_portfolio_value_krw=0.0,
+      total_day_gain_krw=0.0,
+      total_day_gain_percent=0.0,
+      total_total_gain_krw=0.0,
+      total_total_gain_percent=0.0,
+      
+      # 요약 카드
+      domestic_summary=PortfolioSummaryData(
+        market_value=0.0,
+        day_gain=0.0,
+        day_gain_percent=0.0,
+        total_gain=0.0,
+        total_gain_percent=0.0
+      ),
+      overseas_summary=PortfolioSummaryData(
+        market_value=0.0,
+        day_gain=0.0,
+        day_gain_percent=0.0,
+        total_gain=0.0,
+        total_gain_percent=0.0
+      ),
+      
+      # 테이블 데이터
       domestic_stocks=[],
       overseas_stocks=[],
+      
+      # 메타 데이터
       exchange_rate=exchange_rate,
-      total_portfolio_krw=0.0,
-      total_day_gain_krw=0.0,
-      total_total_gain_krw=0.0,
       updated_at=datetime.now().isoformat()
     )
   
@@ -144,10 +188,10 @@ class PortfolioService:
     return aggregated
   
   @staticmethod
-  async def _get_price_safe(symbol: str, market_type: str) -> Dict:
+  async def _get_price_safe(user_id: int, symbol: str, market_type: str) -> Dict:
     """안전한 주가 조회"""
     try:
-      price_data = await kis_api_service.get_stock_price(symbol, market_type)
+      price_data = await kis_api_service.get_stock_price(user_id, symbol, market_type)
       logger.info(f"KIS API 응답 성공: {symbol} = {price_data}")
       return price_data
     except Exception as e:
@@ -210,6 +254,62 @@ class PortfolioService:
       "total_day_gain": domestic_day_gain + overseas_day_gain_krw,
       "total_total_gain": domestic_total_gain + overseas_total_gain_krw
     }
+  
+  @staticmethod
+  def _calculate_domestic_summary(stocks: List[StockDataResponse]) -> PortfolioSummaryData:
+    """국내주식 요약 계산"""
+    if not stocks:
+      return PortfolioSummaryData(
+        market_value=0.0,
+        day_gain=0.0,
+        day_gain_percent=0.0,
+        total_gain=0.0,
+        total_gain_percent=0.0
+      )
+    
+    market_value = sum(stock.market_value for stock in stocks)
+    day_gain = sum(stock.day_gain for stock in stocks)
+    total_gain = sum(stock.total_gain for stock in stocks)
+    total_cost = sum(stock.avg_cost * stock.shares for stock in stocks)
+    
+    day_gain_percent = (day_gain / market_value * 100) if market_value > 0 else 0.0
+    total_gain_percent = (total_gain / total_cost * 100) if total_cost > 0 else 0.0
+    
+    return PortfolioSummaryData(
+      market_value=market_value,
+      day_gain=day_gain,
+      day_gain_percent=day_gain_percent,
+      total_gain=total_gain,
+      total_gain_percent=total_gain_percent
+    )
+
+  @staticmethod
+  def _calculate_overseas_summary(stocks: List[StockDataResponse]) -> PortfolioSummaryData:
+    """해외주식 요약 계산 (USD 기준)"""
+    if not stocks:
+      return PortfolioSummaryData(
+        market_value=0.0,
+        day_gain=0.0,
+        day_gain_percent=0.0,
+        total_gain=0.0,
+        total_gain_percent=0.0
+      )
+    
+    market_value = sum(stock.market_value for stock in stocks)
+    day_gain = sum(stock.day_gain for stock in stocks)
+    total_gain = sum(stock.total_gain for stock in stocks)
+    total_cost = sum(stock.avg_cost * stock.shares for stock in stocks)
+    
+    day_gain_percent = (day_gain / market_value * 100) if market_value > 0 else 0.0
+    total_gain_percent = (total_gain / total_cost * 100) if total_cost > 0 else 0.0
+    
+    return PortfolioSummaryData(
+      market_value=market_value,
+      day_gain=day_gain,
+      day_gain_percent=day_gain_percent,
+      total_gain=total_gain,
+      total_gain_percent=total_gain_percent
+    )
 
 # 싱글톤 인스턴스
 portfolio_service = PortfolioService()

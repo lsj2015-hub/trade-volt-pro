@@ -2,9 +2,10 @@ import {
   BrokerResponse,
   CommissionRateRequest,
   CommissionRateResponse,
+  CompletePortfolioResponse,
   PortfolioSummaryResponse,
   TransactionCreateRequest,
-  TransactionResponse
+  TransactionResponse,
 } from '@/types/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -118,10 +119,23 @@ export class TransactionAPI {
   }
 
   /**
-   * 포트폴리오 요약 조회
+   * 완전한 포트폴리오 조회 (카드 + 테이블 통합 데이터)
+   * @returns 완전한 포트폴리오 정보
+   */
+  static async getCompletePortfolio(): Promise<CompletePortfolioResponse> {
+    return this.request<CompletePortfolioResponse>('/api/v1/transactions/');
+  }
+
+  /**
+   * 포트폴리오 요약 조회 (이전 버전 - 호환성 유지)
    * @returns 포트폴리오 요약 정보
+   * @deprecated getCompletePortfolio() 사용 권장
    */
   static async getPortfolioSummary(): Promise<PortfolioSummaryResponse> {
-    return this.request<PortfolioSummaryResponse>('/api/v1/transactions/');
+    // 임시로 빈 데이터 반환 - 필요시 별도 엔드포인트 구현
+    return {
+      holdings: [],
+      total_holdings_count: 0,
+    };
   }
 }

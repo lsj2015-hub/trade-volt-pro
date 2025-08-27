@@ -324,3 +324,48 @@ export interface ExchangeRateResponse {
   search_date: string;
   updated_at: string;
 }
+
+// ====== 완전한 포트폴리오 응답 타입 (백엔드 API 맞춤) ======
+export interface StockDataResponse {
+  symbol: string;
+  company_name: string;
+  shares: number;
+  avg_cost: number;
+  current_price: number;
+  market_value: number;
+  day_gain: number;
+  day_gain_percent: number;
+  total_gain: number;
+  total_gain_percent: number;
+}
+
+export interface PortfolioSummaryData {
+  market_value: number;
+  day_gain: number;
+  day_gain_percent: number;
+  total_gain: number;
+  total_gain_percent: number;
+}
+
+export interface CompletePortfolioResponse {
+  // 전체 포트폴리오 카드 (KRW 기준)
+  total_portfolio_value_krw: number;
+  total_day_gain_krw: number;
+  total_day_gain_percent: number;
+  total_total_gain_krw: number;
+  total_total_gain_percent: number;
+  
+  // 국내주식 카드 (KRW)
+  domestic_summary: PortfolioSummaryData;
+  
+  // 해외주식 카드 (USD)
+  overseas_summary: PortfolioSummaryData;
+  
+  // 테이블 데이터
+  domestic_stocks: StockDataResponse[];
+  overseas_stocks: StockDataResponse[];
+  
+  // 메타 데이터
+  exchange_rate: number;
+  updated_at: string;
+}
