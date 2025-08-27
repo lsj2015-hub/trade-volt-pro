@@ -21,8 +21,8 @@ import { Button } from '@/components/ui/button';
 import { cn, getExchangeDisplayName } from '@/lib/utils';
 import { StockInfo, StockSearchModalProps } from '@/types/types';
 import { StockAPI, StockAPIError } from '@/lib/stock-api';
-import { TransactionAPI, TransactionAPIError } from '@/lib/transaction-api';
 import { usePortfolio } from '@/contexts/portfolio-context';
+import { useAddLot } from '@/contexts/add-lot-context';
 
 // debounce 커스텀 훅
 const useDebounce = (value: string, delay: number) => {
@@ -44,9 +44,10 @@ const useDebounce = (value: string, delay: number) => {
 export const StockSearchModal = ({
   open,
   onOpenChange,
-  onStockSelect,
-}: StockSearchModalProps) => {
+}: // onStockSelect,
+StockSearchModalProps) => {
   const { portfolioData } = usePortfolio();
+  const { openAddLotModal } = useAddLot();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [stocks, setStocks] = useState<StockInfo[]>([]);
@@ -146,9 +147,13 @@ export const StockSearchModal = ({
   // 종목 선택 시 AddLotModal로 이동
   const handleStockSelect = (stock: StockInfo) => {
     console.log('선택된 종목:', stock);
-    if (onStockSelect) {
-      onStockSelect(stock);
-    }
+    // if (onStockSelect) {
+    //   onStockSelect(stock);
+    // }
+    // onOpenChange(false);
+
+    // Context를 통해 AddLot Modal 열기
+    openAddLotModal(stock);
     onOpenChange(false);
   };
 

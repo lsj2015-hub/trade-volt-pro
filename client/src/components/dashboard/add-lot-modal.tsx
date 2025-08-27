@@ -25,6 +25,7 @@ import { Separator } from '../ui/separator';
 import { StockInfo, BrokerResponse } from '@/types/types';
 import { TransactionAPI, TransactionAPIError } from '@/lib/transaction-api';
 import { usePortfolio } from '@/contexts/portfolio-context';
+import { useAddLot } from '@/contexts/add-lot-context';
 import {
   calculateCommission,
   calculateCommissionWithDefaults,
@@ -46,6 +47,7 @@ export const AddLotModal = ({
 }: AddLotModalProps) => {
   const router = useRouter();
   const { refreshPortfolio } = usePortfolio(); // Context 사용
+  const { resetKey, closeAddLotModal } = useAddLot();
   const [isLoading, setIsLoading] = useState(false);
   const [brokers, setBrokers] = useState<BrokerResponse[]>([]);
   const [brokersLoading, setBrokersLoading] = useState(false);
@@ -69,6 +71,25 @@ export const AddLotModal = ({
     totalFees: 0,
     netAmount: 0,
   });
+
+  // resetKey가 변경될 때마다 폼 초기화 (추가)
+  useEffect(() => {
+    setFormData({
+      shares: '',
+      costPerShare: '',
+      broker: '',
+      date: format(new Date(), 'yyyy-MM-dd'),
+      comment: '',
+    });
+
+    setCommissionRates(null);
+    setCommissionData({
+      commission: 0,
+      transactionTax: 0,
+      totalFees: 0,
+      netAmount: 0,
+    });
+  }, [resetKey]);
 
   // 브로커 목록 가져오기
   useEffect(() => {
@@ -219,19 +240,22 @@ export const AddLotModal = ({
       // 모달 닫기
       onOpenChange(false);
 
-      // 폼 초기화
-      setFormData({
-        shares: '',
-        costPerShare: '',
-        broker: '',
-        date: format(new Date(), 'yyyy-MM-dd'),
-        comment: '',
-      });
+      // // 폼 초기화
+      // setFormData({
+      //   shares: '',
+      //   costPerShare: '',
+      //   broker: '',
+      //   date: format(new Date(), 'yyyy-MM-dd'),
+      //   comment: '',
+      // });
 
       // Context를 통한 포트폴리오 자동 갱신
       console.log('포트폴리오 자동 갱신 시작...');
       await refreshPortfolio();
       console.log('포트폴리오 자동 갱신 완료!');
+
+      // Context를 통해 모달 닫기 (resetKey 자동 증가로 다음 열 때 초기화 보장)
+      closeAddLotModal();
 
       // 기존 콜백도 호출 (호환성 유지)
       if (onTransactionCreated) {

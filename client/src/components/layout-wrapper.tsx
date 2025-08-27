@@ -10,17 +10,26 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { StockSearchModal } from '@/components/dashboard/stock-search-modal';
 import { StockInfo } from '@/types/types';
 import { AddLotModal } from './dashboard/add-lot-modal';
+import { AddLotProvider, useAddLot } from '@/contexts/add-lot-context';
 
 interface LayoutWrapperProps {
   children: React.ReactNode;
 }
 
-export const LayoutWrapper = ({ children }: LayoutWrapperProps) => {
+const LayoutWrapperContent = ({ children }: LayoutWrapperProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [stockSearchOpen, setStockSearchOpen] = useState(false);
-  const [addLotOpen, setAddLotOpen] = useState(false);
-  const [selectedStock, setSelectedStock] = useState<StockInfo | null>(null);
+  // const [addLotOpen, setAddLotOpen] = useState(false);
+  // const [selectedStock, setSelectedStock] = useState<StockInfo | null>(null);
+
+  const {
+    isAddLotOpen,
+    selectedStock,
+    resetKey,
+    openAddLotModal,
+    closeAddLotModal,
+  } = useAddLot();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -79,20 +88,29 @@ export const LayoutWrapper = ({ children }: LayoutWrapperProps) => {
         <StockSearchModal
           open={stockSearchOpen}
           onOpenChange={setStockSearchOpen}
-          onStockSelect={(stock: StockInfo) => {
-            setSelectedStock(stock);
-            setStockSearchOpen(false);
-            setAddLotOpen(true);
-          }}
+          // onStockSelect={(stock: StockInfo) => {
+          //   setSelectedStock(stock);
+          //   setStockSearchOpen(false);
+          //   setAddLotOpen(true);
+          // }}
         />
 
         {/* Add Lot Modal */}
         <AddLotModal
-          open={addLotOpen}
-          onOpenChange={setAddLotOpen}
+          key={resetKey}
+          open={isAddLotOpen}
+          onOpenChange={closeAddLotModal}
           selectedStock={selectedStock}
         />
       </SidebarProvider>
     </ProtectedRoute>
+  );
+};
+
+export const LayoutWrapper = ({ children }: LayoutWrapperProps) => {
+  return (
+    <AddLotProvider>
+      <LayoutWrapperContent>{children}</LayoutWrapperContent>
+    </AddLotProvider>
   );
 };

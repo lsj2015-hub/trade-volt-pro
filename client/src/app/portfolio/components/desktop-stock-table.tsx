@@ -5,12 +5,14 @@ interface DesktopStockTableProps {
   stocks: StockData[];
   isOverseas: boolean;
   formatCurrency: (amount: number, currency: 'KRW' | 'USD') => string;
+  onSharesClick?: (stock: StockData) => void;
 }
 
 export const DesktopStockTable = ({
   stocks,
   isOverseas,
   formatCurrency,
+  onSharesClick,
 }: DesktopStockTableProps) => {
   const formatPercent = (percent: number) => {
     return `${percent.toFixed(2)}%`;
@@ -29,7 +31,12 @@ export const DesktopStockTable = ({
         </div>
       </td>
       <td className="p-3 md:p-4 font-medium text-sm md:text-base">
-        {stock.shares.toLocaleString()}
+        <button
+          className="hover:text-primary transition-colors cursor-pointer underline-offset-4 hover:underline"
+          onClick={() => onSharesClick?.(stock)}
+        >
+          {stock.shares.toLocaleString()}
+        </button>
       </td>
       <td className="p-3 md:p-4 text-sm md:text-base">
         {isOverseas

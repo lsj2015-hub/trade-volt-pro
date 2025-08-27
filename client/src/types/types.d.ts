@@ -101,7 +101,7 @@ export interface StockSearchResponse {
 export interface StockSearchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onStockSelect;
+  onStockSelect?;
 }
 
 // ====== 포트폴리오 관련 타입 ======
