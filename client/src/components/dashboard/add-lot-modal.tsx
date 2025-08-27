@@ -24,6 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '../ui/separator';
 import { StockInfo, BrokerResponse } from '@/types/types';
 import { TransactionAPI, TransactionAPIError } from '@/lib/transaction-api';
+import { usePortfolio } from '@/contexts/portfolio-context';
 import {
   calculateCommission,
   calculateCommissionWithDefaults,
@@ -34,7 +35,7 @@ interface AddLotModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedStock: StockInfo | null;
-  onTransactionCreated?: () => void;
+  onTransactionCreated?: () => void; // 이제 선택사항
 }
 
 export const AddLotModal = ({
@@ -44,6 +45,7 @@ export const AddLotModal = ({
   onTransactionCreated,
 }: AddLotModalProps) => {
   const router = useRouter();
+  const { refreshPortfolio } = usePortfolio(); // Context 사용
   const [isLoading, setIsLoading] = useState(false);
   const [brokers, setBrokers] = useState<BrokerResponse[]>([]);
   const [brokersLoading, setBrokersLoading] = useState(false);
@@ -226,7 +228,12 @@ export const AddLotModal = ({
         comment: '',
       });
 
-      // 포트폴리오 목록 새로고침 콜백 호출
+      // Context를 통한 포트폴리오 자동 갱신
+      console.log('포트폴리오 자동 갱신 시작...');
+      await refreshPortfolio();
+      console.log('포트폴리오 자동 갱신 완료!');
+
+      // 기존 콜백도 호출 (호환성 유지)
       if (onTransactionCreated) {
         onTransactionCreated();
       }

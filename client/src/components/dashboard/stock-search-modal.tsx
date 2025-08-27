@@ -22,6 +22,7 @@ import { cn, getExchangeDisplayName } from '@/lib/utils';
 import { StockInfo, StockSearchModalProps } from '@/types/types';
 import { StockAPI, StockAPIError } from '@/lib/stock-api';
 import { TransactionAPI, TransactionAPIError } from '@/lib/transaction-api';
+import { usePortfolio } from '@/contexts/portfolio-context';
 
 // debounce 커스텀 훅
 const useDebounce = (value: string, delay: number) => {
@@ -45,6 +46,8 @@ export const StockSearchModal = ({
   onOpenChange,
   onStockSelect,
 }: StockSearchModalProps) => {
+  const { portfolioData } = usePortfolio();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [stocks, setStocks] = useState<StockInfo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -66,25 +69,28 @@ export const StockSearchModal = ({
       // 포트폴리오에 있는 종목들 조회
       fetchGetTransactions();
     }
-  }, [open]);
+  }, [open, portfolioData]);
 
   // 포트폴리오에 있는 종목들 조회 (별표 표시용)
   const fetchGetTransactions = async () => {
     try {
-      const portfolioSummary = await TransactionAPI.getPortfolioSummary();
+      if (portfolioData) {
+        // Context에서 가져온 포트폴리오 데이터 사용
+        const allStocks = [
+          ...portfolioData.domestic_stocks,
+          ...portfolioData.overseas_stocks,
+        ];
 
-      // holdings에서 stock_symbol들만 추출해서 Set으로 변환
-      const symbolsSet = new Set(
-        portfolioSummary.holdings.map((holding) => holding.stock_symbol)
-      );
-      setStocksInPortfolio(symbolsSet);
+        // symbol들만 추출해서 Set으로 변환
+        const symbolsSet = new Set(allStocks.map((stock) => stock.symbol));
+        setStocksInPortfolio(symbolsSet);
 
-      console.log('포트폴리오 종목 조회 완료:', symbolsSet);
+        console.log('포트폴리오 종목 조회 완료:', symbolsSet);
+      } else {
+        setStocksInPortfolio(new Set());
+      }
     } catch (error) {
       console.error('포트폴리오 종목 조회 실패:', error);
-      if (error instanceof TransactionAPIError) {
-        console.error('API 에러:', error.message);
-      }
       setStocksInPortfolio(new Set());
     }
   };

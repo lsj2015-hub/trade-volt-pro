@@ -5,6 +5,7 @@ import { AuthProvider } from '@/contexts/auth-context';
 import './globals.css';
 import { LayoutWrapper } from '@/components/layout-wrapper';
 import { FloatingScrollToTop } from '../components/dashboard/floating-scroll-to-top';
+import { PortfolioProvider } from '../contexts/portfolio-context';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -29,9 +30,11 @@ export default function RootLayout({
     <html lang="ko" suppressHydrationWarning>
       <body className={inter.className}>
         <AuthProvider>
-          <LayoutWrapper>{children}</LayoutWrapper>
-          <FloatingScrollToTop />
-          <Toaster position="top-right" richColors closeButton />
+          <PortfolioProvider>
+            <LayoutWrapper>{children}</LayoutWrapper>
+            <FloatingScrollToTop />
+            <Toaster position="top-right" richColors closeButton />
+          </PortfolioProvider>
         </AuthProvider>
       </body>
     </html>

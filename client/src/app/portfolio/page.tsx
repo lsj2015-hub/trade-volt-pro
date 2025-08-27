@@ -1,38 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { DollarSign, Banknote } from 'lucide-react';
 import { PortfolioSummaryCard } from './components/portfolio-summary-card';
 import { TotalPortfolioCard } from './components/total-portfolio-card';
 import { StockTable } from './components/stock-table';
-import { CompletePortfolioResponse } from '@/types/types';
-import { TransactionAPI } from '@/lib/transaction-api';
+import { usePortfolio } from '@/contexts/portfolio-context'; // 추가
 
 export default function PortfolioPage() {
-  const [portfolioData, setPortfolioData] =
-    useState<CompletePortfolioResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Context에서 데이터 가져오기
+  const { portfolioData, isLoading, error, refreshPortfolio } = usePortfolio();
 
+  // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
-    const fetchPortfolioData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // 백엔드에서 완전한 포트폴리오 데이터 조회 (카드 + 테이블 통합)
-        const data = await TransactionAPI.getCompletePortfolio();
-        setPortfolioData(data);
-      } catch (err) {
-        console.error('포트폴리오 데이터 로딩 실패:', err);
-        setError('포트폴리오 데이터를 불러올 수 없습니다.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPortfolioData();
-  }, []);
+    refreshPortfolio();
+  }, [refreshPortfolio]);
 
   // 로딩 중일 때
   if (isLoading) {
@@ -93,7 +75,7 @@ export default function PortfolioPage() {
     );
   }
 
-  // 통합 통화 포맷 함수
+  // 나머지 로직은 기존과 동일...
   const formatCurrency = (amount: number, currency: 'KRW' | 'USD') => {
     if (currency === 'KRW') {
       return `₩${amount.toLocaleString()}`;
@@ -105,7 +87,6 @@ export default function PortfolioPage() {
     }
   };
 
-  // 포트폴리오 요약 카드 데이터 (백엔드에서 계산된 데이터 사용)
   const portfolioCards = [
     {
       title: 'DOMESTIC',
@@ -135,7 +116,6 @@ export default function PortfolioPage() {
     },
   ];
 
-  // StockData 형식으로 변환 (기존 컴포넌트 호환성을 위해)
   const convertToStockData = (stocks: typeof portfolioData.domestic_stocks) => {
     return stocks.map((stock) => ({
       symbol: stock.symbol,
@@ -165,7 +145,6 @@ export default function PortfolioPage() {
 
       {/* 상단 포트폴리오 섹션 */}
       <section className="space-y-4 sm:space-y-6">
-        {/* 전체 포트폴리오 카드 - 백엔드에서 계산된 데이터 */}
         <TotalPortfolioCard
           totalPortfolio={portfolioData.total_portfolio_value_krw}
           totalDayGain={portfolioData.total_day_gain_krw}
@@ -173,7 +152,6 @@ export default function PortfolioPage() {
           formatCurrency={formatCurrency}
         />
 
-        {/* 국내/해외 카드 - 백엔드에서 계산된 데이터 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
           {portfolioCards.map((card, index) => (
             <PortfolioSummaryCard key={index} {...card} />
@@ -181,7 +159,7 @@ export default function PortfolioPage() {
         </div>
       </section>
 
-      {/* 하단 주식 목록 섹션 - Symbol별 합산된 데이터 */}
+      {/* 하단 주식 목록 섹션 */}
       <section>
         <StockTable
           domesticStocks={convertToStockData(portfolioData.domestic_stocks)}
