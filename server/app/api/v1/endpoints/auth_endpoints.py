@@ -23,7 +23,6 @@ async def register_user(
 ):
   """
   새 사용자 계정을 생성합니다.
-  
   - **email**: 유효한 이메일 주소 (중복 불가)
   - **password**: 최소 6자 이상
   - **name**: 사용자 이름 (1-100자)
@@ -41,7 +40,6 @@ async def login_user(
 ):
   """
   사용자 로그인을 처리하고 JWT 액세스 토큰을 발급합니다.
-  
   - **토큰 만료 시간**: 24시간 (1440분)
   - **토큰 타입**: Bearer 토큰
   """
@@ -73,8 +71,7 @@ async def get_current_user_info(
   current_user: User = Depends(get_current_active_user)
 ):
   """
-  현재 로그인된 사용자의 정보를 조회합니다.
-  
+  현재 로그인된 사용자의 정보를 조회합니다. 
   **인증 필요**: Bearer 토큰 헤더 필요
   """
   return current_user
@@ -83,7 +80,6 @@ async def get_current_user_info(
 async def logout_user():
   """
   사용자 로그아웃을 처리합니다.
-  
   **참고**: 클라이언트에서 토큰을 삭제해야 완전한 로그아웃이 됩니다.
   """
   return {
