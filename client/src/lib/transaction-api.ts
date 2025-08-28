@@ -4,6 +4,7 @@ import {
   CommissionRateResponse,
   CompletePortfolioResponse,
   PortfolioSummaryResponse,
+  StockLotResponse,
   TransactionCreateRequest,
   TransactionResponse,
 } from '@/types/types';
@@ -137,5 +138,18 @@ export class TransactionAPI {
       holdings: [],
       total_holdings_count: 0,
     };
+  }
+
+  /**
+   * 특정 종목의 broker별 집계 데이터 조회
+   * @param stockSymbol 종목 코드
+   * @returns broker별 lot 정보 (순보유량, 평균단가, 평가금액 등)
+   */
+  static async getStockLotsByBroker(
+    stockSymbol: string
+  ): Promise<StockLotResponse[]> {
+    return this.request<StockLotResponse[]>(
+      `/api/v1/transactions/${stockSymbol}/lots`
+    );
   }
 }

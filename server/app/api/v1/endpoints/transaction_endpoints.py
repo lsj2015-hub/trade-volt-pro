@@ -12,7 +12,7 @@ from app.crud.transaction_crud import transaction_crud
 from app.models.user import User
 from app.schemas.common_schema import (
   TransactionCreateRequest, TransactionResponse, BrokerResponse, CommissionRateResponse,
-  CompletePortfolioResponse 
+  CompletePortfolioResponse , StockLotResponse
 )
 from app.core.dependencies import get_current_user
 
@@ -177,3 +177,24 @@ async def get_portfolio(
       status_code=500,
       detail="포트폴리오 정보를 불러올 수 없습니다."
     )
+  
+@router.get("/{stock_symbol}/lots", response_model=List[StockLotResponse])
+async def get_stock_lots_by_broker(
+  stock_symbol: str,
+  current_user: User = Depends(get_current_user),
+):
+  """
+  특정 종목의 broker별 집계 데이터 (lots)
+  """
+  try:
+    logger.info(f"broker별 lot 조회: user_id={current_user.id}, symbol={stock_symbol}")
+    
+    from app.services.portfolio_service import PortfolioService
+    lots = await PortfolioService.get_lots_by_broker(current_user.id, stock_symbol)
+    
+    logger.info(f"broker별 lot 조회 완료: {len(lots)}건")
+    return lots
+    
+  except Exception as e:
+    logger.error(f"broker별 lot 조회 중 오류: {str(e)}")
+    raise HTTPException(status_code=500, detail="거래 내역을 불러올 수 없습니다.")

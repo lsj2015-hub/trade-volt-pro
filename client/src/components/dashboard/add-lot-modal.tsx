@@ -240,17 +240,12 @@ export const AddLotModal = ({
       // 모달 닫기
       onOpenChange(false);
 
-      // // 폼 초기화
-      // setFormData({
-      //   shares: '',
-      //   costPerShare: '',
-      //   broker: '',
-      //   date: format(new Date(), 'yyyy-MM-dd'),
-      //   comment: '',
-      // });
-
       // Context를 통한 포트폴리오 자동 갱신
-      console.log('포트폴리오 자동 갱신 시작...');
+      console.log('포트폴리오 자동 갱신 시작...', {
+        marketType: selectedStock.market_type,
+        symbol: selectedStock.symbol,
+        transactionResult: result,
+      });
       await refreshPortfolio();
       console.log('포트폴리오 자동 갱신 완료!');
 

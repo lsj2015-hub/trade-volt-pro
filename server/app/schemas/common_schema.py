@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 from decimal import Decimal
 
@@ -221,6 +221,22 @@ class CompletePortfolioResponse(BaseModel):
   # 메타 데이터
   exchange_rate: float = Field(..., description="USD/KRW 환율")
   updated_at: str = Field(..., description="업데이트 시간")
+  
+  class Config:
+    from_attributes = True
+
+class StockLotResponse(BaseModel):
+  broker_id: int
+  broker_name: str
+  net_quantity: int
+  average_cost_price: float  # Decimal -> float로 변경
+  current_price: float       # Decimal -> float로 변경  
+  market_value: float        # Decimal -> float로 변경
+  latest_transaction_date: date
+  total_buy_cost: float      # 추가 필요
+  total_sell_proceeds: float # 추가 필요
+  total_buy_quantity: int    # 추가 필요
+  total_sell_quantity: int   # 추가 필요
   
   class Config:
     from_attributes = True

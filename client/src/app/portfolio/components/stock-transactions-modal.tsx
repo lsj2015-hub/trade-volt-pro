@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import {
   Dialog,
@@ -10,17 +10,9 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { StockInfo } from '@/types/types';
+import { StockInfo, StockLotResponse } from '@/types/types';
 import { useAddLot } from '@/contexts/add-lot-context';
-
-interface TransactionLot {
-  id: string;
-  shares: number;
-  price: number;
-  value: number;
-  purchaseType: '미래에셋증권' | '키움증권' | '직접입력';
-  purchaseDate: string;
-}
+import { TransactionAPI } from '@/lib/transaction-api';
 
 interface StockTransactionsModalProps {
   open: boolean;
@@ -31,7 +23,6 @@ interface StockTransactionsModalProps {
   totalValue: number;
   marketType?: 'DOMESTIC' | 'OVERSEAS';
   currency?: 'KRW' | 'USD';
-  transactions?: TransactionLot[];
 }
 
 export const StockTransactionsModal = ({
@@ -43,40 +34,39 @@ export const StockTransactionsModal = ({
   totalValue,
   marketType = 'DOMESTIC',
   currency = 'KRW',
-  transactions = [],
 }: StockTransactionsModalProps) => {
   const { openAddLotModal } = useAddLot();
-  // 임시 더미 데이터
-  const [lots] = useState<TransactionLot[]>([
-    {
-      id: '1',
-      shares: 10,
-      price: 100000,
-      value: 2000000,
-      purchaseType: '미래에셋증권',
-      purchaseDate: '2024-11-08',
-    },
-    {
-      id: '2',
-      shares: 20,
-      price: 100000,
-      value: 2000000,
-      purchaseType: '키움증권',
-      purchaseDate: '2024-11-08',
-    },
-    {
-      id: '3',
-      shares: 20,
-      price: 100000,
-      value: 2000000,
-      purchaseType: '키움증권',
-      purchaseDate: '2024-11-09',
-    },
-  ]);
+  const [lots, setLots] = useState<StockLotResponse[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // broker별 집계 데이터 불러오기
+  useEffect(() => {
+    if (open && stockSymbol) {
+      loadStockLots();
+    }
+  }, [open, stockSymbol]);
+
+  const loadStockLots = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const stockLots = await TransactionAPI.getStockLotsByBroker(stockSymbol);
+      setLots(stockLots);
+    } catch (error) {
+      console.error('Failed to load stock lots:', error);
+      setError('거래 내역을 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const totalLots = lots.length;
 
   const formatCurrency = (amount: number) => {
+    if (currency === 'USD') {
+      return `$${amount.toLocaleString()}`;
+    }
     return `₩${amount.toLocaleString()}`;
   };
 
@@ -109,14 +99,14 @@ export const StockTransactionsModal = ({
         {/* 헤더 섹션 */}
         <div className="border-b p-4 text-center">
           <DialogHeader className="space-y-0">
-            <DialogTitle className="text-3xl font-bold mb-6">
+            <DialogTitle className="text-xl font-bold mb-6">
               Stock Transactions
             </DialogTitle>
             <Separator />
           </DialogHeader>
 
           {/* 종목 정보 */}
-          <div className=" mt-5 space-y-4">
+          <div className="mt-5 space-y-4">
             <div className="flex items-center justify-between px-1">
               <div className="inline-block bg-slate-700 text-white px-5 py-2 rounded-full">
                 <span className="text-sm font-bold text-center">
@@ -139,58 +129,83 @@ export const StockTransactionsModal = ({
 
         {/* 거래 내역 목록 */}
         <div className="p-6 overflow-y-auto">
-          <div className="space-y-0">
-            {lots.map((lot, index) => (
-              <div key={lot.id}>
-                <div className="py-2 flex items-center justify-between">
-                  {/* 왼쪽 정보 */}
-                  <div className="flex w-3/4 justify-between pr-4">
-                    <div className="flex flex-col items-baseline">
-                      <span className="text-sm font-semibold text-gray-900">
-                        {lot.shares} Shares
-                      </span>
-                      <span className="text-sm text-gray-600 font-medium">
-                        {formatCurrency(lot.price)} /share
-                      </span>
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-sm text-gray-500">로딩 중...</div>
+            </div>
+          ) : error ? (
+            <div className="text-center py-8">
+              <div className="text-sm text-red-500">{error}</div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={loadStockLots}
+              >
+                다시 시도
+              </Button>
+            </div>
+          ) : lots.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-sm text-gray-500">거래 내역이 없습니다.</div>
+            </div>
+          ) : (
+            <div className="space-y-0">
+              {lots.map((lot, index) => (
+                <div key={lot.broker_id}>
+                  <div className="py-2 flex items-center justify-between">
+                    {/* 왼쪽 정보 */}
+                    <div className="flex w-3/4 justify-between pr-4">
+                      <div className="flex flex-col items-baseline">
+                        <span className="text-sm font-semibold text-gray-900">
+                          {lot.net_quantity} Shares
+                        </span>
+                        <span className="text-sm text-gray-600 font-medium">
+                          {formatCurrency(lot.current_price)}(price)
+                        </span>
+                        <span className="text-sm text-gray-600 font-medium">
+                          {formatCurrency(lot.average_cost_price)}(cost)
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-gray-900">
+                          {formatCurrency(lot.market_value)}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          {lot.broker_name}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          {formatDate(lot.latest_transaction_date)}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-gray-900">
-                        {formatCurrency(lot.value)}
-                      </span>
-                      <span className="text-sm text-gray-600">
-                        {lot.purchaseType}
-                      </span>
-                      <span className="text-sm text-gray-600">
-                        {formatDate(lot.purchaseDate)}
-                      </span>
+                    {/* 오른쪽 버튼들 */}
+                    <div className="flex w-1/4 flex-col space-y-2 ml-10">
+                      <Button
+                        className="w-20 h-6 bg-gray-600 hover:bg-gray-700 text-white font-medium"
+                        size="sm"
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        className="w-20 h-6 bg-gray-600 hover:bg-gray-700 text-white font-medium"
+                        size="sm"
+                      >
+                        Sell
+                      </Button>
                     </div>
                   </div>
 
-                  {/* 오른쪽 버튼들 */}
-                  <div className="flex w-1/4 flex-col space-y-2 ml-10">
-                    <Button
-                      className="w-20 h-6 bg-gray-600 hover:bg-gray-700 text-white font-medium"
-                      size="sm"
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      className="w-20 h-6 bg-gray-600 hover:bg-gray-700 text-white font-medium"
-                      size="sm"
-                    >
-                      Sell
-                    </Button>
-                  </div>
+                  {/* 구분선 (마지막 아이템 제외) */}
+                  {index < lots.length - 1 && (
+                    <div className="border-b border-gray-200" />
+                  )}
                 </div>
-
-                {/* 구분선 (마지막 아이템 제외) */}
-                {index < lots.length - 1 && (
-                  <div className="border-b border-gray-200" />
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 하단 Add New Lot 버튼 */}

@@ -99,6 +99,10 @@ export const StockTable = ({
           companyName={selectedStock.companyName}
           totalShares={selectedStock.shares}
           totalValue={selectedStock.marketValue}
+          marketType={
+            selectedStockType === 'overseas' ? 'OVERSEAS' : 'DOMESTIC'
+          }
+          currency={selectedStockType === 'overseas' ? 'USD' : 'KRW'}
         />
       )}
     </>

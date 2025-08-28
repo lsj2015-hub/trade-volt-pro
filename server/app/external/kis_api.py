@@ -351,6 +351,24 @@ class KISAPIService:
  
  def _parse_overseas_price(self, response_data: Dict, symbol: str, is_historical: bool = False) -> Dict:
    """해외주식 응답 데이터 파싱"""
+   
+   # 안전한 변환 헬퍼 함수들
+   def safe_float(value, default=0.0):
+     if value is None or value == '' or value == '-':
+       return default
+     try:
+       return float(value)
+     except (ValueError, TypeError):
+       return default
+
+   def safe_int(value, default=0):
+     if value is None or value == '' or value == '-':
+       return default
+     try:
+       return int(value)
+     except (ValueError, TypeError):
+       return default
+   
    if is_historical:
      output = response_data.get("output", [])
      if output:
@@ -358,14 +376,14 @@ class KISAPIService:
        return {
          "symbol": symbol,
          "market_type": "OVERSEAS", 
-         "current_price": float(data.get("clos", 0)),
-         "previous_close": float(data.get("base", 0)),
-         "daily_return_rate": float(data.get("rate", 0)),
-         "day_change": float(data.get("diff", 0)),
-         "volume": int(data.get("tvol", 0)),
-         "high_price": float(data.get("high", 0)),
-         "low_price": float(data.get("low", 0)),
-         "open_price": float(data.get("open", 0)),
+         "current_price": safe_float(data.get("clos"), 0),
+         "previous_close": safe_float(data.get("base"), 0),
+         "daily_return_rate": safe_float(data.get("rate"), 0),
+         "day_change": safe_float(data.get("diff"), 0),
+         "volume": safe_int(data.get("tvol"), 0),
+         "high_price": safe_float(data.get("high"), 0),
+         "low_price": safe_float(data.get("low"), 0),
+         "open_price": safe_float(data.get("open"), 0),
          "currency": "USD",
          "updated_at": datetime.now().isoformat(),
          "query_date": data.get("xymd")
@@ -381,14 +399,14 @@ class KISAPIService:
      return {
        "symbol": symbol,
        "market_type": "OVERSEAS",
-       "current_price": float(output.get("last", 0)),
-       "previous_close": float(output.get("base", 0)),
-       "daily_return_rate": float(output.get("rate", 0)),
-       "day_change": float(output.get("diff", 0)),
-       "volume": int(output.get("tvol", 0)),
-       "high_price": float(output.get("high", 0)),
-       "low_price": float(output.get("low", 0)),
-       "open_price": float(output.get("open", 0)),
+       "current_price": safe_float(output.get("last"), 0),
+       "previous_close": safe_float(output.get("base"), 0),
+       "daily_return_rate": safe_float(output.get("rate"), 0),
+       "day_change": safe_float(output.get("diff"), 0),
+       "volume": safe_int(output.get("tvol"), 0),
+       "high_price": safe_float(output.get("high"), 0),
+       "low_price": safe_float(output.get("low"), 0),
+       "open_price": safe_float(output.get("open"), 0),
        "currency": "USD",
        "updated_at": datetime.now().isoformat()
      }

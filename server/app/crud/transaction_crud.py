@@ -210,5 +210,99 @@ class TransactionCRUD:
       logger.error(f"종목 조회 중 오류: symbol={symbol}, error={str(e)}")
       raise
 
+  async def get_broker_holdings_per_stock(
+    self, 
+    db: AsyncSession, 
+    user_id: int, 
+    stock_symbol: str
+  ):
+    """broker별 종목 집계 (DB 작업만)"""
+    from sqlalchemy import select, func, case
+    from app.models.transaction import Transaction
+    from app.models.stock import Stock
+    from app.models.broker import Broker
+    
+    query = select(
+      Transaction.broker_id,
+      Broker.display_name.label('broker_name'),
+      # 순보유량 = BUY 수량 합계 - SELL 수량 합계
+      func.sum(
+        case(
+          (Transaction.transaction_type == 'BUY', Transaction.quantity),
+          else_=-Transaction.quantity
+        )
+      ).label('net_quantity'),
+      # BUY 거래 총비용 (가격 * 수량 + 수수료 + 세금)
+      func.sum(
+        case(
+          (Transaction.transaction_type == 'BUY', 
+          Transaction.quantity * Transaction.price + Transaction.commission + Transaction.transaction_tax),
+          else_=0
+        )
+      ).label('total_buy_cost'),
+      # BUY 거래 총수량
+      func.sum(
+        case(
+          (Transaction.transaction_type == 'BUY', Transaction.quantity),
+          else_=0
+        )
+      ).label('total_buy_quantity'),
+      # SELL 거래 총수익 (가격 * 수량 - 수수료 - 세금)
+      func.sum(
+        case(
+          (Transaction.transaction_type == 'SELL', 
+          Transaction.quantity * Transaction.price - Transaction.commission - Transaction.transaction_tax),
+          else_=0
+        )
+      ).label('total_sell_proceeds'),
+      # SELL 거래 총수량
+      func.sum(
+        case(
+          (Transaction.transaction_type == 'SELL', Transaction.quantity),
+          else_=0
+        )
+      ).label('total_sell_quantity'),
+      func.max(Transaction.transaction_date).label('latest_date')
+    ).join(
+      Stock, Transaction.stock_id == Stock.id
+    ).join(
+      Broker, Transaction.broker_id == Broker.id
+    ).where(
+      Transaction.user_id == user_id,
+      Stock.symbol == stock_symbol
+    ).group_by(
+      Transaction.broker_id, 
+      Broker.display_name
+    ).having(
+      func.sum(
+        case(
+          (Transaction.transaction_type == 'BUY', Transaction.quantity),
+          else_=-Transaction.quantity
+        )
+      ) > 0  # 순보유량이 양수인 것만
+    )
+    
+    result = await db.execute(query)
+    rows = result.fetchall()
+    
+    lots = []
+    for row in rows:
+      # 평균매입가격 = 총매입비용 / 총매입수량
+      avg_cost = float(row.total_buy_cost / row.total_buy_quantity) if row.total_buy_quantity > 0 else 0
+      
+      lots.append({
+        "broker_id": row.broker_id,
+        "broker_name": row.broker_name,
+        "net_quantity": int(row.net_quantity),  # BUY 합계 - SELL 합계
+        "average_cost_price": avg_cost,
+        "latest_transaction_date": row.latest_date,
+        "total_buy_cost": float(row.total_buy_cost),
+        "total_sell_proceeds": float(row.total_sell_proceeds),
+        "total_buy_quantity": int(row.total_buy_quantity),
+        "total_sell_quantity": int(row.total_sell_quantity)
+      })
+    
+    return lots
+
 # 싱글톤 인스턴스
 transaction_crud = TransactionCRUD()

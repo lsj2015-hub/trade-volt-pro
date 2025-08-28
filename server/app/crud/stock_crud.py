@@ -5,6 +5,7 @@ from sqlalchemy import or_
 from app.models.stock import Stock
 from app.models.country import Country
 from app.models.exchange import Exchange
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,15 @@ class StockCRUD:
     except Exception as e:
       logger.error(f"빠른 종목 검색 중 오류 발생: {str(e)}")
       raise
+  
+  async def get_stock_by_symbol(self, db: AsyncSession, symbol: str):
+    """심볼로 종목 조회"""
+    from sqlalchemy import select
+    from app.models.stock import Stock
+    
+    query = select(Stock).where(Stock.symbol == symbol)
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
 
 # 싱글톤 인스턴스
 stock_crud = StockCRUD()

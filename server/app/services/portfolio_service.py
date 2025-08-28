@@ -388,6 +388,45 @@ class PortfolioService:
       total_gain=total_gain,
       total_gain_percent=total_gain_percent
     )
+  
+  @staticmethod
+  async def get_lots_by_broker(user_id: int, stock_symbol: str):
+    """broker별 집계 + 현재가 조합"""
+    from app.config.database import get_async_session
+    from app.crud.transaction_crud import transaction_crud
+    from app.crud.stock_crud import stock_crud
+    
+    db_gen = get_async_session()
+    db = await db_gen.__anext__()
+    
+    try:
+      # 1. DB에서 broker별 집계 데이터 조회
+      lots_data = await transaction_crud.get_broker_holdings_per_stock(db, user_id, stock_symbol)
+      
+      if not lots_data:
+        return []
+      
+      # 2. 종목 정보 조회
+      stock = await stock_crud.get_stock_by_symbol(db, stock_symbol)
+      if not stock:
+        return []
+      
+      # 3. country_code로 market_type 결정
+      market_type = "DOMESTIC" if stock.country_code == "KR" else "OVERSEAS"
+            
+       # 4. 현재가 조회 (_get_price_safe 사용)
+      price_data = await PortfolioService._get_price_safe(user_id, stock_symbol, market_type)
+      current_price = price_data.get("current_price", 0)
+      
+      # 5. 각 lot에 현재가와 평가금액 추가
+      for lot in lots_data:
+        lot["current_price"] = float(current_price)
+        lot["market_value"] = float(lot["net_quantity"] * current_price)
+      
+      return lots_data
+      
+    finally:
+      await db.close()
 
 # 싱글톤 인스턴스
 portfolio_service = PortfolioService()

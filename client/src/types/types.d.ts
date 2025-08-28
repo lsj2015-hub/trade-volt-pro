@@ -325,7 +325,7 @@ export interface ExchangeRateResponse {
   updated_at: string;
 }
 
-// ====== 완전한 포트폴리오 응답 타입 (백엔드 API 맞춤) ======
+// ====== 완전한 포트폴리오 응답 타입 ======
 export interface StockDataResponse {
   symbol: string;
   company_name: string;
@@ -368,4 +368,16 @@ export interface CompletePortfolioResponse {
   // 메타 데이터
   exchange_rate: number;
   updated_at: string;
+}
+
+// ====== Broker별 종목 현황 데이터 ======
+export interface StockLotResponse {
+  broker_id: number;
+  broker_name: string;
+  net_quantity: number;
+  average_cost_price: number;
+  current_price: number;
+  market_value: number;
+  latest_transaction_date: string;
+  total_cost: number;
 }
