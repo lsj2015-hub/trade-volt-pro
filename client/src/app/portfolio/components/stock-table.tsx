@@ -43,6 +43,9 @@ export const StockTable = ({
             stock={stock}
             isOverseas={isOverseas}
             formatCurrency={formatCurrency}
+            onSharesClick={(stock) =>
+              handleSharesClick(stock, isOverseas ? 'overseas' : 'domestic')
+            }
           />
         ))}
       </div>

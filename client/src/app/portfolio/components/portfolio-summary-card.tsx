@@ -38,7 +38,7 @@ export const PortfolioSummaryCard = ({
                 <span
                   className={`text-xs sm:text-sm font-medium ${gainColor} whitespace-nowrap`}
                 >
-                  {formatAmount(Math.abs(dayGain))}
+                  {formatAmount(dayGain)}
                 </span>
                 <span className={`text-xs ${gainColor} whitespace-nowrap`}>
                   ({dayGainPercent.toFixed(2)}%)
@@ -59,7 +59,7 @@ export const PortfolioSummaryCard = ({
                 <span
                   className={`text-xs sm:text-sm font-medium ${totalGainColor} whitespace-nowrap`}
                 >
-                  {formatAmount(Math.abs(totalGain))}
+                  {formatAmount(totalGain)}
                 </span>
                 <span className={`text-xs ${totalGainColor} whitespace-nowrap`}>
                   ({totalGainPercent.toFixed(2)}%)

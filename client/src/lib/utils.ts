@@ -37,7 +37,7 @@ export function calculateCommission(
   } = params;
 
   const grossAmount = shares * pricePerShare;
-  const commission = Math.ceil(grossAmount * feeRate);
+  const commission = Number((grossAmount * feeRate).toFixed(2));
 
   // 거래세는 매도시에만 적용
   const transactionTax =

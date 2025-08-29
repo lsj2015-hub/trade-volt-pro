@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { CompletePortfolioResponse } from '@/types/types';
-import { TransactionAPI } from '@/lib/transaction-api';
+import { PortfolioAPI } from '@/lib/portfolio-api';
 
 interface PortfolioContextType {
   portfolioData: CompletePortfolioResponse | null;
@@ -41,7 +41,7 @@ export const PortfolioProvider: React.FC<PortfolioProviderProps> = ({
       setIsLoading(true);
       setError(null);
 
-      const data = await TransactionAPI.getCompletePortfolio();
+      const data = await PortfolioAPI.getCompletePortfolio();
       setPortfolioData(data);
 
       console.log('포트폴리오 데이터 갱신 완료');

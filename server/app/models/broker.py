@@ -17,3 +17,4 @@ class Broker(Base):
   # 관계 설정
   transactions = relationship("Transaction", back_populates="broker")
   broker_fees = relationship("BrokerFee", back_populates="broker", cascade="all, delete-orphan")
+  holdings = relationship("Holding", back_populates="broker", cascade="all, delete-orphan")

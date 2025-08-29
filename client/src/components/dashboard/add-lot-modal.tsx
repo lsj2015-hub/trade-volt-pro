@@ -21,9 +21,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '../ui/separator';
+import { Separator } from '@/components/ui/separator';
 import { StockInfo, BrokerResponse } from '@/types/types';
-import { TransactionAPI, TransactionAPIError } from '@/lib/transaction-api';
+import { TradingAPI, TradingAPIError } from '@/lib/trading-api';
+import { SystemAPI, SystemAPIError } from '@/lib/system-api';
 import { usePortfolio } from '@/contexts/portfolio-context';
 import { useAddLot } from '@/contexts/add-lot-context';
 import {
@@ -98,12 +99,12 @@ export const AddLotModal = ({
 
       setBrokersLoading(true);
       try {
-        const brokersData = await TransactionAPI.getBrokers();
+        const brokersData = await SystemAPI.getBrokers();
         setBrokers(brokersData);
         console.log('브로커 목록 조회 완료:', brokersData);
       } catch (error) {
         console.error('브로커 목록 조회 실패:', error);
-        if (error instanceof TransactionAPIError) {
+        if (error instanceof SystemAPIError) {
           toast.error('브로커 목록 조회 실패', {
             description: error.message,
           });
@@ -125,7 +126,7 @@ export const AddLotModal = ({
 
       if (brokerId && selectedStock) {
         try {
-          const rates = await TransactionAPI.getCommissionRate({
+          const rates = await SystemAPI.getCommissionRate({
             broker_id: brokerId,
             market_type: selectedStock.market_type,
             transaction_type: 'BUY',
@@ -223,7 +224,7 @@ export const AddLotModal = ({
       console.log('거래 생성 요청:', transactionData);
 
       // API 호출
-      const result = await TransactionAPI.createTransaction(transactionData);
+      const result = await TradingAPI.createOrder(transactionData);
 
       console.log('거래 생성 완료:', result);
 
@@ -259,7 +260,7 @@ export const AddLotModal = ({
     } catch (error) {
       console.error('거래 생성 실패:', error);
 
-      if (error instanceof TransactionAPIError) {
+      if (error instanceof TradingAPIError) {
         toast.error('거래 생성 실패', {
           description: error.message,
           duration: 4000,
@@ -402,7 +403,7 @@ export const AddLotModal = ({
               Commission ({currencySymbol})
             </Label>
             <div className="text-base font-medium text-foreground/50">
-              {commissionData.commission.toLocaleString()}
+              {commissionData.commission}
             </div>
           </div>
 

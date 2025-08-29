@@ -376,8 +376,10 @@ export interface StockLotResponse {
   broker_name: string;
   net_quantity: number;
   average_cost_price: number;
+  total_cost: number;
+  realized_gain: number;
+  realized_gain_krw: number;
+  latest_transaction_date: string;
   current_price: number;
   market_value: number;
-  latest_transaction_date: string;
-  total_cost: number;
 }

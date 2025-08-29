@@ -10,6 +10,7 @@ class Holding(Base):
   id = Column(Integer, primary_key=True, index=True)
   user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
   stock_id = Column(Integer, ForeignKey("stocks.id"), nullable=False, index=True)
+  broker_id = Column(Integer, ForeignKey("brokers.id"), nullable=False, index=True)
   
   # 보유 정보 (프론트엔드와 정확히 매핑)
   quantity = Column(Integer, nullable=False, default=0, comment="보유수량 (Shares)")
@@ -30,9 +31,10 @@ class Holding(Base):
   # 관계 설정
   user = relationship("User", back_populates="holdings")
   stock = relationship("Stock", back_populates="holdings")
+  broker = relationship("Broker", back_populates="holdings")
   
   __table_args__ = (
-    UniqueConstraint('user_id', 'stock_id', name='unique_user_stock'),
+    UniqueConstraint('user_id', 'stock_id', 'broker_id', name='unique_user_stock_broker'),
     Index('idx_user_active', 'user_id', 'is_active'),
     {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4"},
   )

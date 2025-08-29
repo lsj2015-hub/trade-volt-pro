@@ -4,7 +4,7 @@ from typing import Dict, List
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-from app.crud.transaction_crud import transaction_crud
+from app.crud.holding_crud import holding_crud
 from app.external.kis_api import kis_api_service
 from app.external.exchange_rate_api import exchange_rate_service
 from app.schemas.common_schema import StockDataResponse, CompletePortfolioResponse, PortfolioSummaryData
@@ -14,17 +14,17 @@ from app.config.database import get_async_session
 logger = logging.getLogger(__name__)
 
 class PortfolioService:
-  """포트폴리오 서비스 - Symbol별 합산 + 현재가 + 환율 통합 처리"""
+  """포트폴리오 서비스 - Holdings 기반 최적화 + KIS API 통합"""
   
   @staticmethod
   async def get_complete_portfolio(user_id: int) -> CompletePortfolioResponse:
-    """완전한 포트폴리오 정보 조회"""
+    """완전한 포트폴리오 정보 조회 (Holdings 기반)"""
     db_gen = get_async_session()
     db = await db_gen.__anext__()
     
     try:
-      # 1. 포트폴리오 데이터와 환율 병렬 조회
-      portfolio_task = transaction_crud.get_user_portfolio_summary(db, user_id)
+      # 1. Holdings 기반 포트폴리오 데이터와 환율 병렬 조회
+      portfolio_task = holding_crud.get_user_portfolio_by_stocks(db, user_id)
       exchange_task = exchange_rate_service.get_usd_krw_rate()
       
       portfolio_data, exchange_data = await asyncio.gather(portfolio_task, exchange_task)
@@ -33,23 +33,20 @@ class PortfolioService:
       if not portfolio_data:
         return PortfolioService._empty_response(exchange_rate)
       
-      # 2. Symbol별 합산 처리
-      logger.info(f"Raw portfolio data: {portfolio_data}")
-      aggregated_holdings = PortfolioService._aggregate_by_symbol(portfolio_data)
-      logger.info(f"Aggregated holdings: {aggregated_holdings}")
+      logger.info(f"Holdings 기반 포트폴리오 데이터: {len(portfolio_data)}개 종목")
       
-      # 3. 각 Symbol의 현재가 조회 (병렬)
+      # 2. 각 Symbol의 현재가 조회 (병렬)
       price_tasks = [
         PortfolioService._get_price_safe(user_id, holding["stock_symbol"], holding["market_type"])
-        for holding in aggregated_holdings
+        for holding in portfolio_data
       ]
       price_results = await asyncio.gather(*price_tasks, return_exceptions=True)
       
-      # 4. StockData 변환 및 국내/해외 분류
+      # 3. StockData 변환 및 국내/해외 분류
       domestic_stocks = []
       overseas_stocks = []
       
-      for i, holding in enumerate(aggregated_holdings):
+      for i, holding in enumerate(portfolio_data):
         price_data = price_results[i]
         
         # API 조회 실패한 종목은 건너뛰기
@@ -58,12 +55,11 @@ class PortfolioService:
           continue
         
         current_price = price_data["current_price"]
-        day_change = price_data["day_change"]
-        daily_return_rate = price_data["daily_return_rate"]
+        previous_close = price_data["previous_close"] 
         
-        # StockData 계산
-        stock_data = PortfolioService._calculate_stock_data(
-          holding, current_price, day_change, daily_return_rate
+        # StockData 계산 (Holdings 기반)
+        stock_data = PortfolioService._calculate_stock_data_from_holdings(
+          holding, previous_close, current_price
         )
         
         # 국내/해외 분류
@@ -72,14 +68,14 @@ class PortfolioService:
         else:
           overseas_stocks.append(stock_data)
       
-      # 5. 전체 합계 계산 (KRW 기준)
+      # 4. 전체 합계 계산 (KRW 기준)
       totals = PortfolioService._calculate_totals(domestic_stocks, overseas_stocks, exchange_rate)
       
-      # 6. 국내/해외 요약 데이터 계산
+      # 5. 국내/해외 요약 데이터 계산
       domestic_summary = PortfolioService._calculate_domestic_summary(domestic_stocks)
       overseas_summary = PortfolioService._calculate_overseas_summary(overseas_stocks)
       
-      # 7. 전체 수익률 계산
+      # 6. 전체 수익률 계산
       total_cost_krw = sum(stock.avg_cost * stock.shares for stock in domestic_stocks) + \
                        sum(stock.avg_cost * stock.shares for stock in overseas_stocks) * exchange_rate
       total_gain_percent = (totals["total_total_gain"] / total_cost_krw * 100) if total_cost_krw > 0 else 0.0
@@ -113,6 +109,52 @@ class PortfolioService:
         detail="포트폴리오 데이터를 불러올 수 없습니다.",
         error_code="PORTFOLIO_ERROR"
       )
+    finally:
+      await db.close()
+  
+  @staticmethod
+  async def get_stock_holdings_detail(user_id: int, stock_id: int):
+    """특정 종목의 broker별 상세 보유현황 (Holdings 기반)"""
+    db_gen = get_async_session()
+    db = await db_gen.__anext__()
+    
+    try:
+      # Holdings 기반 broker별 상세 조회
+      holdings_data = await holding_crud.get_stock_holdings_by_brokers(db, user_id, stock_id)
+      
+      if not holdings_data["broker_details"]:
+        return None
+      
+      # 현재가 조회
+      stock_symbol = holdings_data.get("stock_symbol", "")
+      market_type = "DOMESTIC" if holdings_data.get("currency") == "KRW" else "OVERSEAS"
+      
+      price_data = await PortfolioService._get_price_safe(user_id, stock_symbol, market_type)
+      current_price = price_data.get("current_price", 0) if price_data else 0
+      
+      # 각 broker별 현재가와 평가금액 추가
+      for broker_detail in holdings_data["broker_details"]:
+        broker_detail["current_price"] = float(current_price)
+        broker_detail["market_value"] = float(broker_detail["quantity"] * current_price)
+        
+        # 손익 계산
+        total_cost = float(broker_detail["total_cost"])
+        market_value = broker_detail["market_value"]
+        broker_detail["unrealized_gain"] = market_value - total_cost
+        broker_detail["unrealized_gain_percent"] = ((market_value - total_cost) / total_cost * 100) if total_cost > 0 else 0.0
+      
+      # 전체 요약에도 현재가 정보 추가
+      holdings_data["current_price"] = float(current_price)
+      summary = holdings_data["summary"]
+      summary["current_market_value"] = summary["total_quantity"] * current_price
+      summary["unrealized_gain"] = summary["current_market_value"] - summary["total_cost"]
+      summary["unrealized_gain_percent"] = (summary["unrealized_gain"] / summary["total_cost"] * 100) if summary["total_cost"] > 0 else 0.0
+      
+      return holdings_data
+      
+    except Exception as e:
+      logger.error(f"종목별 상세 조회 오류: user_id={user_id}, stock_id={stock_id}, error={str(e)}")
+      raise
     finally:
       await db.close()
   
@@ -151,35 +193,6 @@ class PortfolioService:
       exchange_rate=exchange_rate,
       updated_at=datetime.now().isoformat()
     )
-  
-  @staticmethod
-  def _aggregate_by_symbol(holdings_data: List[Dict]) -> List[Dict]:
-    """Symbol별 합산 처리"""
-    symbol_groups = defaultdict(list)
-    
-    # Symbol + market_type별로 그룹핑
-    for holding in holdings_data:
-      key = f"{holding['stock_symbol']}_{holding['market_type']}"
-      symbol_groups[key].append(holding)
-    
-    aggregated = []
-    for group in symbol_groups.values():
-      total_quantity = sum(h["total_quantity"] for h in group)
-      total_cost_amount = sum(h["total_cost_amount"] for h in group)
-      weighted_avg_cost = total_cost_amount / total_quantity if total_quantity > 0 else 0
-      # 합산된 데이터
-      aggregated.append({
-        "stock_symbol": group[0]["stock_symbol"],
-        "company_name": group[0]["company_name"],
-        "company_name_en": group[0]["company_name_en"],
-        "market_type": group[0]["market_type"],
-        "currency": group[0]["currency"],
-        "total_quantity": total_quantity,
-        "average_cost_price": weighted_avg_cost,
-        "total_cost_amount": total_cost_amount
-      })
-    
-    return aggregated
   
   @staticmethod
   async def _get_price_safe(user_id: int, symbol: str, market_type: str) -> Dict:
@@ -274,28 +287,39 @@ class PortfolioService:
     return None
 
   @staticmethod
-  def _calculate_stock_data(holding: Dict, current_price: float, day_change: float, daily_return_rate: float) -> StockDataResponse:
-    """StockData 계산 (해당 통화 기준)"""
+  def _calculate_stock_data_from_holdings(holding: Dict, previous_close: float, current_price: float) -> StockDataResponse:
+    """Holdings 데이터로부터 StockData 계산"""
     shares = holding["total_quantity"]
-    avg_cost = holding["average_cost_price"]
+    avg_cost = holding["overall_average_cost"]
     market_value = shares * current_price
     
-    # 총 투자금액 대비 손익
-    total_cost = holding["total_cost_amount"]
+    # 총 투자금액 대비 손익 (Holdings의 정확한 데이터 사용)
+    total_cost = holding["total_investment"]
     total_gain = market_value - total_cost
     total_gain_percent = (total_gain / total_cost * 100) if total_cost > 0 else 0.0
     
-    # 일일 손익
-    day_gain = shares * day_change
+    # 전일 대비 손익
+    day_gain = shares * (current_price - previous_close)
+    day_gain_percent = (day_gain / market_value * 100) if market_value > 0 else 0.0
 
     # 시장 타입에 따른 회사명 선택
     market_type = holding.get("market_type", "DOMESTIC")
     if market_type == "OVERSEAS":
       # 해외주식: 영문 회사명 사용 (없으면 한글명)
       company_name = holding.get("company_name_en") or holding["company_name"]
+      day_gain = round(day_gain, 2)
+      total_gain = round(total_gain, 2)
+      market_value = round(market_value, 2)
+      avg_cost = round(avg_cost, 2)
+      current_price = round(current_price, 2)
     else:
       # 국내주식: 한글 회사명 사용
       company_name = holding["company_name"]
+      day_gain = round(day_gain)
+      total_gain = round(total_gain)
+      market_value = round(market_value)
+      avg_cost = round(avg_cost)
+      current_price = round(current_price)
     
     return StockDataResponse(
       symbol=holding["stock_symbol"],
@@ -305,7 +329,7 @@ class PortfolioService:
       current_price=current_price,
       market_value=market_value,
       day_gain=day_gain,
-      day_gain_percent=daily_return_rate,
+      day_gain_percent=day_gain_percent,
       total_gain=total_gain,
       total_gain_percent=total_gain_percent
     )
@@ -391,37 +415,48 @@ class PortfolioService:
   
   @staticmethod
   async def get_lots_by_broker(user_id: int, stock_symbol: str):
-    """broker별 집계 + 현재가 조합"""
+    """broker별 집계 + 현재가 조합 (Holdings 기반)"""
     from app.config.database import get_async_session
-    from app.crud.transaction_crud import transaction_crud
     from app.crud.stock_crud import stock_crud
     
     db_gen = get_async_session()
     db = await db_gen.__anext__()
     
     try:
-      # 1. DB에서 broker별 집계 데이터 조회
-      lots_data = await transaction_crud.get_broker_holdings_per_stock(db, user_id, stock_symbol)
-      
-      if not lots_data:
-        return []
-      
-      # 2. 종목 정보 조회
+      # 1. 종목 정보 조회
       stock = await stock_crud.get_stock_by_symbol(db, stock_symbol)
       if not stock:
         return []
       
+      # 2. Holdings 기반 broker별 상세 데이터 조회
+      holdings_data = await holding_crud.get_stock_holdings_by_brokers(db, user_id, stock.id)
+      
+      if not holdings_data or not holdings_data["broker_details"]:
+        return []
+      
       # 3. country_code로 market_type 결정
       market_type = "DOMESTIC" if stock.country_code == "KR" else "OVERSEAS"
-            
-       # 4. 현재가 조회 (_get_price_safe 사용)
-      price_data = await PortfolioService._get_price_safe(user_id, stock_symbol, market_type)
-      current_price = price_data.get("current_price", 0)
       
-      # 5. 각 lot에 현재가와 평가금액 추가
-      for lot in lots_data:
-        lot["current_price"] = float(current_price)
-        lot["market_value"] = float(lot["net_quantity"] * current_price)
+      # 4. 현재가 조회 (_get_price_safe 사용)
+      price_data = await PortfolioService._get_price_safe(user_id, stock_symbol, market_type)
+      current_price = price_data.get("current_price", 0) if price_data else 0
+      
+      # 5. 각 broker별 데이터에 현재가와 평가금액 추가
+      lots_data = []
+      for broker_detail in holdings_data["broker_details"]:
+        lot_item = {
+          "broker_id": broker_detail["broker_id"],
+          "broker_name": broker_detail["broker_name"],
+          "net_quantity": broker_detail["quantity"],
+          "average_cost_price": broker_detail["average_cost"],
+          "total_cost": broker_detail["total_cost"],
+          "realized_gain": broker_detail["realized_gain"],
+          "realized_gain_krw": broker_detail["realized_gain_krw"],
+          "latest_transaction_date": broker_detail["last_transaction_date"],
+          "current_price": float(current_price),
+          "market_value": float(broker_detail["quantity"] * current_price)
+        }
+        lots_data.append(lot_item)
       
       return lots_data
       

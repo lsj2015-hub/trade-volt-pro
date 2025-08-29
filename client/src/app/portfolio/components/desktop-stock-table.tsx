@@ -60,8 +60,8 @@ export const DesktopStockTable = ({
       >
         <div>
           {isOverseas
-            ? formatCurrency(Math.abs(stock.dayGain), 'USD')
-            : formatCurrency(Math.abs(stock.dayGain), 'KRW')}
+            ? formatCurrency(stock.dayGain, 'USD')
+            : formatCurrency(stock.dayGain, 'KRW')}
         </div>
         <div className="text-xs text-center">
           ({formatPercent(stock.dayGainPercent)})
@@ -74,8 +74,8 @@ export const DesktopStockTable = ({
       >
         <div>
           {isOverseas
-            ? formatCurrency(Math.abs(stock.totalGain), 'USD')
-            : formatCurrency(Math.abs(stock.totalGain), 'KRW')}
+            ? formatCurrency(stock.totalGain, 'USD')
+            : formatCurrency(stock.totalGain, 'KRW')}
         </div>
         <div className="text-xs text-center">
           ({formatPercent(stock.totalGainPercent)})

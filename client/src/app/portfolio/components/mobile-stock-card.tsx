@@ -6,12 +6,14 @@ interface MobileStockCardProps {
   stock: StockData;
   isOverseas: boolean;
   formatCurrency: (amount: number, currency: 'KRW' | 'USD') => string;
+  onSharesClick?: (stock: StockData) => void;
 }
 
 export const MobileStockCard = ({
   stock,
   isOverseas,
   formatCurrency,
+  onSharesClick,
 }: MobileStockCardProps) => {
   const formatPercent = (percent: number) => {
     return `${percent.toFixed(2)}%`;
@@ -35,7 +37,10 @@ export const MobileStockCard = ({
                   ? formatCurrency(stock.currentPrice, 'USD')
                   : formatCurrency(stock.currentPrice, 'KRW')}
               </div>
-              <div className="text-sm text-muted-foreground">
+              <div
+                className="text-sm text-muted-foreground"
+                onClick={() => onSharesClick?.(stock)}
+              >
                 {stock.shares.toLocaleString()} 주
               </div>
             </div>
@@ -59,8 +64,8 @@ export const MobileStockCard = ({
                 )}
                 <span className="text-sm font-medium">
                   {isOverseas
-                    ? formatCurrency(Math.abs(stock.dayGain), 'USD')
-                    : formatCurrency(Math.abs(stock.dayGain), 'KRW')}
+                    ? formatCurrency(stock.dayGain, 'USD')
+                    : formatCurrency(stock.dayGain, 'KRW')}
                 </span>
               </div>
               <div className="text-xs text-muted-foreground">
@@ -84,8 +89,8 @@ export const MobileStockCard = ({
                 )}
                 <span className="text-sm font-medium">
                   {isOverseas
-                    ? formatCurrency(Math.abs(stock.totalGain), 'USD')
-                    : formatCurrency(Math.abs(stock.totalGain), 'KRW')}
+                    ? formatCurrency(stock.totalGain, 'USD')
+                    : formatCurrency(stock.totalGain, 'KRW')}
                 </span>
               </div>
               <div className="text-xs text-muted-foreground">

@@ -229,14 +229,13 @@ class StockLotResponse(BaseModel):
   broker_id: int
   broker_name: str
   net_quantity: int
-  average_cost_price: float  # Decimal -> float로 변경
-  current_price: float       # Decimal -> float로 변경  
-  market_value: float        # Decimal -> float로 변경
+  average_cost_price: float
+  total_cost: float
+  realized_gain: float
+  realized_gain_krw: float
   latest_transaction_date: date
-  total_buy_cost: float      # 추가 필요
-  total_sell_proceeds: float # 추가 필요
-  total_buy_quantity: int    # 추가 필요
-  total_sell_quantity: int   # 추가 필요
+  current_price: float
+  market_value: float
   
   class Config:
     from_attributes = True

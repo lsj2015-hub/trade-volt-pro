@@ -38,7 +38,7 @@ export const TotalPortfolioCard = ({
               </span>
               <div className="flex items-center space-x-1 min-w-0 flex-shrink">
                 <span className="font-semibold text-xs sm:text-sm md:text-base whitespace-nowrap truncate">
-                  {formatCurrency(Math.abs(totalDayGain), 'KRW')}
+                  {formatCurrency(totalDayGain, 'KRW')}
                 </span>
                 <span className="text-xs sm:text-sm whitespace-nowrap">
                   ({formatPercent((totalDayGain / totalPortfolio) * 100)})
@@ -63,7 +63,7 @@ export const TotalPortfolioCard = ({
               </span>
               <div className="flex items-center space-x-1 min-w-0 flex-shrink">
                 <span className="font-semibold text-xs sm:text-sm md:text-base whitespace-nowrap truncate">
-                  {formatCurrency(Math.abs(totalTotalGain), 'KRW')}
+                  {formatCurrency(totalTotalGain, 'KRW')}
                 </span>
                 <span className="text-xs sm:text-sm whitespace-nowrap">
                   ({formatPercent((totalTotalGain / totalPortfolio) * 100)})

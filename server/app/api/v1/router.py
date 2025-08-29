@@ -1,6 +1,12 @@
 from fastapi import APIRouter
-from .endpoints import (health, auth_endpoints, stock_endpoints, transaction_endpoints, 
-                        exchange_endpoints)
+from .endpoints import (
+    health, 
+    auth_endpoints, 
+    stock_endpoints, 
+    portfolio_endpoints,
+    trading_endpoints,  
+    system_endpoints 
+)
 
 # API v1 라우터
 api_router = APIRouter()
@@ -26,17 +32,23 @@ api_router.include_router(
   tags=["Stock"]
 )
 
-
-# 거래 API 라우터
+# 포트폴리오 API 라우터 ✅ 새로 추가
 api_router.include_router(
-  transaction_endpoints.router,
-  prefix="/transactions",
-  tags=["Transaction"]
+  portfolio_endpoints.router,
+  prefix="/portfolio",
+  tags=["Portfolio"]
 )
 
-# 환율 API 라우터
+# 거래 API 라우터 ✅ 새로 추가
 api_router.include_router(
-  exchange_endpoints.router, 
-  prefix="/exchange", 
-  tags=["exchange"]
+  trading_endpoints.router,
+  prefix="/trading",
+  tags=["Trading"]
+)
+
+# 시스템 API 라우터 ✅ 새로 추가
+api_router.include_router(
+  system_endpoints.router,
+  prefix="/system",
+  tags=["System"]
 )
