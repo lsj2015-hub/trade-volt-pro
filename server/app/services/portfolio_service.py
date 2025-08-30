@@ -59,7 +59,7 @@ class PortfolioService:
         
         # StockData 계산 (Holdings 기반)
         stock_data = PortfolioService._calculate_stock_data_from_holdings(
-          holding, previous_close, current_price
+          holding, previous_close, current_price, exchange_rate
         )
         
         # 국내/해외 분류
@@ -69,15 +69,17 @@ class PortfolioService:
           overseas_stocks.append(stock_data)
       
       # 4. 전체 합계 계산 (KRW 기준)
-      totals = PortfolioService._calculate_totals(domestic_stocks, overseas_stocks, exchange_rate)
+      totals = PortfolioService._calculate_totals(domestic_stocks, overseas_stocks, exchange_rate, portfolio_data)
       
       # 5. 국내/해외 요약 데이터 계산
       domestic_summary = PortfolioService._calculate_domestic_summary(domestic_stocks)
       overseas_summary = PortfolioService._calculate_overseas_summary(overseas_stocks)
       
       # 6. 전체 수익률 계산
-      total_cost_krw = sum(stock.avg_cost * stock.shares for stock in domestic_stocks) + \
-                       sum(stock.avg_cost * stock.shares for stock in overseas_stocks) * exchange_rate
+      domestic_cost_krw = sum(stock.avg_cost * stock.shares for stock in domestic_stocks)
+      overseas_cost_krw = sum(holding["total_investment_krw"] for holding in portfolio_data if holding.get("market_type") == "OVERSEAS")
+      total_cost_krw = domestic_cost_krw + overseas_cost_krw
+
       total_gain_percent = (totals["total_total_gain"] / total_cost_krw * 100) if total_cost_krw > 0 else 0.0
       total_day_gain_percent = (totals["total_day_gain"] / totals["total_portfolio"] * 100) if totals["total_portfolio"] > 0 else 0.0
       
@@ -287,16 +289,26 @@ class PortfolioService:
     return None
 
   @staticmethod
-  def _calculate_stock_data_from_holdings(holding: Dict, previous_close: float, current_price: float) -> StockDataResponse:
+  def _calculate_stock_data_from_holdings(
+      holding: Dict, previous_close: float, current_price: float, exchange_rate: float = 1.0
+    ) -> StockDataResponse:
     """Holdings 데이터로부터 StockData 계산"""
     shares = holding["total_quantity"]
     avg_cost = holding["overall_average_cost"]
     market_value = shares * current_price
     
-    # 총 투자금액 대비 손익 (Holdings의 정확한 데이터 사용)
-    total_cost = holding["total_investment"]
-    total_gain = market_value - total_cost
-    total_gain_percent = (total_gain / total_cost * 100) if total_cost > 0 else 0.0
+    # 해외주식과 국내주식 구분하여 손익 계산
+    market_type = holding.get("market_type", "DOMESTIC")
+    if market_type == "OVERSEAS":
+      # 해외주식: USD 기준으로 계산
+      total_cost = holding["total_investment"]  # USD 원가
+      total_gain = market_value - total_cost    # USD 손익
+      total_gain_percent = (total_gain / total_cost * 100) if total_cost > 0 else 0.0
+    else:
+      # 국내주식: KRW 기준
+      total_cost = holding["total_investment"]
+      total_gain = market_value - total_cost
+      total_gain_percent = (total_gain / total_cost * 100) if total_cost > 0 else 0.0
     
     # 전일 대비 손익
     day_gain = shares * (current_price - previous_close)
@@ -335,7 +347,7 @@ class PortfolioService:
     )
   
   @staticmethod
-  def _calculate_totals(domestic_stocks: List[StockDataResponse], overseas_stocks: List[StockDataResponse], exchange_rate: float) -> Dict:
+  def _calculate_totals(domestic_stocks: List[StockDataResponse], overseas_stocks: List[StockDataResponse], exchange_rate: float, portfolio_data: List[Dict]) -> Dict:
     """전체 합계 계산 (KRW 기준)"""
     # 국내 합계 (KRW)
     domestic_total = sum(stock.market_value for stock in domestic_stocks)
@@ -345,11 +357,19 @@ class PortfolioService:
     # 해외 합계 (USD → KRW)
     overseas_total_usd = sum(stock.market_value for stock in overseas_stocks)
     overseas_day_gain_usd = sum(stock.day_gain for stock in overseas_stocks)
-    overseas_total_gain_usd = sum(stock.total_gain for stock in overseas_stocks)
+    
+    # 해외주식 KRW 기준 Total Gain 별도 계산
+    overseas_total_gain_krw = 0
+    for stock in overseas_stocks:
+      # portfolio_data에서 해당 종목의 holding 정보 찾기
+      holding = next((h for h in portfolio_data if h["stock_symbol"] == stock.symbol and h.get("market_type") == "OVERSEAS"), None)
+      if holding:
+        total_cost_krw = holding["total_investment_krw"]
+        market_value_krw = stock.market_value * exchange_rate
+        overseas_total_gain_krw += (market_value_krw - total_cost_krw)
     
     overseas_total_krw = overseas_total_usd * exchange_rate
     overseas_day_gain_krw = overseas_day_gain_usd * exchange_rate
-    overseas_total_gain_krw = overseas_total_gain_usd * exchange_rate
     
     return {
       "total_portfolio": domestic_total + overseas_total_krw,

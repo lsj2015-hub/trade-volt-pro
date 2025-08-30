@@ -64,7 +64,8 @@ class HoldingCRUD:
     price: Decimal,
     commission: Decimal,
     transaction_tax: Decimal,
-    transaction_date: datetime
+    transaction_date: datetime,
+    exchange_rate: Decimal = Decimal('1.0')
   ) -> Holding:
     """
     매수 거래 시 보유 정보 업데이트
@@ -72,21 +73,25 @@ class HoldingCRUD:
     try:
       # 매수 총 비용 (가격 * 수량 + 수수료 + 세금)
       buy_cost = quantity * price + commission + transaction_tax
+      buy_cost_krw = buy_cost * exchange_rate
       
       if holding.quantity == 0:
         # 첫 매수인 경우
         holding.quantity = quantity
         holding.average_cost = price + (commission + transaction_tax) / quantity
         holding.total_cost = buy_cost
+        holding.total_cost_krw = buy_cost_krw
         holding.first_purchase_date = transaction_date.date()
         holding.is_active = True
       else:
         # 추가 매수인 경우 - 가중평균 계산
         total_quantity = holding.quantity + quantity
         total_cost = holding.total_cost + buy_cost
+        total_cost_krw = holding.total_cost_krw + buy_cost_krw
         
         holding.quantity = total_quantity
         holding.total_cost = total_cost
+        holding.total_cost_krw = total_cost_krw
         holding.average_cost = total_cost / total_quantity
       
       holding.last_transaction_date = transaction_date
@@ -120,6 +125,8 @@ class HoldingCRUD:
       
       # 매도한 부분의 원가 (평균단가 기준)
       sold_cost = holding.average_cost * quantity
+      ratio = Decimal(quantity) / Decimal(holding.quantity)
+      sold_cost_krw = holding.total_cost_krw * ratio
       
       # 실현 손익 계산
       realized_gain = sell_proceeds - sold_cost
@@ -128,6 +135,7 @@ class HoldingCRUD:
       # 보유 정보 업데이트
       holding.quantity -= quantity
       holding.total_cost -= sold_cost  # 매도한 부분의 원가 차감
+      holding.total_cost_krw -= sold_cost_krw
       holding.realized_gain += realized_gain
       holding.realized_gain_krw += realized_gain_krw
       holding.last_transaction_date = transaction_date
@@ -188,9 +196,10 @@ class HoldingCRUD:
           Stock.company_name_en,
           Stock.currency,
           Stock.country_code,
-          func.count(Holding.broker_id).label('broker_count'),  # 몇 개 broker에서 보유 중
+          func.count(Holding.broker_id).label('broker_count'),
           func.sum(Holding.quantity).label('total_quantity'),
           func.sum(Holding.total_cost).label('total_investment'),
+          func.sum(Holding.total_cost_krw).label('total_investment_krw'),
           func.sum(Holding.realized_gain).label('total_realized_gain'),
           func.sum(Holding.realized_gain_krw).label('total_realized_gain_krw'),
           func.min(Holding.first_purchase_date).label('first_purchase_date'),
@@ -229,6 +238,7 @@ class HoldingCRUD:
           "broker_count": row.broker_count,
           "total_quantity": int(row.total_quantity),
           "total_investment": float(row.total_investment),
+          "total_investment_krw": float(row.total_investment_krw), 
           "overall_average_cost": float(row.overall_average_cost),
           "total_realized_gain": float(row.total_realized_gain),
           "total_realized_gain_krw": float(row.total_realized_gain_krw),
@@ -266,6 +276,7 @@ class HoldingCRUD:
           Holding.quantity,
           Holding.average_cost,
           Holding.total_cost,
+          Holding.total_cost_krw,
           Holding.realized_gain,
           Holding.realized_gain_krw,
           Holding.first_purchase_date,
@@ -298,6 +309,7 @@ class HoldingCRUD:
           "quantity": int(row.quantity),
           "average_cost": float(row.average_cost),
           "total_cost": float(row.total_cost),
+          "total_cost_krw": float(row.total_cost_krw),
           "realized_gain": float(row.realized_gain),
           "realized_gain_krw": float(row.realized_gain_krw),
           "first_purchase_date": row.first_purchase_date,

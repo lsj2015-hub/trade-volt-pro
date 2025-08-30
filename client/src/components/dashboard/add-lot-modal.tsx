@@ -217,8 +217,8 @@ export const AddLotModal = ({
         transaction_date: new Date(formData.date).toISOString(),
         notes: formData.comment || undefined,
         commission: commissionData.commission || undefined,
-        exchange_rate:
-          selectedStock.market_type === 'OVERSEAS' ? 1.0 : undefined,
+        // exchange_rate:
+        //   selectedStock.market_type === 'OVERSEAS' ? 1.0 : undefined,
       };
 
       console.log('거래 생성 요청:', transactionData);

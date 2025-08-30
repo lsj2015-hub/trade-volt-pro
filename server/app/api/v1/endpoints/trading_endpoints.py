@@ -44,6 +44,21 @@ async def create_order(
     else:
       commission = Decimal(str(request.commission))
       transaction_tax = Decimal(str(request.transaction_tax))
+
+    # 환율 자동 계산
+    if request.market_type == 'OVERSEAS':
+      # 거래 날짜의 환율 조회
+      transaction_date_str = request.transaction_date.strftime('%Y%m%d')
+      try:
+        from app.external.exchange_rate_api import exchange_rate_service
+        exchange_data = await exchange_rate_service.get_usd_krw_rate(transaction_date_str)
+        actual_exchange_rate = Decimal(str(exchange_data["currency"]["exchange_rate"]))
+        logger.info(f"거래 날짜 {transaction_date_str} USD/KRW 환율: {actual_exchange_rate}")
+      except Exception as e:
+        logger.warning(f"환율 조회 실패, 기본값 사용: {str(e)}")
+        actual_exchange_rate = Decimal('1400.0')  # fallback
+    else:
+      actual_exchange_rate = Decimal('1.0')  # 국내주식
     
     # 거래 생성 (Holdings 자동 업데이트)
     new_transaction = await transaction_crud.create_transaction(
@@ -56,7 +71,7 @@ async def create_order(
       price=Decimal(str(request.price)),
       commission=commission,
       transaction_tax=transaction_tax,
-      exchange_rate=Decimal(str(request.exchange_rate or 1.0)),
+      exchange_rate=actual_exchange_rate,
       transaction_date=request.transaction_date,
       notes=request.notes
     )

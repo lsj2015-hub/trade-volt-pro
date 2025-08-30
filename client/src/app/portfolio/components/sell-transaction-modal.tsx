@@ -126,7 +126,7 @@ export const SellTransactionModal = ({
         transaction_date: new Date(formData.date).toISOString(),
         notes: formData.comment || undefined,
         commission: commissionData.commission || undefined,
-        exchange_rate: stockInfo.market_type === 'OVERSEAS' ? 1.0 : undefined,
+        // exchange_rate: stockInfo.market_type === 'OVERSEAS' ? 1.0 : undefined,
       };
 
       console.log('매도 거래 생성 요청:', transactionData);
