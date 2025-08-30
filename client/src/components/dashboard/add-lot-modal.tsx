@@ -466,6 +466,18 @@ export const AddLotModal = ({
           >
             {isLoading ? 'Creating...' : 'Add Lot'}
           </Button>
+
+          {/* 확인 툴팁 */}
+          {!isLoading && formData.shares && formData.costPerShare && (
+            <div className="text-center space-y-1">
+              <div className="text-sm text-amber-600 font-medium">
+                ⚠️ 매수 정보를 다시 한번 확인해주세요
+              </div>
+              <div className="text-xs text-red-500 leading-relaxed">
+                확정 후에는 수정할 수 없습니다.
+              </div>
+            </div>
+          )}
         </form>
       </DialogContent>
     </Dialog>

@@ -24,6 +24,7 @@ interface StockTransactionsModalProps {
   totalValue: number;
   marketType?: 'DOMESTIC' | 'OVERSEAS';
   currency?: 'KRW' | 'USD';
+  stockInfo?: StockInfo;
 }
 
 export const StockTransactionsModal = ({
@@ -35,6 +36,7 @@ export const StockTransactionsModal = ({
   totalValue,
   marketType = 'DOMESTIC',
   currency = 'KRW',
+  stockInfo,
 }: StockTransactionsModalProps) => {
   const { openAddLotModal } = useAddLot();
   const [lots, setLots] = useState<StockLotResponse[]>([]);
@@ -82,18 +84,18 @@ export const StockTransactionsModal = ({
   };
 
   const handleAddNewLot = () => {
-    const stockInfo: StockInfo = {
+    const finalStockInfo: StockInfo = stockInfo || {
       symbol: stockSymbol,
       company_name: companyName,
       company_name_en: '',
       corp_cord: '',
-      country_code: marketType === 'DOMESTIC' ? 'KR' : 'US',
-      exchange_code: marketType === 'DOMESTIC' ? 'KRX' : 'NASDAQ',
+      country_code: '',
+      exchange_code: '',
       currency: currency,
       market_type: marketType,
     };
 
-    openAddLotModal(stockInfo);
+    openAddLotModal(finalStockInfo);
     onOpenChange(false);
   };
 
@@ -236,25 +238,27 @@ export const StockTransactionsModal = ({
         </DialogContent>
       </Dialog>
 
-      {/* 기존 StockTransactionsModal JSX 끝부분에 추가 */}
+      {/* Sell Stock Modal */}
       {selectedLotForSell && (
         <SellTransactionModal
           open={isSellModalOpen}
           onOpenChange={setIsSellModalOpen}
-          stockInfo={{
-            symbol: stockSymbol,
-            company_name: companyName,
-            company_name_en: '',
-            corp_cord: '',
-            country_code: marketType === 'DOMESTIC' ? 'KR' : 'US',
-            exchange_code: marketType === 'DOMESTIC' ? 'KRX' : 'NASDAQ',
-            currency: currency,
-            market_type: marketType,
-          }}
+          stockInfo={
+            stockInfo || {
+              symbol: stockSymbol,
+              company_name: companyName,
+              company_name_en: '',
+              corp_cord: '',
+              country_code: '',
+              exchange_code: '',
+              currency: currency,
+              market_type: marketType,
+            }
+          }
           lotInfo={selectedLotForSell}
           onTransactionCreated={() => {
             setIsSellModalOpen(false);
-            loadStockLots(); // 데이터 새로고침
+            loadStockLots();
           }}
         />
       )}

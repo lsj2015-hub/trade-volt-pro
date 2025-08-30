@@ -26,7 +26,7 @@ import {
 interface SellTransactionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  stockInfo: StockInfo | null;
+  stockInfo: StockInfo | undefined;
   lotInfo: StockLotResponse | null;
   onTransactionCreated?: () => void;
 }
@@ -38,6 +38,12 @@ export const SellTransactionModal = ({
   lotInfo,
   onTransactionCreated,
 }: SellTransactionModalProps) => {
+  console.log('SellTransactionModal - stockInfo:', stockInfo);
+  console.log(
+    'SellTransactionModal - exchange_code:',
+    stockInfo?.exchange_code
+  );
+
   const router = useRouter();
   const { refreshPortfolio } = usePortfolio();
   const [isLoading, setIsLoading] = useState(false);
@@ -191,7 +197,7 @@ export const SellTransactionModal = ({
         </DialogHeader>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-4">
+        <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-2">
           {/* Stock Info */}
           <div className="flex justify-between">
             <Label className="text-sm font-medium mb-2 block">Ticker</Label>
@@ -203,6 +209,12 @@ export const SellTransactionModal = ({
             <Label className="text-sm font-medium mb-2 block">Company</Label>
             <div className="text-base font-medium text-foreground/50">
               {stockInfo.company_name}
+            </div>
+          </div>
+          <div className="flex justify-between">
+            <Label className="text-sm font-medium mb-2 block">Exchange</Label>
+            <div className="text-base font-medium text-foreground/50">
+              {stockInfo.exchange_code}
             </div>
           </div>
           <div className="flex justify-between">
@@ -223,8 +235,8 @@ export const SellTransactionModal = ({
           <Separator />
 
           {/* Transaction Details */}
-          <div className="flex justify-between">
-            <Label htmlFor="date" className="text-sm font-medium mb-2 block">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="date" className="text-sm font-medium block">
               *Date
             </Label>
             <Input
@@ -236,8 +248,8 @@ export const SellTransactionModal = ({
             />
           </div>
 
-          <div className="flex justify-between">
-            <Label htmlFor="shares" className="text-sm font-medium mb-2 block">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="shares" className="text-sm font-medium block">
               *Shares
             </Label>
             <Input
@@ -251,12 +263,12 @@ export const SellTransactionModal = ({
             />
           </div>
 
-          <div className="flex justify-between">
+          <div className="flex items-center justify-between">
             <Label
               htmlFor="pricePerShare"
-              className="text-sm font-medium mb-2 block"
+              className="text-sm font-medium block"
             >
-              *Price per Share
+              *Sell Price
             </Label>
             <Input
               id="pricePerShare"
@@ -327,8 +339,20 @@ export const SellTransactionModal = ({
             className="w-full bg-red-600 hover:bg-red-700"
             disabled={isLoading || !formData.shares || !formData.pricePerShare}
           >
-            {isLoading ? '매도 처리 중...' : '매도 확정'}
+            {isLoading ? 'processing...' : 'Transaction Confirm'}
           </Button>
+
+          {/* 확인 툴팁 */}
+          {!isLoading && formData.shares && formData.pricePerShare && (
+            <div className="text-center space-y-1">
+              <div className="text-sm text-amber-600 font-medium">
+                ⚠️ 매도 정보를 다시 한번 확인해주세요
+              </div>
+              <div className="text-xs text-red-500 leading-relaxed">
+                확정 후에는 수정할 수 없습니다.
+              </div>
+            </div>
+          )}
         </form>
       </DialogContent>
     </Dialog>

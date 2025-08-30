@@ -59,7 +59,6 @@ class HoldingCRUD:
 
   async def update_holding_for_buy(
     self,
-    db: AsyncSession,
     holding: Holding,
     quantity: int,
     price: Decimal,
@@ -101,7 +100,6 @@ class HoldingCRUD:
 
   async def update_holding_for_sell(
     self,
-    db: AsyncSession,
     holding: Holding,
     quantity: int,
     price: Decimal,

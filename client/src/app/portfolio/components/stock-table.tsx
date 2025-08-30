@@ -5,6 +5,7 @@ import { StockData, StockInfo } from '@/types/types';
 import { MobileStockCard } from './mobile-stock-card';
 import { DesktopStockTable } from './desktop-stock-table';
 import { StockTransactionsModal } from './stock-transactions-modal';
+import { StockAPI } from '@/lib/stock-api';
 
 interface StockTableProps {
   domesticStocks: StockData[];
@@ -23,13 +24,32 @@ export const StockTable = ({
   const [selectedStockType, setSelectedStockType] = useState<
     'domestic' | 'overseas'
   >('domestic');
+  const [selectedStockInfo, setSelectedStockInfo] = useState<
+    StockInfo | undefined
+  >(undefined);
 
-  const handleSharesClick = (
+  const handleSharesClick = async (
     stock: StockData,
     type: 'domestic' | 'overseas'
   ) => {
     setSelectedStock(stock);
     setSelectedStockType(type);
+
+    // 종목 정보 가져오기
+    try {
+      const results = await StockAPI.searchStocks({
+        query: stock.symbol,
+        limit: 1,
+      });
+      if (results.length > 0) {
+        setSelectedStockInfo(results[0]);
+      } else {
+        setSelectedStockInfo(undefined);
+      }
+    } catch (error) {
+      console.error('종목 정보 조회 실패:', error);
+      setSelectedStockInfo(undefined);
+    }
     setIsModalOpen(true);
   };
 
@@ -106,6 +126,7 @@ export const StockTable = ({
             selectedStockType === 'overseas' ? 'OVERSEAS' : 'DOMESTIC'
           }
           currency={selectedStockType === 'overseas' ? 'USD' : 'KRW'}
+          stockInfo={selectedStockInfo}
         />
       )}
     </>

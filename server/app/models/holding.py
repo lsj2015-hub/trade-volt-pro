@@ -16,6 +16,7 @@ class Holding(Base):
   quantity = Column(Integer, nullable=False, default=0, comment="보유수량 (Shares)")
   average_cost = Column(DECIMAL(15, 6), nullable=False, comment="평균 매입단가 (해당 통화)")
   total_cost = Column(DECIMAL(18, 6), nullable=False, comment="총 투자금액 (해당 통화)")
+  total_cost_krw = Column(DECIMAL(18, 2), nullable=False, default=0, comment="총 투자금액 (KRW 환산)")
   
   # 실현 손익 정보 (매도한 부분)
   realized_gain = Column(DECIMAL(15, 6), nullable=False, default=0, comment="실현 손익 (해당 통화)")

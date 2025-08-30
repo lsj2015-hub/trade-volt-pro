@@ -59,11 +59,11 @@ class TransactionCRUD:
       
       if transaction_type == 'BUY':
         await holding_crud.update_holding_for_buy(
-          db, holding, quantity, price, commission, transaction_tax, transaction_date
+          holding, quantity, price, commission, transaction_tax, transaction_date
         )
       elif transaction_type == 'SELL':
         await holding_crud.update_holding_for_sell(
-          db, holding, quantity, price, commission, transaction_tax, 
+          holding, quantity, price, commission, transaction_tax, 
           transaction_date, exchange_rate
         )
       
