@@ -1,4 +1,8 @@
-import { CompletePortfolioResponse, StockLotResponse } from '@/types/types';
+import {
+  CompletePortfolioResponse,
+  RealizedProfitData,
+  StockLotResponse,
+} from '@/types/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -112,6 +116,52 @@ export class PortfolioAPI {
       data: StockLotResponse[];
       total_count: number;
     }>(`/api/v1/portfolio/stocks/${stockSymbol}/detail`);
-    return response.data; 
+    return response.data;
+  }
+
+  /**
+   * 실현손익 내역 조회
+   * - 매도 거래별 실현손익 상세 내역
+   * - 필터링: 시장구분, 증권사, 종목, 기간
+   * @param filters 필터 조건
+   * @returns 실현손익 내역 데이터
+   */
+  static async getRealizedProfits(filters?: {
+    marketType?: 'domestic' | 'overseas';
+    brokerId?: number;
+    stockSymbol?: string;
+    startDate?: string; // YYYY-MM-DD
+    endDate?: string; // YYYY-MM-DD
+  }): Promise<RealizedProfitData[]> {
+    const params = new URLSearchParams();
+
+    if (filters?.marketType) {
+      params.append('market_type', filters.marketType);
+    }
+    if (filters?.brokerId) {
+      params.append('broker_id', filters.brokerId.toString());
+    }
+    if (filters?.stockSymbol) {
+      params.append('stock_symbol', filters.stockSymbol);
+    }
+    if (filters?.startDate) {
+      params.append('start_date', filters.startDate);
+    }
+    if (filters?.endDate) {
+      params.append('end_date', filters.endDate);
+    }
+
+    const queryString = params.toString();
+    const url = `/api/v1/portfolio/realized-profits${
+      queryString ? `?${queryString}` : ''
+    }`;
+
+    const response = await this.request<{
+      success: boolean;
+      data: RealizedProfitData[];
+      total_count: number;
+    }>(url);
+
+    return response.data;
   }
 }

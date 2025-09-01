@@ -239,3 +239,30 @@ class StockLotResponse(BaseModel):
   
   class Config:
     from_attributes = True
+
+class RealizedProfitResponse(BaseModel):
+  """실현손익 응답 스키마"""
+  id: str = Field(..., description="거래 ID")
+  symbol: str = Field(..., description="종목 심볼")
+  companyName: str = Field(..., description="회사명")
+  broker: str = Field(..., description="증권사명")
+  marketType: str = Field(..., description="시장구분 (DOMESTIC/OVERSEAS)")
+  sellDate: str = Field(..., description="매도일 (ISO format)")
+  shares: int = Field(..., description="매도 수량")
+  sellPrice: float = Field(..., description="매도가")
+  avgCost: float = Field(..., description="평균 매입가")
+  realizedProfit: float = Field(..., description="실현손익")
+  realizedProfitPercent: float = Field(..., description="실현수익률 (%)")
+  currency: str = Field(..., description="통화 (KRW/USD)")
+  
+  class Config:
+    from_attributes = True
+
+class RealizedProfitListResponse(BaseModel):
+  """실현손익 목록 응답 스키마"""
+  success: bool = Field(..., description="성공 여부")
+  data: List[RealizedProfitResponse] = Field(..., description="실현손익 데이터 목록")
+  total_count: int = Field(..., description="총 건수")
+  
+  class Config:
+    from_attributes = True

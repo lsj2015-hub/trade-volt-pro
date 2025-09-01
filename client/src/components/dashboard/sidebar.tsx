@@ -90,7 +90,7 @@ export const Sidebar = ({
 
       <SidebarFooter>
         <div className="p-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-          © 2025 Trade Volt v1.0
+          © 2025 Trade Volt pro v1.0
         </div>
       </SidebarFooter>
 

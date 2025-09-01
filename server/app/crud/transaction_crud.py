@@ -34,7 +34,32 @@ class TransactionCRUD:
     새 거래 생성 및 Holdings 테이블 업데이트
     """
     try:
-      # 거래 기록 생성
+      # Holdings 정보를 먼저 가져와서 매도 시 평균단가 계산
+      from app.crud.holding_crud import holding_crud
+      holding = await holding_crud.get_or_create_holding(db, user_id, stock_id, broker_id)
+
+      # 매도인 경우 실현손익 계산을 위한 추가 필드 설정
+      avg_cost_at_transaction = None
+      realized_profit_per_share = None
+      total_realized_profit = None
+
+      if transaction_type == 'SELL':
+        if holding.quantity >= quantity:  # 매도 가능한 수량 체크
+          # 매도 시점의 평균단가 (이미 수수료 포함됨)
+          avg_cost_at_transaction = holding.average_cost
+          
+          # 매도 순수익 = 매도가 - 매도 시 수수료/세금
+          sell_proceeds_per_share = price - (commission + transaction_tax) / quantity
+          
+          # 실현 수익 = 매도 순수익 - 수수료 포함 평균단가
+          realized_profit_per_share = sell_proceeds_per_share - avg_cost_at_transaction
+          
+          # 총 실현손익
+          total_realized_profit = realized_profit_per_share * quantity
+        else:
+          raise ValueError(f"보유 수량 부족: 보유={holding.quantity}, 매도시도={quantity}")
+
+      # 거래 기록 생성 (추가 필드 포함)
       new_transaction = Transaction(
         user_id=user_id,
         broker_id=broker_id,
@@ -46,17 +71,16 @@ class TransactionCRUD:
         transaction_tax=transaction_tax,
         exchange_rate=exchange_rate,
         transaction_date=transaction_date,
-        notes=notes
+        notes=notes,
+        avg_cost_at_transaction=avg_cost_at_transaction,
+        realized_profit_per_share=realized_profit_per_share,
+        total_realized_profit=total_realized_profit
       )
       
       db.add(new_transaction)
       await db.flush()  # Transaction ID 생성
       
-      # Holdings 테이블 업데이트
-      from app.crud.holding_crud import holding_crud
-      
-      holding = await holding_crud.get_or_create_holding(db, user_id, stock_id, broker_id)
-      
+      # Holdings 테이블 업데이트 (holding은 이미 위에서 조회했으므로 재사용)
       if transaction_type == 'BUY':
         await holding_crud.update_holding_for_buy(
           holding, quantity, price, commission, transaction_tax, transaction_date, exchange_rate
@@ -148,7 +172,7 @@ class TransactionCRUD:
     except Exception as e:
       logger.error(f"포트폴리오 요약 조회 중 오류: user_id={user_id}, error={str(e)}")
       raise
-  
+
   async def get_user_transactions(
     self,
     db: AsyncSession,
@@ -172,7 +196,7 @@ class TransactionCRUD:
     except Exception as e:
       logger.error(f"사용자 거래 목록 조회 중 오류: user_id={user_id}, error={str(e)}")
       raise
-  
+
   async def get_stock_by_symbol(
     self,
     db: AsyncSession,
@@ -259,6 +283,68 @@ class TransactionCRUD:
     """
     logger.warning("get_broker_holdings_per_stock는 deprecated입니다. get_stock_holdings_summary를 사용하세요.")
     return await self.get_stock_holdings_summary(db, user_id, stock_symbol)
+
+  async def get_realized_profits_db(
+    self,
+    db: AsyncSession,
+    user_id: int,
+    market_type: Optional[str] = None,
+    broker_id: Optional[int] = None,
+    stock_symbol: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+  ) -> List[Dict]:
+    """
+    실현손익 Raw 데이터 조회 (순수 DB 작업만)
+    """
+    try:
+      # 기본 쿼리 - 매도 거래만
+      query = select(
+        Transaction.id,
+        Transaction.transaction_date,
+        Transaction.quantity,
+        Transaction.price,
+        Transaction.avg_cost_at_transaction,
+        Transaction.realized_profit_per_share,
+        Transaction.total_realized_profit,
+        Stock.symbol,
+        Stock.company_name,
+        Stock.currency,
+        Stock.country_code,
+        Broker.display_name.label('broker_name'),
+        Broker.id.label('broker_id')
+      ).join(Stock, Transaction.stock_id == Stock.id).join(Broker, Transaction.broker_id == Broker.id).filter(
+        Transaction.user_id == user_id,
+        Transaction.transaction_type == 'SELL',
+        Transaction.total_realized_profit.isnot(None)
+      )
+      
+      # 필터 적용
+      if market_type == 'DOMESTIC':
+        query = query.filter(Stock.country_code == 'KR')
+      elif market_type == 'OVERSEAS':
+        query = query.filter(Stock.country_code != 'KR')
+      
+      if broker_id:
+        query = query.filter(Transaction.broker_id == broker_id)
+      
+      if stock_symbol:
+        query = query.filter(Stock.symbol == stock_symbol)
+      
+      if start_date:
+        query = query.filter(Transaction.transaction_date >= start_date)
+      
+      if end_date:
+        query = query.filter(Transaction.transaction_date <= end_date)
+      
+      query = query.order_by(desc(Transaction.transaction_date))
+      
+      result = await db.execute(query)
+      return [dict(row._mapping) for row in result]
+      
+    except Exception as e:
+      logger.error(f"실현손익 Raw 데이터 조회 중 오류: user_id={user_id}, error={str(e)}")
+      raise
 
 # 싱글톤 인스턴스
 transaction_crud = TransactionCRUD()

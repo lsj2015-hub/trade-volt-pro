@@ -6,6 +6,7 @@ import { PortfolioSummaryCard } from './components/portfolio-summary-card';
 import { TotalPortfolioCard } from './components/total-portfolio-card';
 import { StockTable } from './components/stock-table';
 import { usePortfolio } from '@/contexts/portfolio-context'; // 추가
+import { RealizedProfitView } from './components/realized-profit-view';
 
 export default function PortfolioPage() {
   // Context에서 데이터 가져오기
@@ -170,6 +171,11 @@ export default function PortfolioPage() {
             // Context나 상위 컴포넌트 통해 전달받아야 함
           }}
         />
+      </section>
+
+      {/* 실현손익 섹션 */}
+      <section>
+        <RealizedProfitView />
       </section>
     </div>
   );

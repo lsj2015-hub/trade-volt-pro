@@ -22,6 +22,11 @@ class Transaction(Base):
   
   # 환율 정보 간소화 (해외주식용)
   exchange_rate = Column(DECIMAL(10, 4), default=1.0, nullable=False, comment="거래 당시 환율 (해당통화->KRW, 국내주식=1.0)")
+
+  # 실현손익 관련 (매도 거래시에만 기록)
+  avg_cost_at_transaction = Column(DECIMAL(15, 6), nullable=True, comment="매도 시점의 평균단가 (해당 통화)")
+  realized_profit_per_share = Column(DECIMAL(15, 6), nullable=True, comment="주당 실현손익 (해당 통화)")
+  total_realized_profit = Column(DECIMAL(15, 2), nullable=True, comment="총 실현손익 (해당 통화)")
   
   transaction_date = Column(DateTime(timezone=True), nullable=False, comment="거래일시")
   notes = Column(Text, nullable=True, comment="메모")

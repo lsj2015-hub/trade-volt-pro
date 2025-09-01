@@ -242,7 +242,7 @@ export default function HomePage() {
               <span className="font-semibold">Trade Volt</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2025 Trade Volt. All rights reserved.
+              © 2025 Trade Volt Pro. All rights reserved.
             </p>
           </div>
         </div>

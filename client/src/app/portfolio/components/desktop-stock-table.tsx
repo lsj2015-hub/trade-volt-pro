@@ -101,7 +101,7 @@ export const DesktopStockTable = ({
                   Avg Cost
                 </th>
                 <th className="p-3 md:p-4 font-semibold text-sm md:text-base">
-                  Price
+                  Market Price
                 </th>
                 <th className="p-3 md:p-4 font-semibold text-sm md:text-base">
                   Market Value

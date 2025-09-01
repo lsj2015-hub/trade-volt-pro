@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 from collections import defaultdict
 
@@ -479,6 +479,72 @@ class PortfolioService:
         lots_data.append(lot_item)
       
       return lots_data
+      
+    finally:
+      await db.close()
+
+  @staticmethod
+  async def get_realized_profits(
+    user_id: int,
+    market_type: Optional[str] = None,
+    broker_id: Optional[int] = None, 
+    stock_symbol: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+  ) -> List[Dict]:
+    """
+    실현손익 내역 조회 및 가공
+    - DB에서 Raw 데이터 조회 후 비즈니스 로직 적용
+    """
+    from app.config.database import get_async_session
+    from app.crud.transaction_crud import transaction_crud
+    
+    db_gen = get_async_session()
+    db = await db_gen.__anext__()
+    
+    try:
+      # 1. DB에서 Raw 데이터 조회
+      raw_data = await transaction_crud.get_realized_profits_db(
+        db=db,
+        user_id=user_id,
+        market_type=market_type,
+        broker_id=broker_id,
+        stock_symbol=stock_symbol,
+        start_date=start_date,
+        end_date=end_date
+      )
+      
+      # 2. 비즈니스 로직 적용 - 프론트엔드 형식으로 가공
+      processed_data = []
+      for row in raw_data:
+        # 시장 구분 결정
+        market_type_value = "DOMESTIC" if row["country_code"] == "KR" else "OVERSEAS"
+        
+        # 수익률 계산
+        realized_profit_percent = 0.0
+        if row["avg_cost_at_transaction"] and row["avg_cost_at_transaction"] > 0:
+          profit_per_share = float(row["price"] - row["avg_cost_at_transaction"])
+          realized_profit_percent = profit_per_share / float(row["avg_cost_at_transaction"]) * 100
+        
+        # 프론트엔드 형식으로 변환
+        profit_item = {
+          "id": str(row["id"]),
+          "symbol": row["symbol"],
+          "companyName": row["company_name"],
+          "broker": row["broker_name"],
+          "marketType": market_type_value,
+          "sellDate": row["transaction_date"].isoformat(),
+          "shares": int(row["quantity"]),
+          "sellPrice": float(row["price"]),
+          "avgCost": float(row["avg_cost_at_transaction"]) if row["avg_cost_at_transaction"] else 0.0,
+          "realizedProfit": float(row["total_realized_profit"]) if row["total_realized_profit"] else 0.0,
+          "realizedProfitPercent": round(realized_profit_percent, 2),
+          "currency": row["currency"]
+        }
+        processed_data.append(profit_item)
+      
+      logger.info(f"실현손익 처리 완료: user_id={user_id}, 건수={len(processed_data)}")
+      return processed_data
       
     finally:
       await db.close()

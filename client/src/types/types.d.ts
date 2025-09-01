@@ -383,3 +383,19 @@ export interface StockLotResponse {
   current_price: number;
   market_value: number;
 }
+
+// ====== Realized Profit 데이터 ======
+export interface RealizedProfitData {
+  id: string;
+  symbol: string;
+  companyName: string;
+  broker: string;
+  marketType: 'DOMESTIC' | 'OVERSEAS';
+  sellDate: string;
+  shares: number;
+  sellPrice: number;
+  avgCost: number;
+  realizedProfit: number;
+  realizedProfitPercent: number;
+  currency: 'KRW' | 'USD';
+}

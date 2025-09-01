@@ -50,7 +50,6 @@ export function DatePicker({
           mode="single"
           selected={date}
           onSelect={onSelect}
-          initialFocus
           locale={ko}
         />
       </PopoverContent>
