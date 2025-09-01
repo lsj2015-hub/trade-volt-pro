@@ -1,15 +1,18 @@
 import asyncio
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 from datetime import datetime, timedelta
-from collections import defaultdict
+
+from sqlalchemy import select
 
 from app.crud.holding_crud import holding_crud
+from app.crud.stock_crud import stock_crud
 from app.external.kis_api import kis_api_service
 from app.external.exchange_rate_api import exchange_rate_service
 from app.schemas.common_schema import StockDataResponse, CompletePortfolioResponse, PortfolioSummaryData
 from app.core.exceptions import CustomHTTPException
 from app.config.database import get_async_session
+
 
 logger = logging.getLogger(__name__)
 
@@ -436,8 +439,6 @@ class PortfolioService:
   @staticmethod
   async def get_lots_by_broker(user_id: int, stock_symbol: str):
     """broker별 집계 + 현재가 조합 (Holdings 기반)"""
-    from app.config.database import get_async_session
-    from app.crud.stock_crud import stock_crud
     
     db_gen = get_async_session()
     db = await db_gen.__anext__()
@@ -484,17 +485,10 @@ class PortfolioService:
       await db.close()
 
   @staticmethod
-  async def get_realized_profits(
-    user_id: int,
-    market_type: Optional[str] = None,
-    broker_id: Optional[int] = None, 
-    stock_symbol: Optional[str] = None,
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None
-  ) -> List[Dict]:
+  async def get_realized_profits(user_id: int) -> Dict:
     """
-    실현손익 내역 조회 및 가공
-    - DB에서 Raw 데이터 조회 후 비즈니스 로직 적용
+    실현손익 내역 조회 (클라이언트 필터링 방식)
+    - 모든 데이터를 한번에 가져와서 클라이언트에서 필터링
     """
     from app.config.database import get_async_session
     from app.crud.transaction_crud import transaction_crud
@@ -503,22 +497,34 @@ class PortfolioService:
     db = await db_gen.__anext__()
     
     try:
-      # 1. DB에서 Raw 데이터 조회
-      raw_data = await transaction_crud.get_realized_profits_db(
-        db=db,
-        user_id=user_id,
-        market_type=market_type,
-        broker_id=broker_id,
-        stock_symbol=stock_symbol,
-        start_date=start_date,
-        end_date=end_date
+      # 1. 현재 환율 조회와 실현손익 데이터 조회를 병렬로 처리
+      exchange_task = exchange_rate_service.get_usd_krw_rate()
+      raw_data_task = transaction_crud.get_realized_profits_db(db=db, user_id=user_id)
+      
+      # 병렬 실행 (메타데이터는 raw_data에서 추출)
+      exchange_data, raw_data = await asyncio.gather(
+        exchange_task, raw_data_task
       )
       
-      # 2. 비즈니스 로직 적용 - 프론트엔드 형식으로 가공
-      processed_data = []
+      exchange_rate = exchange_data["currency"]["exchange_rate"]
+      
+      # 2. 메타데이터 수집 (실제 데이터에서 직접 추출)
+      unique_stocks = {}
+      unique_brokers = {}
+      transactions = []
+      
+      # 3. 각 거래 데이터를 프론트엔드 형식으로 변환하면서 메타데이터도 수집
       for row in raw_data:
         # 시장 구분 결정
         market_type_value = "DOMESTIC" if row["country_code"] == "KR" else "OVERSEAS"
+        
+        # 회사명 결정 (해외주식은 영문명 우선)
+        if market_type_value == "OVERSEAS":
+          company_name = row.get("company_name_en") or row["company_name"]
+          company_name_en = row.get("company_name_en", "")
+        else:
+          company_name = row["company_name"]
+          company_name_en = ""
         
         # 수익률 계산
         realized_profit_percent = 0.0
@@ -526,12 +532,33 @@ class PortfolioService:
           profit_per_share = float(row["price"] - row["avg_cost_at_transaction"])
           realized_profit_percent = profit_per_share / float(row["avg_cost_at_transaction"]) * 100
         
+        # 원화 실현손익 계산 (매도 당시 환율 적용)
+        realized_profit_krw = 0.0
+        if row["total_realized_profit"]:
+          if market_type_value == "OVERSEAS":
+            # 해외주식: USD 실현손익 × 매도 당시 환율
+            usd_profit = float(row["total_realized_profit"])
+            sell_exchange_rate = float(row["exchange_rate"]) if row["exchange_rate"] else exchange_rate
+            realized_profit_krw = usd_profit * sell_exchange_rate
+          else:
+            # 국내주식: 이미 KRW
+            realized_profit_krw = float(row["total_realized_profit"])
+            # 국내주식 계산 검증 로그
+            logger.info(f"국내주식 실현손익: {row['symbol']} - KRW손익: {realized_profit_krw}")
+
+            # 해외주식 계산 검증 로그
+            logger.info(f"해외주식 실현손익 계산: {row['symbol']} - USD손익: {usd_profit}, 환율: {sell_exchange_rate}, KRW손익: {realized_profit_krw}")
+        
+        # 수익률 계산 검증 로그
+        logger.info(f"수익률 계산: {row['symbol']} - 매도가: {row['price']}, 평단가: {row['avg_cost_at_transaction']}, 수익률: {realized_profit_percent}%")
         # 프론트엔드 형식으로 변환
         profit_item = {
           "id": str(row["id"]),
           "symbol": row["symbol"],
-          "companyName": row["company_name"],
+          "companyName": company_name,
+          "companyNameEn": company_name_en,
           "broker": row["broker_name"],
+          "brokerId": row["broker_id"],
           "marketType": market_type_value,
           "sellDate": row["transaction_date"].isoformat(),
           "shares": int(row["quantity"]),
@@ -539,15 +566,54 @@ class PortfolioService:
           "avgCost": float(row["avg_cost_at_transaction"]) if row["avg_cost_at_transaction"] else 0.0,
           "realizedProfit": float(row["total_realized_profit"]) if row["total_realized_profit"] else 0.0,
           "realizedProfitPercent": round(realized_profit_percent, 2),
-          "currency": row["currency"]
+          "realizedProfitKRW": round(realized_profit_krw, 0),  # 원화 실현손익 (매도시점 환율 적용)
+          "currency": row["currency"],
+          "exchangeRate": float(row["exchange_rate"]) if row["exchange_rate"] else exchange_rate,  # 매도 당시 환율
+          "commission": float(row["commission"]) if row["commission"] else 0.0,
+          "transactionTax": float(row["transaction_tax"]) if row["transaction_tax"] else 0.0
         }
-        processed_data.append(profit_item)
+        transactions.append(profit_item)
+        
+        # 메타데이터 수집 (중복 제거)
+        symbol = row["symbol"]
+        if symbol not in unique_stocks:
+          unique_stocks[symbol] = {
+            "symbol": symbol,
+            "companyName": row["company_name"],
+            "companyNameEn": row.get("company_name_en", "") or ""
+          }
+        
+        broker_id = row["broker_id"]
+        if broker_id not in unique_brokers:
+          unique_brokers[broker_id] = {
+            "id": broker_id,
+            "name": row["broker_name"],
+            "displayName": row["broker_name"]
+          }
       
-      logger.info(f"실현손익 처리 완료: user_id={user_id}, 건수={len(processed_data)}")
-      return processed_data
+      # 4. 메타데이터 정렬
+      available_stocks = sorted(unique_stocks.values(), key=lambda x: x["symbol"])
+      available_brokers = sorted(unique_brokers.values(), key=lambda x: x["displayName"])
+      
+      # 5. 응답 데이터 구성
+      response_data = {
+        "success": True,
+        "data": {
+          "transactions": transactions,
+          "metadata": {
+            "exchangeRateToday": exchange_rate,  # 현재 환율
+            "availableStocks": available_stocks,
+            "availableBrokers": available_brokers
+          }
+        }
+      }
+      
+      logger.info(f"실현손익 처리 완료: user_id={user_id}, 건수={len(transactions)}")
+      return response_data
       
     finally:
       await db.close()
+
 
 # 싱글톤 인스턴스
 portfolio_service = PortfolioService()

@@ -9,6 +9,9 @@ from decimal import Decimal
 from app.models.transaction import Transaction
 from app.models.stock import Stock
 from app.models.broker import Broker
+from app.crud.holding_crud import holding_crud
+from app.models.holding import Holding
+
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +38,6 @@ class TransactionCRUD:
     """
     try:
       # Holdings 정보를 먼저 가져와서 매도 시 평균단가 계산
-      from app.crud.holding_crud import holding_crud
       holding = await holding_crud.get_or_create_holding(db, user_id, stock_id, broker_id)
 
       # 매도인 경우 실현손익 계산을 위한 추가 필드 설정
@@ -111,10 +113,6 @@ class TransactionCRUD:
     사용자의 포트폴리오 요약 조회 (Holdings 테이블 기반)
     """
     try:
-      from app.models.holding import Holding
-      from app.models.stock import Stock
-      from app.models.broker import Broker
-      
       result = await db.execute(
         select(
           Holding.stock_id,
@@ -224,11 +222,7 @@ class TransactionCRUD:
     """
     특정 종목의 broker별 보유현황 조회 (Holdings 테이블 기반)
     """
-    try:
-      from app.models.holding import Holding
-      from app.models.stock import Stock
-      from app.models.broker import Broker
-      
+    try:      
       result = await db.execute(
         select(
           Holding.broker_id,
@@ -304,11 +298,15 @@ class TransactionCRUD:
         Transaction.transaction_date,
         Transaction.quantity,
         Transaction.price,
+        Transaction.commission,
+        Transaction.transaction_tax,
         Transaction.avg_cost_at_transaction,
         Transaction.realized_profit_per_share,
         Transaction.total_realized_profit,
+        Transaction.exchange_rate,
         Stock.symbol,
         Stock.company_name,
+        Stock.company_name_en,
         Stock.currency,
         Stock.country_code,
         Broker.display_name.label('broker_name'),
@@ -345,6 +343,65 @@ class TransactionCRUD:
     except Exception as e:
       logger.error(f"실현손익 Raw 데이터 조회 중 오류: user_id={user_id}, error={str(e)}")
       raise
+
+  async def get_realized_profits_metadata(
+  self,
+  db: AsyncSession,
+  user_id: int
+  ) -> Dict:
+    """실현손익 관련 메타데이터 조회"""
+    try:
+      # 실현손익이 있는 종목 목록 조회
+      stock_query = select(
+        Stock.symbol,
+        Stock.company_name,
+        Stock.company_name_en
+      ).join(Transaction, Stock.id == Transaction.stock_id).filter(
+        Transaction.user_id == user_id,
+        Transaction.transaction_type == 'SELL',
+        Transaction.total_realized_profit.isnot(None)
+      ).distinct().order_by(Stock.symbol)
+      
+      # 실현손익 거래가 있는 증권사 목록 조회
+      broker_query = select(
+        Broker.id,
+        Broker.name,
+        Broker.display_name
+      ).join(Transaction, Broker.id == Transaction.broker_id).filter(
+        Transaction.user_id == user_id,
+        Transaction.transaction_type == 'SELL',
+        Transaction.total_realized_profit.isnot(None)
+      ).distinct().order_by(Broker.display_name)
+      
+      stock_result = await db.execute(stock_query)
+      broker_result = await db.execute(broker_query)
+      
+      # 종목 목록 가공
+      stocks = []
+      for row in stock_result:
+        stocks.append({
+          "symbol": row.symbol,
+          "companyName": row.company_name,
+          "companyNameEn": row.company_name_en or ""
+        })
+      
+      # 증권사 목록 가공
+      brokers = []
+      for row in broker_result:
+        brokers.append({
+          "id": row.id,
+          "name": row.name,
+          "displayName": row.display_name
+        })
+      
+      return {
+        "stocks": stocks,
+        "brokers": brokers
+      }
+      
+    except Exception as e:
+      logger.error(f"실현손익 메타데이터 조회 오류: user_id={user_id}, error={str(e)}")
+      return {"stocks": [], "brokers": []}
 
 # 싱글톤 인스턴스
 transaction_crud = TransactionCRUD()

@@ -116,67 +116,23 @@ async def get_stock_detail_by_brokers(
   
 @router.get("/realized-profits", response_model=RealizedProfitListResponse)
 async def get_realized_profits(
-  current_user: User = Depends(get_current_user),
-  market_type: Optional[str] = Query(None, description="시장구분: 'domestic', 'overseas', None(전체)"),
-  broker_id: Optional[int] = Query(None, description="증권사 ID"),
-  stock_symbol: Optional[str] = Query(None, description="종목 심볼"),
-  start_date: Optional[str] = Query(None, description="시작일 (YYYY-MM-DD)"),
-  end_date: Optional[str] = Query(None, description="종료일 (YYYY-MM-DD)")
+  current_user: User = Depends(get_current_user)
 ):
   """
-  실현손익 내역 조회
-  - 매도 거래별 실현손익 상세 내역
-  - 필터링: 시장구분, 증권사, 종목, 기간
+  실현손익 내역 조회 (클라이언트 필터링 방식)
+  - 모든 실현손익 데이터를 한번에 조회하여 클라이언트에서 필터링
+  - metadata 포함 (환율, 종목목록, 증권사목록)
   """
   try:
-    from app.services.portfolio_service import portfolio_service
+    logger.info(f"실현손익 조회 요청: user_id={current_user.id}")
     
-    # 날짜 파라미터 변환
-    start_datetime = None
-    end_datetime = None
+    # Portfolio Service를 통한 실현손익 조회 (모든 데이터)
+    result = await portfolio_service.get_realized_profits(current_user.id)
     
-    if start_date:
-      try:
-        start_datetime = datetime.fromisoformat(start_date)
-      except ValueError:
-        raise HTTPException(status_code=400, detail="잘못된 시작일 형식입니다. YYYY-MM-DD 형식으로 입력해주세요.")
+    logger.info(f"실현손익 API 조회 완료: user_id={current_user.id}, 건수={len(result['data']['transactions'])}")
     
-    if end_date:
-      try:
-        end_datetime = datetime.fromisoformat(end_date)
-      except ValueError:
-        raise HTTPException(status_code=400, detail="잘못된 종료일 형식입니다. YYYY-MM-DD 형식으로 입력해주세요.")
+    return result
     
-    # 시장구분 변환
-    market_type_filter = None
-    if market_type:
-      if market_type.lower() == 'domestic':
-        market_type_filter = 'DOMESTIC'
-      elif market_type.lower() == 'overseas':
-        market_type_filter = 'OVERSEAS'
-      else:
-        raise HTTPException(status_code=400, detail="시장구분은 'domestic' 또는 'overseas'만 가능합니다.")
-    
-    # Portfolio Service를 통한 실현손익 조회
-    realized_profits = await portfolio_service.get_realized_profits(
-      user_id=current_user.id,
-      market_type=market_type_filter,
-      broker_id=broker_id,
-      stock_symbol=stock_symbol,
-      start_date=start_datetime,
-      end_date=end_datetime
-    )
-    
-    logger.info(f"실현손익 API 조회 완료: user_id={current_user.id}, 건수={len(realized_profits)}")
-    
-    return {
-      "success": True,
-      "data": realized_profits,
-      "total_count": len(realized_profits)
-    }
-    
-  except HTTPException:
-    raise
   except Exception as e:
     logger.error(f"실현손익 API 조회 중 오류: user_id={current_user.id}, error={str(e)}")
     raise HTTPException(status_code=500, detail="실현손익 정보를 불러올 수 없습니다.")

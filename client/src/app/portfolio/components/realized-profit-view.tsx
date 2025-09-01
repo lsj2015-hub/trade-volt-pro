@@ -1,7 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { TrendingUp, Download } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  TrendingUp,
+  Download,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+} from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -11,7 +17,6 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-
 import {
   Select,
   SelectContent,
@@ -24,14 +29,17 @@ import { format, subMonths } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { PortfolioAPI } from '@/lib/portfolio-api';
 import { toast } from 'sonner';
-import { SystemAPI } from '@/lib/system-api';
 import { DatePicker } from '@/components/ui/date-picker';
+import { RealizedProfitMobileCard } from './realized-profit-mobile-card';
+import { RealizedProfitDesktopTable } from './realized-profit-desktop-table';
 
 interface RealizedProfitData {
   id: string;
   symbol: string;
   companyName: string;
+  companyNameEn: string;
   broker: string;
+  brokerId: number;
   marketType: 'DOMESTIC' | 'OVERSEAS';
   sellDate: string;
   shares: number;
@@ -39,11 +47,35 @@ interface RealizedProfitData {
   avgCost: number;
   realizedProfit: number;
   realizedProfitPercent: number;
+  realizedProfitKRW: number;
   currency: 'KRW' | 'USD';
+  exchangeRate: number;
+  commission: number;
+  transactionTax: number;
+}
+
+interface RealizedProfitResponse {
+  success: boolean;
+  data: {
+    transactions: RealizedProfitData[];
+    metadata: {
+      exchangeRateToday: number;
+      availableStocks: Array<{
+        symbol: string;
+        companyName: string;
+        companyNameEn: string;
+      }>;
+      availableBrokers: Array<{
+        id: number;
+        name: string;
+        displayName: string;
+      }>;
+    };
+  };
 }
 
 export const RealizedProfitView = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  // 상태 관리
   const [selectedMarket, setSelectedMarket] = useState<
     'domestic' | 'overseas' | 'all'
   >('all');
@@ -53,637 +85,363 @@ export const RealizedProfitView = () => {
     subMonths(new Date(), 12)
   );
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
-  const [realizedProfitData, setRealizedProfitData] = useState<
-    RealizedProfitData[]
-  >([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [brokers, setBrokers] = useState<
-    Array<{ id: number; broker_name: string; display_name: string }>
-  >([]);
 
-  // debounced filters state
-  const [debouncedFilters, setDebouncedFilters] = useState({
+  // 데이터 상태
+  const [allData, setAllData] = useState<RealizedProfitData[]>([]);
+  const [metadata, setMetadata] = useState<
+    RealizedProfitResponse['data']['metadata'] | null
+  >(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showDetailTable, setShowDetailTable] = useState(false);
+
+  // 초기 데이터 로딩 (1회만)
+  const loadInitialData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response: RealizedProfitResponse =
+        await PortfolioAPI.getRealizedProfits();
+
+      if (response.success) {
+        console.log('실현손익 API 응답:', response);
+        console.log('transactions 수:', response.data.transactions.length);
+        console.log('availableStocks:', response.data.metadata.availableStocks);
+        console.log(
+          'availableBrokers:',
+          response.data.metadata.availableBrokers
+        );
+
+        setAllData(response.data.transactions);
+        setMetadata(response.data.metadata);
+      } else {
+        throw new Error('API 응답 실패');
+      }
+    } catch (error) {
+      console.error('실현손익 데이터 로딩 실패:', error);
+      toast.error('실현손익 데이터를 불러오는데 실패했습니다.');
+      setAllData([]);
+      setMetadata(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 컴포넌트 마운트 시 데이터 로딩
+  useEffect(() => {
+    loadInitialData();
+  }, [loadInitialData]);
+
+  // 클라이언트 필터링 로직
+  const filteredData = useCallback(() => {
+    if (!allData.length) return [];
+
+    return allData.filter((item) => {
+      // 시장구분 필터
+      const marketMatch =
+        selectedMarket === 'all' ||
+        (selectedMarket === 'domestic' && item.marketType === 'DOMESTIC') ||
+        (selectedMarket === 'overseas' && item.marketType === 'OVERSEAS');
+
+      // 증권사 필터
+      const brokerMatch =
+        selectedBroker === 'all' || item.brokerId.toString() === selectedBroker;
+
+      // 종목 필터
+      const stockMatch =
+        selectedStock === 'all' || item.symbol === selectedStock;
+
+      // 날짜 필터
+      const sellDate = new Date(item.sellDate);
+      const dateMatch =
+        (!startDate || sellDate >= startDate) &&
+        (!endDate || sellDate <= endDate);
+
+      return marketMatch && brokerMatch && stockMatch && dateMatch;
+    });
+  }, [
+    allData,
     selectedMarket,
     selectedBroker,
     selectedStock,
     startDate,
     endDate,
-  });
+  ]);
 
-  const loadBrokers = async () => {
-    try {
-      const brokerData = await SystemAPI.getBrokers();
-      setBrokers(brokerData);
-    } catch (error) {
-      console.error('브로커 목록 조회 실패:', error);
-      toast.error('브로커 목록을 불러오는데 실패했습니다.');
+  const currentFilteredData = filteredData();
+
+  // 통계 계산 (realizedProfitKRW 기반)
+  const statistics = useCallback(() => {
+    if (!currentFilteredData.length) {
+      return {
+        totalRealizedProfitKRW: 0,
+        avgReturnRate: 0,
+        totalTransactions: 0,
+      };
     }
-  };
 
-  // debounce된 필터 업데이트
-  const debouncedUpdateFilters = useCallback(() => {
-    const timer = setTimeout(() => {
-      setDebouncedFilters({
-        selectedMarket,
-        selectedBroker,
-        selectedStock,
-        startDate,
-        endDate,
-      });
-    }, 300); // 300ms debounce
+    const totalKRW = currentFilteredData.reduce(
+      (sum, item) => sum + item.realizedProfitKRW,
+      0
+    );
+    const avgReturn =
+      currentFilteredData.reduce(
+        (sum, item) => sum + item.realizedProfitPercent,
+        0
+      ) / currentFilteredData.length;
 
-    return () => clearTimeout(timer);
-  }, [selectedMarket, selectedBroker, selectedStock, startDate, endDate]);
+    return {
+      totalRealizedProfitKRW: totalKRW,
+      avgReturnRate: avgReturn,
+      totalTransactions: currentFilteredData.length,
+    };
+  }, [currentFilteredData]);
 
-  // 필터 변경 감지
-  useEffect(() => {
-    const cleanup = debouncedUpdateFilters();
-    return cleanup;
-  }, [selectedMarket, selectedBroker, selectedStock, startDate, endDate]);
+  const stats = statistics();
 
-  // API 데이터 로딩 - 개선된 버전
-  const loadRealizedProfits = useCallback(async () => {
-    // 현재 스크롤 위치 저장
-    const scrollY = window.scrollY;
-
-    setIsLoading(true);
-
-    // 최소 로딩 시간을 500ms로 증가하여 전환 효과 확인 가능하게 함
-    const minLoadingTime = new Promise((resolve) => setTimeout(resolve, 500));
-
-    try {
-      const filters: any = {};
-
-      // 필터 조건 설정
-      if (debouncedFilters.selectedMarket !== 'all') {
-        filters.marketType = debouncedFilters.selectedMarket;
-      }
-
-      if (debouncedFilters.selectedBroker !== 'all') {
-        filters.brokerId = parseInt(debouncedFilters.selectedBroker);
-      }
-
-      if (debouncedFilters.selectedStock !== 'all') {
-        filters.stockSymbol = debouncedFilters.selectedStock;
-      }
-
-      // 날짜 범위 확인 및 설정
-      if (debouncedFilters.startDate) {
-        filters.startDate = format(debouncedFilters.startDate, 'yyyy-MM-dd');
-      }
-
-      if (debouncedFilters.endDate) {
-        filters.endDate = format(debouncedFilters.endDate, 'yyyy-MM-dd');
-      }
-
-      const [data] = await Promise.all([
-        PortfolioAPI.getRealizedProfits(filters),
-        minLoadingTime,
-      ]);
-
-      setRealizedProfitData(data);
-
-      // 짧은 딜레이 후 스크롤 위치 복원
-      setTimeout(() => {
-        window.scrollTo({ top: scrollY, behavior: 'smooth' });
-      }, 100);
-    } catch (error) {
-      await minLoadingTime;
-      console.error('실현손익 조회 실패:', error);
-      toast.error('실현손익 데이터를 불러오는데 실패했습니다.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [debouncedFilters]);
-
-  // 컴포넌트 마운트 시 데이터 로드
-  useEffect(() => {
-    loadBrokers();
-    loadRealizedProfits();
-  }, []);
-
-  // 필터 변경 시 데이터 재로드
-  useEffect(() => {
-    loadRealizedProfits();
-  }, [loadRealizedProfits, debouncedFilters]);
-
-  // 로딩 중일 때 표시 - 개선된 버전
-  if (isLoading && realizedProfitData.length === 0) {
+  // 로딩 상태
+  if (isLoading) {
     return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <div className="text-muted-foreground animate-pulse">
-              실현손익 데이터를 불러오는 중...
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="text-muted-foreground animate-pulse">
+                실현손익 데이터를 불러오는 중...
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
-  // 필터링된 데이터
-  const filteredData = realizedProfitData.filter((item) => {
-    const marketMatch =
-      selectedMarket === 'all' ||
-      (selectedMarket === 'domestic' && item.marketType === 'DOMESTIC') ||
-      (selectedMarket === 'overseas' && item.marketType === 'OVERSEAS');
-
-    const brokerMatch =
-      selectedBroker === 'all' || item.broker === selectedBroker;
-    const stockMatch = selectedStock === 'all' || item.symbol === selectedStock;
-
-    const sellDate = new Date(item.sellDate);
-    const dateMatch =
-      (!startDate || sellDate >= startDate) &&
-      (!endDate || sellDate <= endDate);
-
-    return marketMatch && brokerMatch && stockMatch && dateMatch;
-  });
-
-  // 통계 계산
-  const totalRealizedProfit = filteredData.reduce(
-    (sum, item) =>
-      sum +
-      (item.currency === 'KRW'
-        ? item.realizedProfit
-        : item.realizedProfit * 1300),
-    0
-  );
-
-  const positiveCount = filteredData.filter(
-    (item) => item.realizedProfit > 0
-  ).length;
-  const negativeCount = filteredData.filter(
-    (item) => item.realizedProfit < 0
-  ).length;
-  const winRate =
-    filteredData.length > 0 ? (positiveCount / filteredData.length) * 100 : 0;
-
+  // 통화 포맷팅 (통합된 KRW 기준)
   const formatCurrency = (
     amount: number,
-    currency: 'KRW' | 'USD',
-    marketType?: 'domestic' | 'overseas' | 'all'
+    forDisplay: 'krw' | 'original' = 'krw'
   ) => {
-    // 시장구분에 따른 통화 심볼 결정
-    let symbol = '';
-    if (
-      marketType === 'overseas' ||
-      (marketType === 'all' && currency === 'USD')
-    ) {
-      symbol = '$';
-    } else {
-      symbol = '₩';
+    if (forDisplay === 'krw') {
+      return `₩${Math.round(amount).toLocaleString()}`;
     }
+    // 기존 로직 유지 (개별 거래 표시용)
+    return `₩${Math.round(amount).toLocaleString()}`;
+  };
 
-    if (currency === 'KRW') {
-      return `${symbol}${amount.toLocaleString()}`;
-    } else {
-      return `${symbol}${amount.toLocaleString(undefined, {
+  const formatOriginalCurrency = (
+    amount: number,
+    currency: string,
+    exchangeRate?: number
+  ) => {
+    if (currency === 'USD') {
+      return `$${amount.toLocaleString(undefined, {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`;
     }
+    return `₩${Math.round(amount).toLocaleString()}`;
   };
 
   const exportToCsv = () => {
-    // CSV 내보내기 로직
     console.log('CSV 내보내기');
   };
 
   return (
-    <div ref={containerRef} className="transition-all duration-300">
-      <Card className="transition-all duration-300">
-        <CardHeader>
-          <div className="flex flex-col gap-3 md:flex-row items-center justify-between">
+    <div className="space-y-6">
+      {' '}
+      {/* portfolio page와 일관된 spacing */}
+      {/* 헤더 섹션 */}
+      <div className="flex flex-col gap-3 md:flex-row items-start md:items-center justify-between">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+            실현손익 내역
+          </h2>
+          <p className="text-muted-foreground text-sm md:text-base">
+            총 {allData.length}건의 실현손익 거래 • 현재 환율:{' '}
+            {metadata?.exchangeRateToday
+              ? `₩${metadata.exchangeRateToday.toLocaleString()}`
+              : '-'}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={exportToCsv}>
+          <Download className="h-4 w-4 mr-2" />
+          CSV 내보내기
+        </Button>
+      </div>
+      {/* 필터 섹션 */}
+      <Card>
+        <CardContent className="p-4 md:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+            {/* 시장구분 */}
             <div>
-              <CardTitle className="flex items-center gap-2">
-                실현손익 내역
-              </CardTitle>
-            </div>
-            <Button variant="outline" size="sm" onClick={exportToCsv}>
-              <Download className="h-4 w-4 mr-2" />
-              CSV 내보내기
-            </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
-          {/* 필터 영역 - 한 줄 배치 */}
-          <div
-            className={`transition-all duration-300 ease-out ${
-              isLoading ? 'opacity-60 pointer-events-none' : 'opacity-100'
-            }`}
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
-              {/* 시장구분 - 보통 (3칸) */}
-              <div className="lg:col-span-3">
-                <label className="text-sm font-bold mb-2 block">시장구분</label>
-                <Tabs
-                  value={selectedMarket}
-                  onValueChange={(value) => setSelectedMarket(value as any)}
-                  className="transition-all duration-200"
-                >
-                  <TabsList className="grid w-full grid-cols-3 transition-all duration-200">
-                    <TabsTrigger
-                      value="all"
-                      className="text-xs transition-all duration-150"
-                    >
-                      전체
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="domestic"
-                      className="text-xs transition-all duration-150"
-                    >
-                      국내
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="overseas"
-                      className="text-xs transition-all duration-150"
-                    >
-                      해외
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-
-              {/* 증권사 - 적당히 (2칸) */}
-              <div className="lg:col-span-2">
-                <label className="text-sm font-bold mb-2 block">증권사</label>
-                <Select
-                  value={selectedBroker}
-                  onValueChange={setSelectedBroker}
-                >
-                  <SelectTrigger className="text-sm transition-all duration-200 hover:bg-accent">
-                    <SelectValue placeholder="증권사" />
-                  </SelectTrigger>
-                  <SelectContent className="animate-in fade-in-0 zoom-in-95">
-                    <SelectItem
-                      value="all"
-                      className="transition-colors duration-150"
-                    >
-                      전체
-                    </SelectItem>
-                    {brokers.map((broker) => (
-                      <SelectItem
-                        key={broker.id}
-                        value={broker.id.toString()}
-                        className="transition-colors duration-150"
-                      >
-                        {broker.display_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* 종목 - 적당히 (2칸) */}
-              <div className="lg:col-span-2">
-                <label className="text-sm font-bold mb-2 block">종목</label>
-                <Select value={selectedStock} onValueChange={setSelectedStock}>
-                  <SelectTrigger className="text-sm transition-all duration-200 hover:bg-accent">
-                    <SelectValue placeholder="종목" />
-                  </SelectTrigger>
-                  <SelectContent className="animate-in fade-in-0 zoom-in-95">
-                    <SelectItem
-                      value="all"
-                      className="transition-colors duration-150"
-                    >
-                      전체
-                    </SelectItem>
-                    {Array.from(
-                      new Set(realizedProfitData.map((item) => item.symbol))
-                    ).map((symbol) => (
-                      <SelectItem
-                        key={symbol}
-                        value={symbol}
-                        className="transition-colors duration-150"
-                      >
-                        {symbol}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* 기간 */}
-              <div className="lg:col-span-5">
-                <label className="text-sm font-bold mb-2 block">기간</label>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                  <div className="transition-all duration-200">
-                    <DatePicker
-                      date={startDate}
-                      onSelect={setStartDate}
-                      placeholder="시작일"
-                      className="w-full text-sm transition-all duration-200 hover:bg-accent"
-                    />
-                  </div>
-                  <div className="transition-all duration-200">
-                    <DatePicker
-                      date={endDate}
-                      onSelect={setEndDate}
-                      placeholder="종료일"
-                      className="w-full text-sm transition-all duration-200 hover:bg-accent"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 통계 요약 - 데이터 변경 시 부드러운 전환 */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <Card
-              className={`transition-all duration-500 ease-out ${
-                isLoading ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-              }`}
-            >
-              <CardContent className="pt-6">
-                <div className="transition-all duration-300">
-                  <div className="text-2xl font-bold text-primary transition-all duration-300">
-                    {selectedMarket === 'overseas'
-                      ? `$${(totalRealizedProfit / 1300).toLocaleString(
-                          undefined,
-                          {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          }
-                        )}`
-                      : `₩${totalRealizedProfit.toLocaleString()}`}
-                  </div>
-                  <p className="text-xs text-muted-foreground transition-opacity duration-300">
-                    {selectedMarket === 'overseas'
-                      ? '총 실현손익 (USD)'
-                      : '총 실현손익 (KRW)'}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card
-              className={`transition-all duration-500 ease-out ${
-                isLoading ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-              }`}
-            >
-              <CardContent className="pt-6">
-                <div className="transition-all duration-300">
-                  <div
-                    className={`text-2xl font-bold transition-all duration-300 ${
-                      filteredData.length > 0
-                        ? filteredData.reduce(
-                            (sum, item) => sum + item.realizedProfitPercent,
-                            0
-                          ) /
-                            filteredData.length >=
-                          0
-                          ? 'text-green-600'
-                          : 'text-red-600'
-                        : 'text-gray-500'
-                    }`}
-                  >
-                    {filteredData.length > 0
-                      ? `${
-                          filteredData.reduce(
-                            (sum, item) => sum + item.realizedProfitPercent,
-                            0
-                          ) /
-                            filteredData.length >=
-                          0
-                            ? '+'
-                            : ''
-                        }${(
-                          filteredData.reduce(
-                            (sum, item) => sum + item.realizedProfitPercent,
-                            0
-                          ) / filteredData.length
-                        ).toFixed(1)}%`
-                      : '0.0%'}
-                  </div>
-                  <p className="text-xs text-muted-foreground transition-opacity duration-300">
-                    평균 수익률
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card
-              className={`transition-all duration-500 ease-out ${
-                isLoading ? 'opacity-50 scale-95' : 'opacity-100 scale-100'
-              }`}
-            >
-              <CardContent className="pt-6">
-                <div className="transition-all duration-300">
-                  <div className="text-2xl font-bold transition-all duration-300">
-                    {filteredData.length}
-                  </div>
-                  <p className="text-xs text-muted-foreground">총 거래 건수</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* 데이터 테이블 - 종목 선택시에만 표시 */}
-          {selectedStock !== 'all' && (
-            <div className="rounded-md border transition-all duration-500 ease-out animate-in fade-in-0 slide-in-from-top-4">
-              {/* Desktop & Tablet 테이블 */}
-              <div className="hidden md:block">
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[800px]">
-                    <thead>
-                      <tr className="border-b bg-muted/50">
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
-                          매도일
-                        </th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-sm">
-                          종목
-                        </th>
-                        <th className="h-12 px-4 text-left align-middle font-bold text-muted-foreground text-sm">
-                          증권사
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground text-sm">
-                          수량
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground text-sm">
-                          매도가
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground text-sm">
-                          평단가
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground text-sm">
-                          실현손익
-                        </th>
-                        <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground text-sm">
-                          수익률
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody
-                      className={`transition-all duration-300 ${
-                        isLoading ? 'opacity-50' : 'opacity-100'
-                      }`}
-                    >
-                      {filteredData.map((item) => (
-                        <tr
-                          key={item.id}
-                          className="border-b transition-colors hover:bg-muted/50"
-                        >
-                          <td className="p-4 align-middle text-sm">
-                            {format(new Date(item.sellDate), 'yyyy.MM.dd', {
-                              locale: ko,
-                            })}
-                          </td>
-                          <td className="p-4 align-middle">
-                            <div className="font-medium text-sm">
-                              {item.symbol}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {item.companyName}
-                            </div>
-                          </td>
-                          <td className="p-4 align-middle">
-                            <Badge variant="outline" className="text-xs">
-                              {item.broker.toUpperCase()}
-                            </Badge>
-                          </td>
-                          <td className="p-4 align-middle text-right text-sm">
-                            {item.shares.toLocaleString()}주
-                          </td>
-                          <td className="p-4 align-middle text-right text-sm">
-                            {formatCurrency(
-                              item.sellPrice,
-                              item.currency,
-                              selectedMarket
-                            )}
-                          </td>
-                          <td className="p-4 align-middle text-right text-sm">
-                            {formatCurrency(
-                              item.avgCost,
-                              item.currency,
-                              selectedMarket
-                            )}
-                          </td>
-                          <td
-                            className={`p-4 align-middle text-right text-sm font-medium ${
-                              item.realizedProfit >= 0
-                                ? 'text-red-600'
-                                : 'text-blue-600'
-                            }`}
-                          >
-                            {formatCurrency(
-                              item.realizedProfit,
-                              item.currency,
-                              selectedMarket
-                            )}
-                          </td>
-                          <td
-                            className={`p-4 align-middle text-right text-sm font-medium ${
-                              item.realizedProfitPercent >= 0
-                                ? 'text-red-600'
-                                : 'text-blue-600'
-                            }`}
-                          >
-                            {item.realizedProfitPercent > 0 ? '+' : ''}
-                            {item.realizedProfitPercent.toFixed(2)}%
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* 모바일 카드 레이아웃 */}
-              <div
-                className={`block md:hidden space-y-3 p-4 transition-all duration-300 ${
-                  isLoading ? 'opacity-50' : 'opacity-100'
-                }`}
+              <label className="text-sm font-semibold mb-2 block">
+                시장구분
+              </label>
+              <Tabs
+                value={selectedMarket}
+                onValueChange={(value) => setSelectedMarket(value as any)}
               >
-                {filteredData.map((item) => (
-                  <div
-                    key={item.id}
-                    className="border rounded-lg p-4 bg-white shadow-sm transition-all duration-200 hover:shadow-md"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <div className="text-sm text-gray-600">
-                          {format(new Date(item.sellDate), 'yyyy.MM.dd', {
-                            locale: ko,
-                          })}
-                        </div>
-                        <div className="font-medium">{item.symbol}</div>
-                        <div className="text-sm text-gray-600">
-                          {item.companyName}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div
-                          className={`font-medium ${
-                            item.realizedProfitPercent >= 0
-                              ? 'text-red-600'
-                              : 'text-blue-600'
-                          }`}
-                        >
-                          {item.realizedProfitPercent > 0 ? '+' : ''}
-                          {item.realizedProfitPercent.toFixed(2)}%
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-600 mb-2">
-                      <Badge variant="outline" className="text-xs mr-2">
-                        {item.broker.toUpperCase()}
-                      </Badge>
-                      매도 {item.shares.toLocaleString()}주
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm">
-                        {formatCurrency(
-                          item.avgCost,
-                          item.currency,
-                          selectedMarket
-                        )}{' '}
-                        →{' '}
-                        {formatCurrency(
-                          item.sellPrice,
-                          item.currency,
-                          selectedMarket
-                        )}
-                      </div>
-                      <div
-                        className={`font-medium ${
-                          item.realizedProfit >= 0
-                            ? 'text-red-600'
-                            : 'text-blue-600'
-                        }`}
-                      >
-                        {item.realizedProfit >= 0 ? '+' : ''}
-                        {formatCurrency(
-                          Math.abs(item.realizedProfit),
-                          item.currency,
-                          selectedMarket
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {filteredData.length === 0 && (
-                  <div className="p-8 text-center text-muted-foreground">
-                    선택한 조건에 해당하는 실현손익 내역이 없습니다.
-                  </div>
-                )}
-              </div>
-
-              {/* Desktop/Tablet 빈 데이터 표시 */}
-              {filteredData.length === 0 && (
-                <div className="hidden md:block p-8 text-center text-muted-foreground">
-                  선택한 조건에 해당하는 실현손익 내역이 없습니다.
-                </div>
-              )}
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="all" className="text-xs">
+                    전체
+                  </TabsTrigger>
+                  <TabsTrigger value="domestic" className="text-xs">
+                    국내
+                  </TabsTrigger>
+                  <TabsTrigger value="overseas" className="text-xs">
+                    해외
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
-          )}
+
+            {/* 증권사 */}
+            <div>
+              <label className="text-sm font-semibold mb-2 block">증권사</label>
+              <Select value={selectedBroker} onValueChange={setSelectedBroker}>
+                <SelectTrigger className="text-sm">
+                  <SelectValue placeholder="증권사" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체</SelectItem>
+                  {metadata?.availableBrokers.map((broker) => (
+                    <SelectItem key={broker.id} value={broker.id.toString()}>
+                      {broker.displayName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 종목 */}
+            <div>
+              <label className="text-sm font-semibold mb-2 block">종목</label>
+              <Select value={selectedStock} onValueChange={setSelectedStock}>
+                <SelectTrigger className="text-sm">
+                  <SelectValue placeholder="종목" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체</SelectItem>
+                  {metadata?.availableStocks.map((stock) => (
+                    <SelectItem key={stock.symbol} value={stock.symbol}>
+                      {stock.companyName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 기간 */}
+            <div className="sm:col-span-2">
+              <label className="text-sm font-semibold mb-2 block">기간</label>
+              <div className="grid grid-cols-2 gap-2">
+                <DatePicker
+                  date={startDate}
+                  onSelect={setStartDate}
+                  placeholder="시작일"
+                  className="w-full text-sm"
+                />
+                <DatePicker
+                  date={endDate}
+                  onSelect={setEndDate}
+                  placeholder="종료일"
+                  className="w-full text-sm"
+                />
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
+      {/* 통계 섹션 - portfolio page와 동일한 패턴 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-4 md:p-6">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">총 실현손익</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-primary">
+                {formatCurrency(stats.totalRealizedProfitKRW)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-4 md:p-6">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">평균 수익률</p>
+              <p
+                className={`text-lg sm:text-xl md:text-2xl font-bold ${
+                  stats.avgReturnRate >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
+                {stats.avgReturnRate >= 0 ? '+' : ''}
+                {stats.avgReturnRate.toFixed(1)}%
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-4 md:p-6">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">총 거래 건수</p>
+              <p className="text-lg sm:text-xl md:text-2xl font-bold">
+                {stats.totalTransactions}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      {/* 자세히 보기 버튼 */}
+      {currentFilteredData.length > 0 && (
+        <div className="text-center">
+          <Button
+            variant="outline"
+            onClick={() => setShowDetailTable(!showDetailTable)}
+            className="w-full sm:w-auto"
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            {showDetailTable ? '테이블 숨기기' : '자세히 보기'}
+            {showDetailTable ? (
+              <ChevronUp className="h-4 w-4 ml-2" />
+            ) : (
+              <ChevronDown className="h-4 w-4 ml-2" />
+            )}
+          </Button>
+        </div>
+      )}
+      {/* 상세 테이블 섹션 */}
+      {showDetailTable && currentFilteredData.length > 0 && (
+        <div className="transition-all duration-500 ease-out animate-in fade-in-0 slide-in-from-top-4">
+          {/* 모바일 & iPad mini: 카드 레이아웃 (< 1024px) */}
+          <div className="block lg:hidden space-y-4">
+            {currentFilteredData.map((item) => (
+              <RealizedProfitMobileCard
+                key={item.id}
+                item={item}
+                formatCurrency={formatCurrency}
+                formatOriginalCurrency={formatOriginalCurrency}
+              />
+            ))}
+          </div>
+
+          {/* Desktop: 테이블 레이아웃 (≥ 1024px) */}
+          <div className="hidden lg:block">
+            <RealizedProfitDesktopTable
+              items={currentFilteredData}
+              formatCurrency={formatCurrency}
+              formatOriginalCurrency={formatOriginalCurrency}
+            />
+          </div>
+        </div>
+      )}
+      {/* 데이터 없음 표시 */}
+      {currentFilteredData.length === 0 && !isLoading && (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            선택한 조건에 해당하는 실현손익 내역이 없습니다.
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

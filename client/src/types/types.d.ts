@@ -389,7 +389,9 @@ export interface RealizedProfitData {
   id: string;
   symbol: string;
   companyName: string;
+  companyNameEn: string;
   broker: string;
+  brokerId: number;
   marketType: 'DOMESTIC' | 'OVERSEAS';
   sellDate: string;
   shares: number;
@@ -397,5 +399,29 @@ export interface RealizedProfitData {
   avgCost: number;
   realizedProfit: number;
   realizedProfitPercent: number;
+  realizedProfitKRW: number;
   currency: 'KRW' | 'USD';
+  exchangeRate: number;
+  commission: number;
+  transactionTax: number;
+}
+
+interface RealizedProfitResponse {
+  success: boolean;
+  data: {
+    transactions: RealizedProfitData[];
+    metadata: {
+      exchangeRateToday: number;
+      availableStocks: Array<{
+        symbol: string;
+        companyName: string;
+        companyNameEn: string;
+      }>;
+      availableBrokers: Array<{
+        id: number;
+        name: string;
+        displayName: string;
+      }>;
+    };
+  };
 }
