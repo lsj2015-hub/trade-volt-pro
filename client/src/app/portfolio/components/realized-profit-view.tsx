@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   TrendingUp,
   Download,
@@ -32,47 +32,7 @@ import { toast } from 'sonner';
 import { DatePicker } from '@/components/ui/date-picker';
 import { RealizedProfitMobileCard } from './realized-profit-mobile-card';
 import { RealizedProfitDesktopTable } from './realized-profit-desktop-table';
-
-interface RealizedProfitData {
-  id: string;
-  symbol: string;
-  companyName: string;
-  companyNameEn: string;
-  broker: string;
-  brokerId: number;
-  marketType: 'DOMESTIC' | 'OVERSEAS';
-  sellDate: string;
-  shares: number;
-  sellPrice: number;
-  avgCost: number;
-  realizedProfit: number;
-  realizedProfitPercent: number;
-  realizedProfitKRW: number;
-  currency: 'KRW' | 'USD';
-  exchangeRate: number;
-  commission: number;
-  transactionTax: number;
-}
-
-interface RealizedProfitResponse {
-  success: boolean;
-  data: {
-    transactions: RealizedProfitData[];
-    metadata: {
-      exchangeRateToday: number;
-      availableStocks: Array<{
-        symbol: string;
-        companyName: string;
-        companyNameEn: string;
-      }>;
-      availableBrokers: Array<{
-        id: number;
-        name: string;
-        displayName: string;
-      }>;
-    };
-  };
-}
+import { RealizedProfitData, RealizedProfitResponse } from '@/types/types';
 
 export const RealizedProfitView = () => {
   // 상태 관리
@@ -94,6 +54,9 @@ export const RealizedProfitView = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showDetailTable, setShowDetailTable] = useState(false);
 
+  // 이전 기간 추적을 위한 ref
+  const prevDateRef = useRef<string>('');
+
   // 초기 데이터 로딩 (1회만)
   const loadInitialData = useCallback(async () => {
     setIsLoading(true);
@@ -103,13 +66,6 @@ export const RealizedProfitView = () => {
 
       if (response.success) {
         console.log('실현손익 API 응답:', response);
-        console.log('transactions 수:', response.data.transactions.length);
-        console.log('availableStocks:', response.data.metadata.availableStocks);
-        console.log(
-          'availableBrokers:',
-          response.data.metadata.availableBrokers
-        );
-
         setAllData(response.data.transactions);
         setMetadata(response.data.metadata);
       } else {
@@ -130,11 +86,109 @@ export const RealizedProfitView = () => {
     loadInitialData();
   }, [loadInitialData]);
 
-  // 클라이언트 필터링 로직
+  // 기간별 기본 데이터 필터링 (최우선)
+  const getBaseDataByDateRange = useCallback(() => {
+    if (!allData.length) return [];
+
+    return allData.filter((item) => {
+      const sellDate = new Date(item.sellDate);
+      const dateMatch =
+        (!startDate || sellDate >= startDate) &&
+        (!endDate || sellDate <= endDate);
+      return dateMatch;
+    });
+  }, [allData, startDate, endDate]);
+
+  // 동적 필터 옵션 생성 (기간 기준)
+  const getDynamicFilterOptions = useCallback(() => {
+    const baseData = getBaseDataByDateRange();
+
+    if (!baseData.length) {
+      return {
+        availableMarkets: [],
+        availableBrokers: [],
+        availableStocks: [],
+        hasData: false,
+      };
+    }
+
+    // 사용 가능한 시장구분 추출
+    const marketTypes = Array.from(
+      new Set(baseData.map((item) => item.marketType))
+    );
+    const availableMarkets = [
+      ...(marketTypes.includes('DOMESTIC') ? ['domestic'] : []),
+      ...(marketTypes.includes('OVERSEAS') ? ['overseas'] : []),
+    ];
+
+    // 현재 선택된 시장구분 기준으로 데이터 필터링
+    let filteredByMarket = baseData;
+    if (selectedMarket !== 'all') {
+      filteredByMarket = baseData.filter(
+        (item) =>
+          (selectedMarket === 'domestic' && item.marketType === 'DOMESTIC') ||
+          (selectedMarket === 'overseas' && item.marketType === 'OVERSEAS')
+      );
+    }
+
+    // 사용 가능한 증권사 추출
+    const availableBrokers = Array.from(
+      new Map(
+        filteredByMarket.map((item) => [
+          item.brokerId,
+          {
+            id: item.brokerId,
+            name: item.broker,
+            displayName: item.broker,
+          },
+        ])
+      ).values()
+    );
+
+    // 현재 선택된 증권사 기준으로 데이터 필터링
+    let filteredByBroker = filteredByMarket;
+    if (selectedBroker !== 'all') {
+      filteredByBroker = filteredByMarket.filter(
+        (item) => item.brokerId.toString() === selectedBroker
+      );
+    }
+
+    // 사용 가능한 종목 추출
+    const availableStocks = Array.from(
+      new Map(
+        filteredByBroker.map((item) => [
+          item.symbol,
+          {
+            symbol: item.symbol,
+            companyName: item.companyName,
+            companyNameEn: item.companyNameEn,
+            marketType: item.marketType,
+          },
+        ])
+      ).values()
+    );
+
+    return {
+      availableMarkets,
+      availableBrokers,
+      availableStocks,
+      hasData: true,
+    };
+  }, [getBaseDataByDateRange, selectedMarket, selectedBroker]);
+
+  const dynamicOptions = getDynamicFilterOptions();
+
+  // 최종 필터링된 데이터
   const filteredData = useCallback(() => {
     if (!allData.length) return [];
 
     return allData.filter((item) => {
+      // 날짜 필터 (최우선)
+      const sellDate = new Date(item.sellDate);
+      const dateMatch =
+        (!startDate || sellDate >= startDate) &&
+        (!endDate || sellDate <= endDate);
+
       // 시장구분 필터
       const marketMatch =
         selectedMarket === 'all' ||
@@ -149,13 +203,7 @@ export const RealizedProfitView = () => {
       const stockMatch =
         selectedStock === 'all' || item.symbol === selectedStock;
 
-      // 날짜 필터
-      const sellDate = new Date(item.sellDate);
-      const dateMatch =
-        (!startDate || sellDate >= startDate) &&
-        (!endDate || sellDate <= endDate);
-
-      return marketMatch && brokerMatch && stockMatch && dateMatch;
+      return dateMatch && marketMatch && brokerMatch && stockMatch;
     });
   }, [
     allData,
@@ -168,7 +216,77 @@ export const RealizedProfitView = () => {
 
   const currentFilteredData = filteredData();
 
-  // 통계 계산 (realizedProfitKRW 기반)
+  // 통합된 필터 초기화 로직 - 하나의 useEffect로 통합
+  useEffect(() => {
+    let needsUpdate = false;
+    const updates: {
+      market?: 'domestic' | 'overseas' | 'all';
+      broker?: string;
+      stock?: string;
+    } = {};
+
+    // 기간 변경 감지
+    const currentDate = `${startDate?.getTime()}-${endDate?.getTime()}`;
+    const isDateChanged = prevDateRef.current !== currentDate;
+
+    if (isDateChanged) {
+      // 기간 변경 시 모든 필터 초기화
+      updates.market = 'all';
+      updates.broker = 'all';
+      updates.stock = 'all';
+      needsUpdate = true;
+      prevDateRef.current = currentDate;
+    } else {
+      // 유효하지 않은 선택만 초기화
+      if (
+        selectedMarket !== 'all' &&
+        !dynamicOptions.availableMarkets.includes(selectedMarket)
+      ) {
+        updates.market = 'all';
+        needsUpdate = true;
+      }
+
+      const availableBrokerIds = dynamicOptions.availableBrokers.map((b) =>
+        b.id.toString()
+      );
+      if (
+        selectedBroker !== 'all' &&
+        !availableBrokerIds.includes(selectedBroker)
+      ) {
+        updates.broker = 'all';
+        needsUpdate = true;
+      }
+
+      const availableStockSymbols = dynamicOptions.availableStocks.map(
+        (s) => s.symbol
+      );
+      if (
+        selectedStock !== 'all' &&
+        !availableStockSymbols.includes(selectedStock)
+      ) {
+        updates.stock = 'all';
+        needsUpdate = true;
+      }
+    }
+
+    // 한 번에 모든 업데이트 실행 (배치 처리)
+    if (needsUpdate) {
+      if (updates.market !== undefined) setSelectedMarket(updates.market);
+      if (updates.broker !== undefined) setSelectedBroker(updates.broker);
+      if (updates.stock !== undefined) setSelectedStock(updates.stock);
+    }
+  }, [
+    startDate,
+    endDate,
+    selectedMarket,
+    selectedBroker,
+    selectedStock,
+    dynamicOptions.availableMarkets,
+    dynamicOptions.availableBrokers,
+    dynamicOptions.availableStocks,
+  ]);
+
+  // 통계 계산 (realizedProfitKRW 기준)
   const statistics = useCallback(() => {
     if (!currentFilteredData.length) {
       return {
@@ -223,7 +341,6 @@ export const RealizedProfitView = () => {
     if (forDisplay === 'krw') {
       return `₩${Math.round(amount).toLocaleString()}`;
     }
-    // 기존 로직 유지 (개별 거래 표시용)
     return `₩${Math.round(amount).toLocaleString()}`;
   };
 
@@ -247,8 +364,6 @@ export const RealizedProfitView = () => {
 
   return (
     <div className="space-y-6">
-      {' '}
-      {/* portfolio page와 일관된 spacing */}
       {/* 헤더 섹션 */}
       <div className="flex flex-col gap-3 md:flex-row items-start md:items-center justify-between">
         <div>
@@ -256,10 +371,7 @@ export const RealizedProfitView = () => {
             실현손익 내역
           </h2>
           <p className="text-muted-foreground text-sm md:text-base">
-            총 {allData.length}건의 실현손익 거래 • 현재 환율:{' '}
-            {metadata?.exchangeRateToday
-              ? `₩${metadata.exchangeRateToday.toLocaleString()}`
-              : '-'}
+            총 {allData.length}건의 실현손익 거래
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={exportToCsv}>
@@ -267,131 +379,206 @@ export const RealizedProfitView = () => {
           CSV 내보내기
         </Button>
       </div>
+
       {/* 필터 섹션 */}
       <Card>
         <CardContent className="p-4 md:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-            {/* 시장구분 */}
-            <div>
-              <label className="text-sm font-semibold mb-2 block">
-                시장구분
-              </label>
-              <Tabs
-                value={selectedMarket}
-                onValueChange={(value) => setSelectedMarket(value as any)}
-              >
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="all" className="text-xs">
-                    전체
-                  </TabsTrigger>
-                  <TabsTrigger value="domestic" className="text-xs">
-                    국내
-                  </TabsTrigger>
-                  <TabsTrigger value="overseas" className="text-xs">
-                    해외
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            {/* 증권사 */}
-            <div>
-              <label className="text-sm font-semibold mb-2 block">증권사</label>
-              <Select value={selectedBroker} onValueChange={setSelectedBroker}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="증권사" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  {metadata?.availableBrokers.map((broker) => (
-                    <SelectItem key={broker.id} value={broker.id.toString()}>
-                      {broker.displayName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 종목 */}
-            <div>
-              <label className="text-sm font-semibold mb-2 block">종목</label>
-              <Select value={selectedStock} onValueChange={setSelectedStock}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="종목" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  {metadata?.availableStocks.map((stock) => (
-                    <SelectItem key={stock.symbol} value={stock.symbol}>
-                      {stock.companyName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 기간 */}
-            <div className="sm:col-span-2">
-              <label className="text-sm font-semibold mb-2 block">기간</label>
-              <div className="grid grid-cols-2 gap-2">
-                <DatePicker
-                  date={startDate}
-                  onSelect={setStartDate}
-                  placeholder="시작일"
-                  className="w-full text-sm"
-                />
-                <DatePicker
-                  date={endDate}
-                  onSelect={setEndDate}
-                  placeholder="종료일"
-                  className="w-full text-sm"
-                />
+          {!dynamicOptions.hasData ? (
+            // 데이터 없음 메시지
+            <div className="text-center py-8">
+              <div className="text-muted-foreground text-base mb-2">
+                선택한 기간에 매도 기록이 없습니다
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {startDate && endDate
+                  ? `${format(startDate, 'yyyy.MM.dd', {
+                      locale: ko,
+                    })} ~ ${format(endDate, 'yyyy.MM.dd', { locale: ko })}`
+                  : '다른 기간을 선택해보세요'}
+              </div>
+              <div className="mt-6 max-w-md mx-auto">
+                <label className="text-sm font-semibold mb-2 block">
+                  기간 재설정
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <DatePicker
+                    date={startDate}
+                    onSelect={setStartDate}
+                    placeholder="시작일"
+                    className="w-full text-sm"
+                  />
+                  <DatePicker
+                    date={endDate}
+                    onSelect={setEndDate}
+                    placeholder="종료일"
+                    className="w-full text-sm"
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
+              {/* 시장구분 - disabled 처리만 */}
+              <div className="lg:col-span-4">
+                <label className="text-sm font-semibold mb-2 block">
+                  시장구분
+                </label>
+                <Tabs
+                  value={selectedMarket}
+                  onValueChange={(value) => setSelectedMarket(value as any)}
+                >
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="all" className="text-xs">
+                      전체
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="domestic"
+                      className="text-xs"
+                      disabled={
+                        !dynamicOptions.availableMarkets.includes('domestic')
+                      }
+                    >
+                      국내
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="overseas"
+                      className="text-xs"
+                      disabled={
+                        !dynamicOptions.availableMarkets.includes('overseas')
+                      }
+                    >
+                      해외
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              {/* 증권사 - 데이터 있는 항목만 표시 */}
+              <div className="lg:col-span-2">
+                <label className="text-sm font-semibold mb-2 block">
+                  증권사
+                </label>
+                {dynamicOptions.availableBrokers.length === 0 ? (
+                  <div className="h-9 px-3 py-2 bg-muted/50 text-muted-foreground text-sm rounded-md border flex items-center justify-center">
+                    선택 가능한 증권사 없음
+                  </div>
+                ) : (
+                  <Select
+                    value={selectedBroker}
+                    onValueChange={setSelectedBroker}
+                  >
+                    <SelectTrigger className="text-sm">
+                      <SelectValue placeholder="증권사" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">전체</SelectItem>
+                      {dynamicOptions.availableBrokers.map((broker) => (
+                        <SelectItem
+                          key={broker.id}
+                          value={broker.id.toString()}
+                        >
+                          {broker.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* 종목 - 데이터 있는 항목만 표시 */}
+              <div className="lg:col-span-2">
+                <label className="text-sm font-semibold mb-2 block">종목</label>
+                {dynamicOptions.availableStocks.length === 0 ? (
+                  <div className="h-9 px-3 py-2 bg-muted/50 text-muted-foreground text-sm rounded-md border flex items-center justify-center">
+                    선택 가능한 종목 없음
+                  </div>
+                ) : (
+                  <Select
+                    value={selectedStock}
+                    onValueChange={setSelectedStock}
+                  >
+                    <SelectTrigger className="text-sm">
+                      <SelectValue placeholder="종목" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">전체</SelectItem>
+                      {dynamicOptions.availableStocks.map((stock) => (
+                        <SelectItem key={stock.symbol} value={stock.symbol}>
+                          {stock.companyName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              {/* 기간 */}
+              <div className="sm:col-span-2 lg:col-span-4">
+                <label className="text-sm font-semibold mb-2 block">기간</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <DatePicker
+                    date={startDate}
+                    onSelect={setStartDate}
+                    placeholder="시작일"
+                    className="w-full text-sm"
+                  />
+                  <DatePicker
+                    date={endDate}
+                    onSelect={setEndDate}
+                    placeholder="종료일"
+                    className="w-full text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
-      {/* 통계 섹션 - portfolio page와 동일한 패턴 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="p-4 md:p-6">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">총 실현손익</p>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold text-primary">
-                {formatCurrency(stats.totalRealizedProfitKRW)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="p-4 md:p-6">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">평균 수익률</p>
-              <p
-                className={`text-lg sm:text-xl md:text-2xl font-bold ${
-                  stats.avgReturnRate >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
-                {stats.avgReturnRate >= 0 ? '+' : ''}
-                {stats.avgReturnRate.toFixed(1)}%
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* 통계 섹션 - 데이터가 있을 때만 표시 */}
+      {dynamicOptions.hasData && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-4 md:p-6">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">총 실현손익</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold text-primary">
+                  {formatCurrency(stats.totalRealizedProfitKRW)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="p-4 md:p-6">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">총 거래 건수</p>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold">
-                {stats.totalTransactions}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      {/* 자세히 보기 버튼 */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-4 md:p-6">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">평균 수익률</p>
+                <p
+                  className={`text-lg sm:text-xl md:text-2xl font-bold ${
+                    stats.avgReturnRate >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}
+                >
+                  {stats.avgReturnRate >= 0 ? '+' : ''}
+                  {stats.avgReturnRate.toFixed(1)}%
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-4 md:p-6">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">총 거래 건수</p>
+                <p className="text-lg sm:text-xl md:text-2xl font-bold">
+                  {stats.totalTransactions}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* 자세히 보기 버튼 - 데이터가 있을 때만 표시 */}
       {currentFilteredData.length > 0 && (
         <div className="text-center">
           <Button
@@ -409,11 +596,12 @@ export const RealizedProfitView = () => {
           </Button>
         </div>
       )}
+
       {/* 상세 테이블 섹션 */}
       {showDetailTable && currentFilteredData.length > 0 && (
         <div className="transition-all duration-500 ease-out animate-in fade-in-0 slide-in-from-top-4">
-          {/* 모바일 & iPad mini: 카드 레이아웃 (< 1024px) */}
-          <div className="block lg:hidden space-y-4">
+          {/* 모바일: 1열 카드 레이아웃 (< 768px) */}
+          <div className="block md:hidden space-y-4">
             {currentFilteredData.map((item) => (
               <RealizedProfitMobileCard
                 key={item.id}
@@ -424,7 +612,21 @@ export const RealizedProfitView = () => {
             ))}
           </div>
 
-          {/* Desktop: 테이블 레이아웃 (≥ 1024px) */}
+          {/* 태블릿: 2열 카드 레이아웃 (768px ≤ < 1024px) */}
+          <div className="hidden md:block lg:hidden">
+            <div className="grid grid-cols-2 gap-4">
+              {currentFilteredData.map((item) => (
+                <RealizedProfitMobileCard
+                  key={item.id}
+                  item={item}
+                  formatCurrency={formatCurrency}
+                  formatOriginalCurrency={formatOriginalCurrency}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop: 테이블 레이아웃 (≥ 1024px) - 기존 유지 */}
           <div className="hidden lg:block">
             <RealizedProfitDesktopTable
               items={currentFilteredData}
@@ -434,14 +636,20 @@ export const RealizedProfitView = () => {
           </div>
         </div>
       )}
-      {/* 데이터 없음 표시 */}
-      {currentFilteredData.length === 0 && !isLoading && (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            선택한 조건에 해당하는 실현손익 내역이 없습니다.
-          </CardContent>
-        </Card>
-      )}
+
+      {/* 필터링 후 데이터 없음 표시 */}
+      {currentFilteredData.length === 0 &&
+        !isLoading &&
+        dynamicOptions.hasData && (
+          <Card>
+            <CardContent className="p-8 text-center text-muted-foreground">
+              <div className="text-base mb-2">
+                선택한 조건에 해당하는 실현손익 내역이 없습니다
+              </div>
+              <div className="text-sm">필터 조건을 변경해보세요</div>
+            </CardContent>
+          </Card>
+        )}
     </div>
   );
 };

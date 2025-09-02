@@ -166,10 +166,6 @@ export default function PortfolioPage() {
           domesticStocks={convertToStockData(portfolioData.domestic_stocks)}
           overseasStocks={convertToStockData(portfolioData.overseas_stocks)}
           formatCurrency={formatCurrency}
-          onAddLot={(stock) => {
-            // layout-wrapper의 상태를 어떻게 접근할지 결정 필요
-            // Context나 상위 컴포넌트 통해 전달받아야 함
-          }}
         />
       </section>
 

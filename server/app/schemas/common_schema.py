@@ -266,7 +266,7 @@ class RealizedProfitResponse(BaseModel):
 
 class RealizedProfitMetadata(BaseModel):
   """실현손익 메타데이터"""
-  exchangeRateToday: float = Field(..., description="현재 환율")
+  # exchangeRateToday: float = Field(..., description="현재 환율")
   availableStocks: List[Dict] = Field(..., description="실현손익이 있는 종목 목록")
   availableBrokers: List[Dict] = Field(..., description="실현손익이 있는 증권사 목록")
   

@@ -1,6 +1,7 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { TotalPortfolioCardProps } from '@/types/types';
+import { ExchangeRateDisplay } from '../../../components/common/exchange-rate-display';
 
 export const TotalPortfolioCard = ({
   totalPortfolio,
@@ -19,6 +20,13 @@ export const TotalPortfolioCard = ({
           Total Portfolio Value
         </p>
       </CardTitle>
+
+      {/* 환율 정보 */}
+      <ExchangeRateDisplay
+        size="sm"
+        showLabel={true}
+        className="text-right px-4"
+      />
       <CardContent className="p-4 sm:p-6 md:p-8">
         <div className="space-y-3 md:space-y-6 lg:space-y-12">
           <div className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-5xl text-center font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent md:mb-5">

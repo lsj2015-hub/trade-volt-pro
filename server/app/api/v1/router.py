@@ -5,7 +5,8 @@ from .endpoints import (
     stock_endpoints, 
     portfolio_endpoints,
     trading_endpoints,  
-    system_endpoints 
+    system_endpoints,
+    exchange_endpoints
 )
 
 # API v1 라우터
@@ -32,23 +33,30 @@ api_router.include_router(
   tags=["Stock"]
 )
 
-# 포트폴리오 API 라우터 ✅ 새로 추가
+# 포트폴리오 API 라우터
 api_router.include_router(
   portfolio_endpoints.router,
   prefix="/portfolio",
   tags=["Portfolio"]
 )
 
-# 거래 API 라우터 ✅ 새로 추가
+# 거래 API 라우터
 api_router.include_router(
   trading_endpoints.router,
   prefix="/trading",
   tags=["Trading"]
 )
 
-# 시스템 API 라우터 ✅ 새로 추가
+# 시스템 API 라우터
 api_router.include_router(
   system_endpoints.router,
   prefix="/system",
   tags=["System"]
+)
+
+# 환율 API 라우터
+api_router.include_router(
+  exchange_endpoints.router,
+  prefix="/exchange",
+  tags=["Exchange"]
 )

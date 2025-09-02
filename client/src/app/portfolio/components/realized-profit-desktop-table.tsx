@@ -20,34 +20,38 @@ export const RealizedProfitDesktopTable = ({
   formatCurrency,
   formatOriginalCurrency,
 }: RealizedProfitDesktopTableProps) => (
-  <Card className="border-0 shadow-md">
-    <CardContent className="p-0">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px]">
+  <div className="w-full">
+    {/* Card 대신 직접 div 사용 */}
+    <div className="border rounded-lg shadow-md bg-white">
+      {/* 스크롤 영역을 더 명확히 제한 */}
+      <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300">
+        <table className="w-full min-w-[800px]">
+          {' '}
+          {/* min-width를 줄임 */}
           <thead className="border-b bg-muted/30">
             <tr className="text-left">
-              <th className="p-3 lg:p-4 font-semibold text-sm lg:text-base">
+              <th className="px-3 py-4 font-semibold text-sm whitespace-nowrap">
                 매도일
               </th>
-              <th className="p-3 lg:p-4 font-semibold text-sm lg:text-base">
+              <th className="px-3 py-4 font-semibold text-sm whitespace-nowrap">
                 종목
               </th>
-              <th className="p-3 lg:p-4 font-semibold text-sm lg:text-base">
+              <th className="px-3 py-4 font-semibold text-sm whitespace-nowrap">
                 증권사
               </th>
-              <th className="p-3 lg:p-4 font-semibold text-sm lg:text-base text-right">
+              <th className="px-3 py-4 font-semibold text-sm text-right whitespace-nowrap">
                 수량
               </th>
-              <th className="p-3 lg:p-4 font-semibold text-sm lg:text-base text-right">
+              <th className="px-3 py-4 font-semibold text-sm text-right whitespace-nowrap">
                 매도가
               </th>
-              <th className="p-3 lg:p-4 font-semibold text-sm lg:text-base text-right">
+              <th className="px-3 py-4 font-semibold text-sm text-right whitespace-nowrap">
                 평단가
               </th>
-              <th className="p-3 lg:p-4 font-semibold text-sm lg:text-base text-right">
+              <th className="px-3 py-4 font-semibold text-sm text-right whitespace-nowrap">
                 실현손익
               </th>
-              <th className="p-3 lg:p-4 font-semibold text-sm lg:text-base text-right">
+              <th className="px-3 py-4 font-semibold text-sm text-right whitespace-nowrap">
                 수익률
               </th>
             </tr>
@@ -58,39 +62,42 @@ export const RealizedProfitDesktopTable = ({
                 key={item.id}
                 className="border-b hover:bg-muted/20 transition-colors"
               >
-                <td className="p-3 lg:p-4 text-sm lg:text-base">
+                <td className="px-3 py-4 text-sm whitespace-nowrap">
                   {format(new Date(item.sellDate), 'yyyy.MM.dd', {
                     locale: ko,
                   })}
                 </td>
-                <td className="p-3 lg:p-4">
-                  <div>
-                    <div className="font-semibold text-sm lg:text-base">
+                <td className="px-3 py-4">
+                  <div className="max-w-[120px]">
+                    <div className="font-semibold text-sm truncate">
                       {item.symbol}
                     </div>
-                    <div className="text-xs lg:text-sm text-muted-foreground line-clamp-1">
+                    <div className="text-xs text-muted-foreground truncate">
                       {item.marketType === 'OVERSEAS'
                         ? item.companyNameEn || item.companyName
                         : item.companyName}
                     </div>
                   </div>
                 </td>
-                <td className="p-3 lg:p-4">
-                  <Badge variant="outline" className="text-xs lg:text-sm">
+                <td className="px-3 py-4">
+                  <Badge
+                    variant="outline"
+                    className="text-xs whitespace-nowrap"
+                  >
                     {item.broker}
                   </Badge>
                 </td>
-                <td className="p-3 lg:p-4 text-right text-sm lg:text-base font-medium">
+                <td className="px-3 py-4 text-right text-sm font-medium whitespace-nowrap">
                   {item.shares.toLocaleString()}주
                 </td>
-                <td className="p-3 lg:p-4 text-right text-sm lg:text-base">
+                <td className="px-3 py-4 text-right text-sm whitespace-nowrap">
                   {formatOriginalCurrency(item.sellPrice, item.currency)}
                 </td>
-                <td className="p-3 lg:p-4 text-right text-sm lg:text-base">
+                <td className="px-3 py-4 text-right text-sm whitespace-nowrap">
                   {formatOriginalCurrency(item.avgCost, item.currency)}
                 </td>
                 <td
-                  className={`p-3 lg:p-4 text-right text-sm lg:text-base font-semibold ${
+                  className={`px-3 py-4 text-right text-sm font-semibold whitespace-nowrap ${
                     item.realizedProfitKRW >= 0
                       ? 'text-green-600'
                       : 'text-red-600'
@@ -99,7 +106,7 @@ export const RealizedProfitDesktopTable = ({
                   {formatCurrency(item.realizedProfitKRW)}
                 </td>
                 <td
-                  className={`p-3 lg:p-4 text-right text-sm lg:text-base font-semibold ${
+                  className={`px-3 py-4 text-right text-sm font-semibold whitespace-nowrap ${
                     item.realizedProfitPercent >= 0
                       ? 'text-green-600'
                       : 'text-red-600'
@@ -113,6 +120,6 @@ export const RealizedProfitDesktopTable = ({
           </tbody>
         </table>
       </div>
-    </CardContent>
-  </Card>
+    </div>
+  </div>
 );

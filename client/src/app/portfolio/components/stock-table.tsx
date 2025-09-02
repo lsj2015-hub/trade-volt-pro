@@ -11,7 +11,6 @@ interface StockTableProps {
   domesticStocks: StockData[];
   overseasStocks: StockData[];
   formatCurrency: (amount: number, currency: 'KRW' | 'USD') => string;
-  onAddLot?: (stock: StockInfo) => void;
 }
 
 export const StockTable = ({

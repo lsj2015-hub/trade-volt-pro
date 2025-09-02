@@ -385,7 +385,7 @@ export interface StockLotResponse {
 }
 
 // ====== Realized Profit 데이터 ======
-export interface RealizedProfitData {
+interface RealizedProfitData {
   id: string;
   symbol: string;
   companyName: string;
@@ -411,7 +411,7 @@ interface RealizedProfitResponse {
   data: {
     transactions: RealizedProfitData[];
     metadata: {
-      exchangeRateToday: number;
+      // exchangeRateToday: number;
       availableStocks: Array<{
         symbol: string;
         companyName: string;

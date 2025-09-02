@@ -8,7 +8,6 @@ import { Sidebar } from '@/components/dashboard/sidebar';
 import { useAuth } from '@/hooks/use-auth';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { StockSearchModal } from '@/components/dashboard/stock-search-modal';
-import { StockInfo } from '@/types/types';
 import { AddLotModal } from './dashboard/add-lot-modal';
 import { AddLotProvider, useAddLot } from '@/contexts/add-lot-context';
 
@@ -20,16 +19,9 @@ const LayoutWrapperContent = ({ children }: LayoutWrapperProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [stockSearchOpen, setStockSearchOpen] = useState(false);
-  // const [addLotOpen, setAddLotOpen] = useState(false);
-  // const [selectedStock, setSelectedStock] = useState<StockInfo | null>(null);
 
-  const {
-    isAddLotOpen,
-    selectedStock,
-    resetKey,
-    openAddLotModal,
-    closeAddLotModal,
-  } = useAddLot();
+  const { isAddLotOpen, selectedStock, resetKey, closeAddLotModal } =
+    useAddLot();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -88,11 +80,6 @@ const LayoutWrapperContent = ({ children }: LayoutWrapperProps) => {
         <StockSearchModal
           open={stockSearchOpen}
           onOpenChange={setStockSearchOpen}
-          // onStockSelect={(stock: StockInfo) => {
-          //   setSelectedStock(stock);
-          //   setStockSearchOpen(false);
-          //   setAddLotOpen(true);
-          // }}
         />
 
         {/* Add Lot Modal */}

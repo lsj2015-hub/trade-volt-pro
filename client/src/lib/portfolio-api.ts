@@ -131,7 +131,7 @@ export class PortfolioAPI {
     data: {
       transactions: RealizedProfitData[];
       metadata: {
-        exchangeRateToday: number;
+        // exchangeRateToday: number;
         availableStocks: Array<{
           symbol: string;
           companyName: string;

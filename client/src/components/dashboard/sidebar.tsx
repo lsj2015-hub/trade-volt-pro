@@ -40,7 +40,7 @@ export const Sidebar = ({
   const dashboardItems = navigationItems.filter((item) => item.requireAuth);
 
   return (
-    <ShadcnSidebar collapsible="icon" {...props}>
+    <ShadcnSidebar collapsible="icon" className="z-50" {...props}>
       <SidebarHeader>
         <div className="flex h-12 items-center justify-center px-2">
           <Link href="/">

@@ -601,7 +601,6 @@ class PortfolioService:
         "data": {
           "transactions": transactions,
           "metadata": {
-            "exchangeRateToday": exchange_rate,  # 현재 환율
             "availableStocks": available_stocks,
             "availableBrokers": available_brokers
           }
