@@ -9,7 +9,7 @@ from app.crud.holding_crud import holding_crud
 from app.crud.stock_crud import stock_crud
 from app.external.kis_api import kis_api_service
 from app.external.exchange_rate_api import exchange_rate_service
-from app.schemas.common_schema import StockDataResponse, CompletePortfolioResponse, PortfolioSummaryData
+from app.schemas.common_schemas import StockDataResponse, CompletePortfolioResponse, PortfolioSummaryData
 from app.core.exceptions import CustomHTTPException
 from app.config.database import get_async_session
 

@@ -101,7 +101,7 @@ export interface StockSearchResponse {
 export interface StockSearchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onStockSelect?;
+  onStockSelect?: boolean;
 }
 
 // ====== 포트폴리오 관련 타입 ======
@@ -269,7 +269,7 @@ export interface CommissionRateResponse {
 export interface CommissionCalculationParams {
   shares: number;
   pricePerShare: number;
-  feeRate: number;           // 서버에서 받은 수수료율
+  feeRate: number; // 서버에서 받은 수수료율
   transactionTaxRate: number; // 서버에서 받은 거래세율
   transactionType: 'BUY' | 'SELL';
 }
@@ -354,17 +354,17 @@ export interface CompletePortfolioResponse {
   total_day_gain_percent: number;
   total_total_gain_krw: number;
   total_total_gain_percent: number;
-  
+
   // 국내주식 카드 (KRW)
   domestic_summary: PortfolioSummaryData;
-  
+
   // 해외주식 카드 (USD)
   overseas_summary: PortfolioSummaryData;
-  
+
   // 테이블 데이터
   domestic_stocks: StockDataResponse[];
   overseas_stocks: StockDataResponse[];
-  
+
   // 메타 데이터
   exchange_rate: number;
   updated_at: string;
@@ -385,7 +385,7 @@ export interface StockLotResponse {
 }
 
 // ====== Realized Profit 데이터 ======
-interface RealizedProfitData {
+export interface RealizedProfitData {
   id: string;
   symbol: string;
   companyName: string;
@@ -406,7 +406,7 @@ interface RealizedProfitData {
   transactionTax: number;
 }
 
-interface RealizedProfitResponse {
+export interface RealizedProfitResponse {
   success: boolean;
   data: {
     transactions: RealizedProfitData[];
@@ -424,4 +424,115 @@ interface RealizedProfitResponse {
       }>;
     };
   };
+}
+
+// ====== Analysis 관련 타입 ======
+export type AnalysisInfoType =
+  | 'company-summary'
+  | 'financial-summary'
+  | 'investment-index'
+  | 'market-info'
+  | 'analyst-opinion'
+  | 'major-executors';
+
+export interface AnalysisResponse {
+  symbol: string;
+  info_type: string;
+  data: any;
+  success: boolean;
+  message?: string;
+}
+
+export interface CompanySummary {
+  symbol: string;
+  longName: string;
+  industry: string;
+  sector: string;
+  longBusinessSummary: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  website?: string;
+  fullTimeEmployees: string;
+}
+
+export interface FinancialSummary {
+  totalRevenue: string;
+  netIncomeToCommon: string;
+  operatingMargins: string;
+  dividendYield: string;
+  trailingEps: string;
+  totalCash: string;
+  totalDebt: string;
+  debtToEquity: string;
+  exDividendDate?: string;
+}
+
+export interface InvestmentIndex {
+  trailingPE: string;
+  forwardPE: string;
+  priceToBook: string;
+  returnOnEquity: string;
+  returnOnAssets: string;
+  beta: string;
+}
+
+export interface MarketInfo {
+  currentPrice: string;
+  previousClose: string;
+  dayHigh: string;
+  dayLow: string;
+  fiftyTwoWeekHigh: string;
+  fiftyTwoWeekLow: string;
+  marketCap: string;
+  sharesOutstanding: string;
+  volume: string;
+}
+
+export interface AnalystOpinion {
+  recommendationMean: number;
+  recommendationKey: string;
+  numberOfAnalystOpinions: number;
+  targetMeanPrice: string;
+  targetHighPrice: string;
+  targetLowPrice: string;
+}
+
+export interface OfficerInfo {
+  name: string;
+  title: string;
+  totalPay: string;
+  age?: number;
+  yearBorn?: number;
+}
+
+export interface MajorExecutors {
+  officers: OfficerInfo[];
+}
+
+export type AnalysisData =
+  | CompanySummary
+  | FinancialSummary
+  | InvestmentIndex
+  | MarketInfo
+  | AnalystOpinion
+  | MajorExecutors;
+
+export class AnalysisAPIError extends Error {
+  constructor(
+    message: string,
+    public status?: number,
+    public errorCode?: string
+  ) {
+    super(message);
+    this.name = 'AnalysisAPIError';
+  }
+}
+
+export interface AnalysisParams {
+  symbol: string;
+  infoType: AnalysisInfoType;
+  countryCode?: string;
+  companyName?: string;
+  exchangeCode?: string
 }

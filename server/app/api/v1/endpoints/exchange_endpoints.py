@@ -5,7 +5,7 @@ import logging
 from app.external.exchange_rate_api import exchange_rate_service
 from app.models.user import User
 from app.core.dependencies import get_current_user
-from app.schemas.common_schema import ExchangeRateResponse, ExchangeRatesResponse
+from app.schemas.common_schemas import ExchangeRateResponse, ExchangeRatesResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

@@ -5,7 +5,7 @@ import logging
 
 from app.config.database import get_sync_session
 from app.crud.stock_crud import stock_crud
-from app.schemas.common_schema import StockInfo, StockPriceResponse
+from app.schemas.common_schemas import StockInfo, StockPriceResponse
 from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.external.kis_api import kis_api_service

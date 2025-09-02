@@ -6,7 +6,8 @@ from .endpoints import (
     portfolio_endpoints,
     trading_endpoints,  
     system_endpoints,
-    exchange_endpoints
+    exchange_endpoints,
+    analysis_endpoints
 )
 
 # API v1 라우터
@@ -59,4 +60,11 @@ api_router.include_router(
   exchange_endpoints.router,
   prefix="/exchange",
   tags=["Exchange"]
+)
+
+# 종목 분석 API 라우터 (추가)
+api_router.include_router(
+  analysis_endpoints.router,
+  prefix="/analysis",
+  tags=["Analysis"]
 )

@@ -6,7 +6,7 @@ from datetime import datetime
 from app.config.database import get_async_session
 from app.crud.holding_crud import holding_crud
 from app.models.user import User
-from app.schemas.common_schema import ( 
+from app.schemas.common_schemas import ( 
   CompletePortfolioResponse, RealizedProfitListResponse 
 )
 from app.core.dependencies import get_current_user

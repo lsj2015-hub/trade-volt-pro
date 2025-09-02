@@ -8,7 +8,7 @@ from app.config.database import get_async_session, get_sync_session
 from app.crud.broker_crud import broker_crud
 from app.crud.fee_tax_crud import fee_tax_crud
 from app.models.user import User
-from app.schemas.common_schema import BrokerResponse, CommissionRateResponse
+from app.schemas.common_schemas import BrokerResponse, CommissionRateResponse
 from app.core.dependencies import get_current_user
 
 logger = logging.getLogger(__name__)

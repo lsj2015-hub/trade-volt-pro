@@ -208,17 +208,12 @@ class CompletePortfolioResponse(BaseModel):
   total_total_gain_krw: float = Field(..., description="총 누적 손익 (원화)")
   total_total_gain_percent: float = Field(..., description="총 누적 수익률 (%)")
   
-  # 국내주식 카드 (KRW)
   domestic_summary: PortfolioSummaryData = Field(..., description="국내주식 요약")
-  
-  # 해외주식 카드 (USD)
   overseas_summary: PortfolioSummaryData = Field(..., description="해외주식 요약")
   
-  # 테이블 데이터
   domestic_stocks: List[StockDataResponse] = Field(..., description="국내주식 목록")
   overseas_stocks: List[StockDataResponse] = Field(..., description="해외주식 목록")
   
-  # 메타 데이터
   exchange_rate: float = Field(..., description="USD/KRW 환율")
   updated_at: str = Field(..., description="업데이트 시간")
   
@@ -288,3 +283,89 @@ class RealizedProfitListResponse(BaseModel):
   
   class Config:
     from_attributes = True
+
+# ========== Analysis 관련 ==========
+
+class AnalysisInfoType(str, Enum):
+  """분석 정보 유형"""
+  COMPANY_SUMMARY = "company-summary"
+  FINANCIAL_SUMMARY = "financial-summary" 
+  INVESTMENT_INDEX = "investment-index"
+  MARKET_INFO = "market-info"
+  ANALYST_OPINION = "analyst-opinion"
+  MAJOR_EXECUTORS = "major-executors"
+
+class CompanySummaryResponse(BaseModel):
+  """Company Summary 응답"""
+  symbol: str
+  longName: str
+  industry: str
+  sector: str
+  longBusinessSummary: str
+  city: Optional[str] = None
+  state: Optional[str] = None
+  country: Optional[str] = None
+  website: Optional[str] = None
+  fullTimeEmployees: str
+
+class FinancialSummaryResponse(BaseModel):
+  """Financial Summary 응답"""
+  totalRevenue: str
+  netIncomeToCommon: str
+  operatingMargins: str
+  dividendYield: str
+  trailingEps: str
+  totalCash: str
+  totalDebt: str
+  debtToEquity: str
+  exDividendDate: Optional[str] = None
+
+class InvestmentIndexResponse(BaseModel):
+  """Investment Index 응답"""
+  trailingPE: str
+  forwardPE: str
+  priceToBook: str
+  returnOnEquity: str
+  returnOnAssets: str
+  beta: str
+
+class MarketInfoResponse(BaseModel):
+  """Market Info 응답"""
+  currentPrice: str
+  previousClose: str
+  dayHigh: str
+  dayLow: str
+  fiftyTwoWeekHigh: str
+  fiftyTwoWeekLow: str
+  marketCap: str
+  sharesOutstanding: str
+  volume: str
+
+class AnalystOpinionResponse(BaseModel):
+  """Analyst Opinion 응답"""
+  recommendationMean: float
+  recommendationKey: str
+  numberOfAnalystOpinions: int
+  targetMeanPrice: str
+  targetHighPrice: str
+  targetLowPrice: str
+
+class OfficerInfo(BaseModel):
+  """임원 정보"""
+  name: str
+  title: str
+  totalPay: str
+  age: Optional[int] = None
+  yearBorn: Optional[int] = None
+
+class MajorExecutorsResponse(BaseModel):
+  """Major Executors 응답"""
+  officers: List[OfficerInfo]
+
+class AnalysisResponse(BaseModel):
+  """종목 분석 응답"""
+  symbol: str
+  info_type: str
+  data: Dict
+  success: bool = True
+  message: Optional[str] = None
