@@ -1,29 +1,26 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 import logging
+from typing import Optional
+import pandas as pd
 
 from app.config.database import get_sync_session
 from app.schemas.common_schemas import (
   AnalysisInfoType, AnalysisResponse, CompanySummaryResponse,
   FinancialSummaryResponse, InvestmentIndexResponse, MarketInfoResponse,
-  AnalystOpinionResponse, MajorExecutorsResponse
+  AnalystOpinionResponse, MajorExecutorsResponse, PriceHistoryResponse
 )
 from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.services.analysis_service import analysis_service
-from app.external.exchange_rate_api import exchange_rate_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-async def get_exchange_rate() -> float:
-  """환율 정보 조회"""
-  try:
-    exchange_data = await exchange_rate_service.get_usd_krw_rate()
-    return exchange_data["currency"]["exchange_rate"]
-  except Exception as e:
-    logger.warning(f"환율 조회 실패, 기본값 사용: {e}")
-    return 1300.0
+# =========================
+# 🗑️ 제거된 함수: get_exchange_rate()
+# 이제 각 서비스에서 실시간 환율 자동 조회
+# =========================
 
 @router.get("/{symbol}", response_model=AnalysisResponse)
 async def get_stock_analysis(
@@ -31,29 +28,28 @@ async def get_stock_analysis(
   info_type: AnalysisInfoType = Query(..., description="조회할 정보 유형"),
   country_code: str = Query("US", description="국가 코드"),
   company_name: str = Query("", description="회사명"),
-  exchange_code: str = Query(None, description="거래소 코드 (KOSPI/KOSDAQ)"),
+  exchange_code: str = Query(None, description="거래소 코드 (KOSPI/KOSDAQ/NYSE/NASDAQ 등)"),
   current_user: User = Depends(get_current_user),
   db: Session = Depends(get_sync_session)
 ):
-  """종목 분석 정보 조회"""
+  """종목 분석 정보 조회 (다국가 거래소 지원)"""
   try:
     logger.info(f"종목 분석 요청: user_id={current_user.id}, symbol={symbol}, info_type={info_type.value}, exchange_code={exchange_code}")
     
     symbol = symbol.upper()
-    exchange_rate = await get_exchange_rate()
     
     if info_type == AnalysisInfoType.COMPANY_SUMMARY:
       data = analysis_service.get_company_summary(symbol, country_code, company_name, exchange_code)
     elif info_type == AnalysisInfoType.FINANCIAL_SUMMARY:
-      data = analysis_service.get_financial_summary(symbol, db, exchange_rate)
+      data = await analysis_service.get_financial_summary(symbol, db, exchange_code)
     elif info_type == AnalysisInfoType.INVESTMENT_INDEX:
       data = analysis_service.get_investment_index(symbol, db)
     elif info_type == AnalysisInfoType.MARKET_INFO:
-      data = analysis_service.get_market_info(symbol, db, exchange_rate)
+      data = await analysis_service.get_market_info(symbol, db, exchange_code)
     elif info_type == AnalysisInfoType.ANALYST_OPINION:
-      data = analysis_service.get_analyst_opinion(symbol, db)
+      data = await analysis_service.get_analyst_opinion(symbol, db, exchange_code)
     elif info_type == AnalysisInfoType.MAJOR_EXECUTORS:
-      data = analysis_service.get_major_executors(symbol, exchange_rate, exchange_code, country_code)
+      data = await analysis_service.get_major_executors(symbol, exchange_code)
     else:
       raise HTTPException(status_code=400, detail="지원하지 않는 정보 유형입니다.")
     
@@ -82,7 +78,7 @@ async def get_company_summary(
   symbol: str,
   country_code: str = Query("US", description="국가 코드"),
   company_name: str = Query("", description="회사명"),
-  exchange_code: str = Query(None, description="거래소 코드 (KOSPI/KOSDAQ)"),
+  exchange_code: str = Query(None, description="거래소 코드 (KOSPI/KOSDAQ/NYSE/NASDAQ 등)"),
   current_user: User = Depends(get_current_user)
 ):
   """회사 기본 정보 조회"""
@@ -105,15 +101,15 @@ async def get_company_summary(
 @router.get("/{symbol}/financial-summary", response_model=FinancialSummaryResponse)
 async def get_financial_summary(
   symbol: str,
+  exchange_code: str = Query(None, description="거래소 코드 (KOSPI/KOSDAQ/NYSE/NASDAQ 등)"),
   current_user: User = Depends(get_current_user),
   db: Session = Depends(get_sync_session)
 ):
-  """재무 요약 정보 조회"""
+  """재무 요약 정보 조회 (다국가 거래소 지원)"""
   try:
-    logger.info(f"재무요약 정보요청: user_id={current_user.id}, symbol={symbol}")
+    logger.info(f"재무요약 정보요청: user_id={current_user.id}, symbol={symbol}, exchange_code={exchange_code}")
     
-    exchange_rate = await get_exchange_rate()
-    data = analysis_service.get_financial_summary(symbol.upper(), db, exchange_rate)
+    data = await analysis_service.get_financial_summary(symbol.upper(), db, exchange_code)
     if not data:
       raise HTTPException(status_code=404, detail=f"'{symbol}' 재무 정보를 찾을 수 없습니다.")
     
@@ -132,7 +128,7 @@ async def get_investment_index(
   current_user: User = Depends(get_current_user),
   db: Session = Depends(get_sync_session)
 ):
-  """투자 지표 조회"""
+  """투자 지표 조회 (환율 무관)"""
   try:
     logger.info(f"투자지표 정보요청: user_id={current_user.id}, symbol={symbol}")
     
@@ -152,15 +148,15 @@ async def get_investment_index(
 @router.get("/{symbol}/market-info", response_model=MarketInfoResponse)
 async def get_market_info(
   symbol: str,
+  exchange_code: str = Query(None, description="거래소 코드 (KOSPI/KOSDAQ/NYSE/NASDAQ 등)"),
   current_user: User = Depends(get_current_user),
   db: Session = Depends(get_sync_session)
 ):
-  """시장 정보 조회"""
+  """시장 정보 조회 (다국가 거래소 지원)"""
   try:
-    logger.info(f"시장정보 정보요청: user_id={current_user.id}, symbol={symbol}")
+    logger.info(f"시장정보 정보요청: user_id={current_user.id}, symbol={symbol}, exchange_code={exchange_code}")
     
-    exchange_rate = await get_exchange_rate()
-    data = analysis_service.get_market_info(symbol.upper(), db, exchange_rate)
+    data = await analysis_service.get_market_info(symbol.upper(), db, exchange_code)
     if not data:
       raise HTTPException(status_code=404, detail=f"'{symbol}' 시장 정보를 찾을 수 없습니다.")
     
@@ -176,14 +172,15 @@ async def get_market_info(
 @router.get("/{symbol}/analyst-opinion", response_model=AnalystOpinionResponse)
 async def get_analyst_opinion(
   symbol: str,
+  exchange_code: str = Query(None, description="거래소 코드 (KOSPI/KOSDAQ/NYSE/NASDAQ 등)"),
   current_user: User = Depends(get_current_user),
   db: Session = Depends(get_sync_session)
 ):
-  """애널리스트 의견 조회"""
+  """애널리스트 의견 조회 (다국가 거래소 지원)"""
   try:
-    logger.info(f"애널리스트 정보요청: user_id={current_user.id}, symbol={symbol}")
+    logger.info(f"애널리스트 정보요청: user_id={current_user.id}, symbol={symbol}, exchange_code={exchange_code}")
     
-    data = analysis_service.get_analyst_opinion(symbol.upper(), db)
+    data = await analysis_service.get_analyst_opinion(symbol.upper(), db, exchange_code)
     if not data:
       raise HTTPException(status_code=404, detail=f"'{symbol}' 애널리스트 정보를 찾을 수 없습니다.")
     
@@ -199,16 +196,14 @@ async def get_analyst_opinion(
 @router.get("/{symbol}/major-executors", response_model=MajorExecutorsResponse)
 async def get_major_executors(
   symbol: str,
-  exchange_code: str = Query(None, description="거래소 코드 (KOSPI/KOSDAQ)"),
-  country_code: str = Query("US", description="국가 코드"),
+  exchange_code: str = Query(None, description="거래소 코드 (KOSPI/KOSDAQ/NYSE/NASDAQ 등)"),
   current_user: User = Depends(get_current_user)
 ):
-  """주요 임원진 조회"""
+  """주요 임원진 조회 (다국가 거래소 지원)"""
   try:
-    logger.info(f"주요 임원진 정보요청: user_id={current_user.id}, symbol={symbol}, exchange_code={exchange_code}, , country_code={country_code}")
+    logger.info(f"주요 임원진 정보요청: user_id={current_user.id}, symbol={symbol}, exchange_code={exchange_code}")
     
-    exchange_rate = await get_exchange_rate()
-    data = analysis_service.get_major_executors(symbol.upper(), exchange_rate, exchange_code, country_code)
+    data = await analysis_service.get_major_executors(symbol.upper(), exchange_code)
     if not data:
       raise HTTPException(status_code=404, detail=f"'{symbol}' 임원진 정보를 찾을 수 없습니다.")
     
@@ -220,3 +215,107 @@ async def get_major_executors(
   except Exception as e:
     logger.error(f"주요 임원진 조회 오류: user_id={current_user.id}, symbol={symbol}, error={str(e)}")
     raise HTTPException(status_code=500, detail="주요 임원진 조회 중 오류가 발생했습니다.")
+  
+@router.get("/{symbol}/financial-statements/{statement_type}")
+async def get_financial_statements(
+    symbol: str,
+    statement_type: str,
+    exchange_code: Optional[str] = Query(None, description="거래소 코드 (KOSPI, KOSDAQ 등)"),
+):
+    """
+    재무제표 상세 조회
+    - statement_type: income (손익계산서), balance (대차대조표), cashflow (현금흐름표)
+    """
+    try:
+        if statement_type not in ["income", "balance", "cashflow"]:
+            raise HTTPException(status_code=400, detail="지원하지 않는 재무제표 타입입니다. (income, balance, cashflow)")
+        
+        logger.info(f"재무제표 API 호출: {symbol} - {statement_type}")
+        
+        result = await analysis_service.get_financial_statements(symbol, statement_type, exchange_code)
+        
+        if not result:
+            raise HTTPException(status_code=404, detail="재무제표 데이터를 찾을 수 없습니다.")
+            
+        return {"success": True, "data": result}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"재무제표 API 오류: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="재무제표 조회 중 오류가 발생했습니다.")
+    
+@router.get("/{symbol}/price-history", response_model=PriceHistoryResponse)
+async def get_price_history(
+    symbol: str,
+    start_date: str = Query(..., description="시작일 (YYYY-MM-DD)"),
+    end_date: str = Query(..., description="종료일 (YYYY-MM-DD)"),
+    exchange_code: Optional[str] = Query(None, description="거래소 코드 (KOSPI, KOSDAQ 등)"),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    주가 히스토리 조회
+    - start_date, end_date: YYYY-MM-DD 형식
+    - exchange_code: 거래소 코드 (없으면 심볼 그대로 사용)
+    """
+    try:
+        logger.info(f"주가 히스토리 API 호출: user_id={current_user.id}, symbol={symbol}, start={start_date}, end={end_date}, exchange={exchange_code}")
+        
+        # 날짜 형식 검증
+        from datetime import datetime
+        try:
+            start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+            end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            
+            if start_dt >= end_dt:
+                raise HTTPException(status_code=400, detail="시작일은 종료일보다 이전이어야 합니다.")
+                
+        except ValueError:
+            raise HTTPException(status_code=400, detail="날짜 형식이 올바르지 않습니다. YYYY-MM-DD 형식을 사용하세요.")
+        
+        # Yahoo Finance에서 주가 데이터 조회
+        from app.external.yahoo_finance import yahoo_finance
+        df, last_date = yahoo_finance.get_price_history(symbol.upper(), start_date, end_date, exchange_code)
+        
+        if df is None or df.empty:
+            raise HTTPException(status_code=404, detail="해당 기간의 주가 데이터를 찾을 수 없습니다.")
+        
+        # DataFrame 컬럼 정리 및 JSON 변환
+        # MultiIndex 컬럼 처리
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+        
+        # 필요한 컬럼만 선택하고 이름 정리
+        required_columns = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
+        df_clean = df[required_columns].copy()
+        
+        # 날짜를 문자열로 변환
+        df_clean['Date'] = df_clean['Date'].astype(str)
+        
+        # 숫자형 컬럼을 적절한 타입으로 변환
+        for col in ['Open', 'High', 'Low', 'Close']:
+            df_clean[col] = df_clean[col].astype(float)
+        df_clean['Volume'] = df_clean['Volume'].astype(int)
+        
+        # JSON으로 변환
+        price_data = df_clean.to_dict('records')
+        
+        result = {
+            "success": True,
+            "symbol": symbol.upper(),
+            "start_date": start_date,
+            "end_date": end_date,
+            "exchange_code": exchange_code,
+            "last_available_date": last_date,
+            "data_count": len(price_data),
+            "data": price_data
+        }
+        
+        logger.info(f"주가 히스토리 조회 완료: symbol={symbol}, 데이터 수={len(price_data)}")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"주가 히스토리 조회 오류: symbol={symbol}, error={str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="주가 히스토리 조회 중 오류가 발생했습니다.")

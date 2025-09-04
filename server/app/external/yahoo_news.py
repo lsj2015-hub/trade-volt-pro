@@ -35,7 +35,7 @@ class YahooNewsService:
             break
         
         item_count += 1
-        title = item.findtext('title', 'N/A')
+        title = item.findtext('title', '')
         pub_date_str = item.findtext('pubDate', None)
 
         published_date_iso = None

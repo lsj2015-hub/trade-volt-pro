@@ -536,3 +536,24 @@ export interface AnalysisParams {
   companyName?: string;
   exchangeCode?: string
 }
+
+// 주가 히스토리 관련 타입
+export interface PriceHistoryData {
+  Date: string;
+  Open: number;
+  High: number;
+  Low: number;
+  Close: number;
+  Volume: number;
+}
+
+export interface PriceHistoryResponse {
+  success: boolean;
+  symbol: string;
+  start_date: string;
+  end_date: string;
+  exchange_code?: string;
+  last_available_date?: string;
+  data_count: number;
+  data: PriceHistoryData[];
+}

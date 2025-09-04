@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from app.core.exceptions import CustomHTTPException
 from app.config.settings import get_settings
+from app.core.constants import EXIMBANK_CURRENCY_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +161,67 @@ class ExchangeRateService:
     
     # 7일 내에 영업일을 찾지 못한 경우 원래 날짜 반환
     return target_date
+
+  # =========================
+  # 🔥 최적화된 핵심 함수들
+  # =========================
+  
+  async def get_multi_currency_rates(self, target_currencies: list, search_date: Optional[str] = None) -> Dict:
+    """여러 통화의 환율 정보를 한 번에 조회"""
+    try:
+      exchange_data = await self.get_exchange_rates(search_date)
+      
+      result = {}
+      for currency in target_currencies:
+        eximbank_code = EXIMBANK_CURRENCY_MAP.get(currency)
+        if eximbank_code and eximbank_code in exchange_data["exchange_rates"]:
+          result[currency] = exchange_data["exchange_rates"][eximbank_code]["exchange_rate"]
+        else:
+          logger.warning(f"환율 정보 없음: {currency} (한국수출입은행 API에서 제공하지 않음)")
+          result[currency] = None
+      
+      return result
+    except Exception as e:
+      logger.error(f"다중 환율 조회 실패: {e}")
+      return {}
+
+  async def convert_to_krw(self, amount: float, from_currency: str, search_date: Optional[str] = None) -> Dict:
+    """특정 통화를 원화로 변환 (다국가 지원)"""
+    if from_currency == "KRW":
+      return {"original_amount": amount, "converted_amount": amount, "rate": 1.0, "success": True}
+    
+    try:
+      rates = await self.get_multi_currency_rates([from_currency], search_date)
+      rate = rates.get(from_currency)
+      
+      if rate is None:
+        logger.error(f"환율 정보를 가져올 수 없음: {from_currency}")
+        return {"original_amount": amount, "converted_amount": None, "rate": None, "success": False}
+      
+      # ✅ JPY 100엔 단위 보정 추가
+      if from_currency == "JPY":
+        # 한국수출입은행: 100엔당 원화 → 1엔당 원화로 변환
+        actual_rate = rate / 100
+        converted = amount * actual_rate
+        logger.debug(f"JPY 환율 보정: {rate} (100엔당) → {actual_rate} (1엔당)")
+      else:
+        actual_rate = rate
+        converted = amount * rate
+      
+      return {
+        "original_amount": amount,
+        "converted_amount": converted,
+        "rate": actual_rate,  # 실제 적용된 환율 반환
+        "from_currency": from_currency,
+        "success": True
+      }
+    except Exception as e:
+      logger.error(f"통화 변환 실패 ({from_currency} -> KRW): {e}")
+      return {"original_amount": amount, "converted_amount": None, "rate": None, "success": False}
+
+  # =========================  
+  # 🔄 기존 호환성 유지 함수들
+  # =========================
   
   async def get_currency_rate(self, currency_code: str, search_date: Optional[str] = None) -> Dict:
     """특정 통화의 환율 정보만 조회"""
@@ -181,45 +243,12 @@ class ExchangeRateService:
     }
   
   async def get_usd_krw_rate(self, search_date: Optional[str] = None) -> Dict:
-    """USD/KRW 환율 정보 조회 (가장 많이 사용)"""
+    """USD/KRW 환율 정보 조회 (기존 코드 호환성 유지)"""
     return await self.get_currency_rate("USD", search_date)
   
-  async def convert_currency(self, amount: float, from_currency: str, to_currency: str = "KRW", search_date: Optional[str] = None) -> Dict:
-    """통화 변환 계산"""
-    if from_currency.upper() == to_currency.upper():
-      return {
-        "original_amount": amount,
-        "converted_amount": amount,
-        "from_currency": from_currency.upper(),
-        "to_currency": to_currency.upper(),
-        "exchange_rate": 1.0,
-        "search_date": search_date or datetime.now().strftime("%Y%m%d")
-      }
-    
-    # 현재는 KRW 기준 환율만 지원 (한국수출입은행 API 특성)
-    if to_currency.upper() != "KRW":
-      raise CustomHTTPException(
-        status_code=400,
-        detail="현재는 원화(KRW)로의 변환만 지원합니다",
-        error_code="UNSUPPORTED_CONVERSION"
-      )
-    
-    currency_data = await self.get_currency_rate(from_currency, search_date)
-    exchange_rate = currency_data["currency"]["exchange_rate_decimal"]
-    
-    converted_amount = Decimal(str(amount)) * exchange_rate
-    
-    return {
-      "original_amount": amount,
-      "converted_amount": float(converted_amount),
-      "converted_amount_decimal": converted_amount,
-      "from_currency": from_currency.upper(),
-      "to_currency": to_currency.upper(),
-      "exchange_rate": float(exchange_rate),
-      "exchange_rate_decimal": exchange_rate,
-      "search_date": currency_data["search_date"],
-      "retrieved_at": currency_data["retrieved_at"]
-    }
+  # =========================
+  # 🗑️ 유틸리티 함수들  
+  # =========================
   
   def clear_cache(self):
     """캐시 초기화"""

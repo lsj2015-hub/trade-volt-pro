@@ -8,26 +8,93 @@ logger = logging.getLogger(__name__)
 
 class YahooFinance:
   def _get_yfinance_ticker_with_suffix(self, symbol: str, exchange_code: str = None) -> yf.Ticker | None:
+    """실제 DB 거래소 코드 기반 Yahoo Finance 심볼 suffix 처리"""
     try:
-      if exchange_code == "KOSPI":
-        ticker_ks = yf.Ticker(f"{symbol}.KS")
-        if ticker_ks.info.get('regularMarketPrice') is not None:
-          return ticker_ks
-        else:
-          logger.warning(f"KOSPI 주식 '{symbol}.KS'의 시장 가격 정보를 찾을 수 없습니다.")
-          return None
-      elif exchange_code == "KOSDAQ":
-        ticker_kq = yf.Ticker(f"{symbol}.KQ")
-        if ticker_kq.info.get('regularMarketPrice') is not None:
-          return ticker_kq
-        else:
-          logger.warning(f"KOSDAQ 주식 '{symbol}.KQ'의 시장 가격 정보를 찾을 수 없습니다.")
-          return None
-      else:
-        # 거래소 정보가 없는 경우
-        error_msg = f"한국 주식 '{symbol}'에 대한 거래소 정보가 필요합니다. 현재 값: '{exchange_code}'. 'KOSPI' 또는 'KOSDAQ'을 지정해주세요."
+      # Yahoo Finance suffix 매핑
+      yahoo_suffix_map = {
+        # 한국
+        "KOSPI": ".KS",
+        "KOSDAQ": ".KQ",
+        
+        # 미국 (suffix 없음)
+        "NYSE": "",
+        "NASDAQ": "",
+        "AMEX": "",
+        
+        # 일본
+        "TSE": ".T",
+        
+        # 홍콩
+        "HKS": ".HK",
+        
+        # 중국
+        "SHS": ".SS",
+        "SZS": ".SZ",
+        
+        # 베트남
+        "HNX": ".VN",
+        "HSX": ".VN",
+      }
+      
+      if exchange_code not in yahoo_suffix_map:
+        error_msg = f"지원하지 않는 거래소입니다: '{exchange_code}'. 지원 거래소: {', '.join(yahoo_suffix_map.keys())}"
         logger.error(error_msg)
         raise ValueError(error_msg)
+      
+      suffix = yahoo_suffix_map[exchange_code]
+      
+      # 거래소별 심볼 포맷 처리
+      if exchange_code in ["KOSPI", "KOSDAQ"]:
+        # 한국: 6자리 숫자 (005930)
+        if symbol.isdigit():
+          formatted_symbol = symbol.zfill(6)  # 6자리로 패딩
+        else:
+          formatted_symbol = symbol
+        ticker_symbol = f"{formatted_symbol}{suffix}"
+        
+      elif exchange_code in ["NYSE", "NASDAQ", "AMEX"]:
+        # 미국: 문자 심볼, suffix 없음
+        ticker_symbol = symbol
+        
+      elif exchange_code == "TSE":
+        # 일본: 보통 4자리 숫자 (7203)
+        if symbol.isdigit():
+          formatted_symbol = symbol.zfill(4)  # 4자리로 패딩
+        else:
+          formatted_symbol = symbol
+        ticker_symbol = f"{formatted_symbol}{suffix}"
+        
+      elif exchange_code == "HKS":
+        # 홍콩: 4자리 숫자 (0700)
+        if symbol.isdigit():
+          formatted_symbol = symbol.zfill(4)  # 4자리로 패딩
+        else:
+          formatted_symbol = symbol
+        ticker_symbol = f"{formatted_symbol}{suffix}"
+        
+      elif exchange_code in ["SHS", "SZS"]:
+        # 중국: 6자리 숫자 (000001)
+        if symbol.isdigit():
+          formatted_symbol = symbol.zfill(6)  # 6자리로 패딩
+        else:
+          formatted_symbol = symbol
+        ticker_symbol = f"{formatted_symbol}{suffix}"
+        
+      elif exchange_code in ["HNX", "HSX"]:
+        ticker_symbol = f"{symbol}{suffix}"
+        
+      else:
+        # 기본: suffix만 추가
+        ticker_symbol = f"{symbol}{suffix}" if suffix else symbol
+      
+      logger.debug(f"심볼 포맷팅: {symbol} → {ticker_symbol} ({exchange_code})")
+      
+      ticker = yf.Ticker(ticker_symbol)
+      if ticker.info.get('regularMarketPrice') is not None:
+        return ticker
+      else:
+        logger.warning(f"'{ticker_symbol}'의 시장 가격 정보를 찾을 수 없습니다.")
+        return None
         
     except ValueError:
       raise  # ValueError는 그대로 재발생
@@ -73,27 +140,38 @@ class YahooFinance:
           logger.error(f"한국 주식 '{symbol}' 조회 실패: {e}")
           return None
       else:
-        # 해외 주식인 경우 직접 yfinance 조회
-        yfs_ticker = yf.Ticker(symbol)
-        if yfs_ticker and yfs_ticker.info:
-          combined_info.update(yfs_ticker.info)
+        try:
+          yfs_ticker = self._get_yfinance_ticker_with_suffix(symbol, stock_info.exchange_code)
+          if yfs_ticker and yfs_ticker.info:
+            combined_info.update(yfs_ticker.info)
+            
+            # 시가총액 정보 추가
+            if 'marketCap' in yfs_ticker.info and yfs_ticker.info['marketCap']:
+              combined_info['marketCap'] = yfs_ticker.info['marketCap']
+            elif ('sharesOutstanding' in yfs_ticker.info and 'regularMarketPrice' in yfs_ticker.info 
+                  and yfs_ticker.info['sharesOutstanding'] and yfs_ticker.info['regularMarketPrice']):
+              combined_info['marketCap'] = yfs_ticker.info['sharesOutstanding'] * yfs_ticker.info['regularMarketPrice']
+        except ValueError as e:
+          logger.error(f"해외 주식 '{symbol}' 조회 실패: {e}")
+          return None
       
       return combined_info
     except Exception as e:
       logger.error(f"한국 주식 정보 조합 중 오류 발생 ('{symbol}'): {e}", exc_info=True)
       return None
 
-  def get_stock_info(self, symbol: str, country_code: str = None, exchange_code: str = None) -> dict | None:
+  def get_stock_info(self, symbol: str, exchange_code: str = None) -> dict | None:
     """DB 조회 없이 symbol과 country_code, exchange_code로 Yahoo Finance 데이터 조회"""
     try:
-      # 한국 주식인 경우 suffix 처리
-      if country_code == 'KR' and len(symbol) == 6 and symbol.isdigit():
+      # exchange_code가 있으면 항상 포맷팅 적용
+      if exchange_code:
         try:
           yfs_ticker = self._get_yfinance_ticker_with_suffix(symbol, exchange_code)
         except ValueError as e:
-          logger.error(f"한국 주식 '{symbol}' 조회 실패: {e}")
+          logger.error(f"'{symbol}' 조회 실패 (거래소: {exchange_code}): {e}")
           return None
       else:
+        # exchange_code가 없으면 직접 조회 (미국 주식 등)
         yfs_ticker = yf.Ticker(symbol)
       
       if yfs_ticker and yfs_ticker.info:
@@ -106,15 +184,20 @@ class YahooFinance:
   def get_officers(self, symbol: str, exchange_code: str = None) -> list | None:
     """임원진 정보 조회"""
     try:
-      # 한국 주식인 경우 suffix 처리
-      if len(symbol) == 6 and symbol.isdigit():
+      # exchange_code가 있으면 항상 _get_yfinance_ticker_with_suffix 사용
+      if exchange_code:
         try:
           ticker = self._get_yfinance_ticker_with_suffix(symbol, exchange_code)
         except ValueError as e:
           logger.error(f"임원진 조회 실패: {e}")
           return None
       else:
-        ticker = yf.Ticker(symbol)
+        # exchange_code가 없으면 기존 로직
+        if len(symbol) == 6 and symbol.isdigit():
+          logger.warning(f"한국 주식으로 추정되지만 exchange_code가 없습니다: {symbol}")
+          return None
+        else:
+          ticker = yf.Ticker(symbol)
       
       if ticker and ticker.info:
         officers = ticker.info.get("companyOfficers")
@@ -126,14 +209,20 @@ class YahooFinance:
 
   def get_financials(self, symbol: str, exchange_code: str = None) -> dict | None:
     try:
-      if len(symbol) == 6 and symbol.isdigit():
+      # exchange_code가 있으면 항상 _get_yfinance_ticker_with_suffix 사용
+      if exchange_code:
         try:
           yfs_ticker = self._get_yfinance_ticker_with_suffix(symbol, exchange_code)
         except ValueError as e:
           logger.error(f"재무제표 조회 실패: {e}")
           return None
       else:
-        yfs_ticker = yf.Ticker(symbol)
+        # exchange_code가 없으면 기존 로직
+        if len(symbol) == 6 and symbol.isdigit():
+          logger.warning(f"한국 주식으로 추정되지만 exchange_code가 없습니다: {symbol}")
+          return None
+        else:
+          yfs_ticker = yf.Ticker(symbol)
         
       if not yfs_ticker: 
         return None
@@ -161,14 +250,18 @@ class YahooFinance:
           
   def get_price_history(self, symbol: str, start: str, end: str, exchange_code: str = None) -> tuple[pd.DataFrame | None, str | None]:
     try:
-      # 한국 주식인 경우 suffix 추가
-      if len(symbol) == 6 and symbol.isdigit():
-        if exchange_code == "KOSPI":
-          symbol_with_suffix = f"{symbol}.KS"
-        elif exchange_code == "KOSDAQ":
-          symbol_with_suffix = f"{symbol}.KQ"
-        else:
-          logger.error(f"한국 주식 '{symbol}'에 대한 거래소 정보가 필요합니다.")
+      # exchange_code가 있으면 포맷팅 적용
+      if exchange_code:
+        try:
+          # _get_yfinance_ticker_with_suffix에서 사용하는 것과 동일한 로직 적용
+          ticker_obj = self._get_yfinance_ticker_with_suffix(symbol, exchange_code)
+          if ticker_obj:
+            # ticker 객체에서 symbol 추출 (예: 0700.HK)
+            symbol_with_suffix = ticker_obj.ticker
+          else:
+            return None, None
+        except ValueError as e:
+          logger.error(f"주가 히스토리 조회 실패: {e}")
           return None, None
       else:
         symbol_with_suffix = symbol

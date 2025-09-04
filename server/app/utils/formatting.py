@@ -1,6 +1,8 @@
 import pandas as pd
 from datetime import datetime
-from app.core.constants import INCOME_KR, BALANCE_KR, CASHFLOW_KR
+import logging
+
+logger = logging.getLogger(__name__)
 
 def _classify_unit(value: float) -> tuple[str, float]:
   """금액 단위를 조, 억 등으로 분류"""
@@ -38,8 +40,49 @@ def _format_krw(amount: float) -> str:
   value_str = f"{krw_value:,.2f}".rstrip('0').rstrip('.')
   return f"₩{value_str}{krw_unit}"
 
+async def format_currency_by_exchange(amount: float, exchange_code: str) -> str:
+  """거래소 코드 기반 다국가 통화 포맷팅 (실시간 환율 연동)"""
+  if amount is None or pd.isna(amount) or amount == 0:
+    return "-"
+  
+  from app.core.constants import EXCHANGE_CURRENCY_MAP, CURRENCY_SYMBOLS
+  from app.external.exchange_rate_api import exchange_rate_service
+  
+  # 지원 거래소 체크
+  if exchange_code not in EXCHANGE_CURRENCY_MAP:
+    logger.error(f"지원하지 않는 거래소 코드: {exchange_code}")
+    return "지원하지 않는 거래소"
+  
+  base_currency = EXCHANGE_CURRENCY_MAP[exchange_code]
+  currency_symbol = CURRENCY_SYMBOLS[base_currency]
+  
+  # 한국 주식은 원화만 표시
+  if base_currency == "KRW":
+    return _format_krw(amount)
+  
+  # 해외 주식은 현지통화 + 원화 병기
+  else:
+    local_unit, local_value = _classify_unit(amount)
+    local_fmt = f"{currency_symbol}{local_value:,.2f}{local_unit}"
+    
+    try:
+      conversion = await exchange_rate_service.convert_to_krw(amount, base_currency)
+      
+      if conversion["success"]:
+        krw_amount = conversion["converted_amount"]
+        krw_unit, krw_value = _classify_unit(krw_amount)
+        krw_fmt = f"₩{krw_value:,.2f}{krw_unit}"
+        return f"{local_fmt} ({krw_fmt})"
+      else:
+        return f"{local_fmt} (환율 정보 없음)"
+        
+    except Exception as e:
+      logger.warning(f"환율 변환 실패 ({base_currency} -> KRW): {e}")
+      return f"{local_fmt} (환율 변환 실패)"
+
+# 기존 format_currency는 호환성을 위해 유지하되 deprecated 표시
 def format_currency(amount: float, symbol: str, rate: float, country_code: str = None) -> str:
-  """주식 종류(국내/해외)에 따라 통화 포맷팅을 분기"""
+  """[DEPRECATED] 기존 호환성용 - format_currency_by_exchange 사용 권장"""
   if amount is None or pd.isna(amount):
     return "-"
       
@@ -56,7 +99,7 @@ def format_stock_profile(info: dict, summary_kr: str) -> dict:
   business_summary = summary_kr or info.get('longBusinessSummary', '정보 없음')
 
   return {
-    "symbol": info.get('symbol', 'N/A').upper(),
+    "symbol": info.get('symbol', '').upper(),
     "longName": info.get('longName', '정보 없음'),
     "industry": info.get('industry', '정보 없음'),
     "sector": info.get('sector', '정보 없음'),
@@ -68,24 +111,22 @@ def format_stock_profile(info: dict, summary_kr: str) -> dict:
     "fullTimeEmployees": f"{info.get('fullTimeEmployees', 0):,}" if info.get('fullTimeEmployees') else "정보 없음",
   }
 
-def format_financial_summary(info: dict, symbol: str, rate: float, country_code: str = None) -> dict:
-  """재무 요약 정보를 API 응답 포맷으로 변환"""
-
-  # ✅ exDividendDate 포매팅 로직
+async def format_financial_summary(info: dict, exchange_code: str) -> dict:
+  """재무 요약 정보를 거래소별 통화로 포맷팅"""
+  
   ex_dividend_timestamp = info.get('exDividendDate')
   ex_dividend_date_str = None
   if ex_dividend_timestamp:
-    # 타임스탬프를 날짜 문자열로 변환
     ex_dividend_date_str = datetime.fromtimestamp(ex_dividend_timestamp).strftime('%Y-%m-%d')
 
   return {
-    "totalRevenue": format_currency(info.get('totalRevenue'), symbol, rate, country_code),
-    "netIncomeToCommon": format_currency(info.get('netIncomeToCommon'), symbol, rate, country_code),
+    "totalRevenue": await format_currency_by_exchange(info.get('totalRevenue'), exchange_code),
+    "netIncomeToCommon": await format_currency_by_exchange(info.get('netIncomeToCommon'), exchange_code),
     "operatingMargins": f"{info.get('operatingMargins', 0) * 100:.2f}%" if info.get('operatingMargins') is not None else "-",
-    "dividendYield": f"{info.get('dividendYield', 0):.2f}%" if info.get('dividendYield') is not None else "-",  # 수정: * 100 추가
-    "trailingEps": format_currency(info.get('trailingEps'), symbol, rate, country_code),  # 수정: 통화 포맷팅 적용
-    "totalCash": format_currency(info.get('totalCash'), symbol, rate, country_code),
-    "totalDebt": format_currency(info.get('totalDebt'), symbol, rate, country_code),
+    "dividendYield": f"{info.get('dividendYield', 0):.2f}%" if info.get('dividendYield') is not None else "-",
+    "trailingEps": await format_currency_by_exchange(info.get('trailingEps'), exchange_code),
+    "totalCash": await format_currency_by_exchange(info.get('totalCash'), exchange_code),
+    "totalDebt": await format_currency_by_exchange(info.get('totalDebt'), exchange_code),
     "debtToEquity": f"{info.get('debtToEquity'):.2f}" if info.get('debtToEquity') is not None else "-",
     "exDividendDate": ex_dividend_date_str
   }
@@ -101,55 +142,108 @@ def format_investment_metrics(info: dict) -> dict:
     "beta": f"{info.get('beta'):.2f}" if info.get('beta') is not None else "-",
   }
 
-def format_market_data(info: dict, symbol: str, rate: float, country_code: str = None) -> dict:
-  """주가/시장 정보를 API 응답 포맷으로 변환"""
+async def format_market_data(info: dict, exchange_code: str) -> dict:
+  """시장 정보를 거래소별 통화로 포맷팅"""
   return {
-    "currentPrice": format_currency(info.get('currentPrice'), symbol, rate, country_code),
-    "previousClose": format_currency(info.get('previousClose'), symbol, rate, country_code),
-    "dayHigh": format_currency(info.get('dayHigh'), symbol, rate, country_code),
-    "dayLow": format_currency(info.get('dayLow'), symbol, rate, country_code),
-    "fiftyTwoWeekHigh": format_currency(info.get('fiftyTwoWeekHigh'), symbol, rate, country_code),
-    "fiftyTwoWeekLow": format_currency(info.get('fiftyTwoWeekLow'), symbol, rate, country_code),
-    "marketCap": format_currency(info.get('marketCap'), symbol, rate, country_code),
+    "currentPrice": await format_currency_by_exchange(info.get('currentPrice'), exchange_code),
+    "previousClose": await format_currency_by_exchange(info.get('previousClose'), exchange_code),
+    "dayHigh": await format_currency_by_exchange(info.get('dayHigh'), exchange_code),
+    "dayLow": await format_currency_by_exchange(info.get('dayLow'), exchange_code),
+    "fiftyTwoWeekHigh": await format_currency_by_exchange(info.get('fiftyTwoWeekHigh'), exchange_code),
+    "fiftyTwoWeekLow": await format_currency_by_exchange(info.get('fiftyTwoWeekLow'), exchange_code),
+    "marketCap": await format_currency_by_exchange(info.get('marketCap'), exchange_code),
     "sharesOutstanding": f"{info.get('sharesOutstanding', 0):,}주" if info.get('sharesOutstanding') else "-",
     "volume": f"{info.get('volume', 0):,}주" if info.get('volume') else "-",
   }
     
-def format_analyst_recommendations(info: dict, symbol: str = None, rate: float = 1300.0, country_code: str = None) -> dict:
-  """분석가 의견을 API 응답 포맷으로 변환"""
+async def format_analyst_recommendations(info: dict, exchange_code: str) -> dict:
+  """분석가 의견을 거래소별 통화로 포맷팅"""
   return {
     "recommendationMean": info.get('recommendationMean', 0),
-    "recommendationKey": info.get('recommendationKey', 'N/A').upper(),
+    "recommendationKey": info.get('recommendationKey', '').upper(),
     "numberOfAnalystOpinions": info.get('numberOfAnalystOpinions', 0),
-    "targetMeanPrice": format_currency(info.get('targetMeanPrice'), symbol or 'UNKNOWN', rate, country_code),
-    "targetHighPrice": format_currency(info.get('targetHighPrice'), symbol or 'UNKNOWN', rate, country_code),
-    "targetLowPrice": format_currency(info.get('targetLowPrice'), symbol or 'UNKNOWN', rate, country_code),
+    "targetMeanPrice": await format_currency_by_exchange(info.get('targetMeanPrice'), exchange_code),
+    "targetHighPrice": await format_currency_by_exchange(info.get('targetHighPrice'), exchange_code),
+    "targetLowPrice": await format_currency_by_exchange(info.get('targetLowPrice'), exchange_code),
   }
 
-def format_financial_statement_response(df_raw: pd.DataFrame, statement_type: str, symbol: str) -> dict:
-  """재무제표를 API 응답 포맷으로 변환 (한국 주식 처리 추가)"""
+async def format_financial_statement_response(df_raw: pd.DataFrame, statement_type: str, symbol: str, exchange_code: str = None) -> dict:
+  """재무제표를 API 응답 포맷으로 변환 (다국가 거래소 지원 + 3개년도 제한)"""
+  from app.core.constants import INCOME_KR, BALANCE_KR, CASHFLOW_KR, EXCHANGE_CURRENCY_MAP
+  from app.external.exchange_rate_api import exchange_rate_service
+  
+  # 최근 3개년도만 선택
+  recent_columns = df_raw.columns[-3:] if len(df_raw.columns) >= 3 else df_raw.columns
+  df_limited = df_raw[recent_columns]
+  
   trans_map = {"income": INCOME_KR, "balance": BALANCE_KR, "cashflow": CASHFLOW_KR}.get(statement_type, {})
-  is_korean_stock = symbol.upper().endswith(('.KS', '.KQ'))
-  currency_prefix = "₩" if is_korean_stock else "$"
+  
+  # 거래소 코드 기반 통화 결정
+  if exchange_code and exchange_code in EXCHANGE_CURRENCY_MAP:
+    base_currency = EXCHANGE_CURRENCY_MAP[exchange_code]
+    is_korean_stock = (base_currency == "KRW")
+  else:
+    # fallback: 기존 로직
+    is_korean_stock = symbol.upper().endswith(('.KS', '.KQ'))
+    base_currency = "KRW" if is_korean_stock else "USD"
 
-  years = [str(y.year) for y in df_raw.columns]
+  years = [str(y.year) for y in df_limited.columns]
   formatted_rows = []
   
+  # 해외 주식의 경우 환율 정보 조회
+  exchange_rate = None
+  if not is_korean_stock:
+    try:
+      rates = await exchange_rate_service.get_multi_currency_rates([base_currency])
+      exchange_rate = rates.get(base_currency)
+    except Exception as e:
+      logger.warning(f"환율 정보 조회 실패 ({base_currency}): {e}")
+      exchange_rate = None
+  
   for k, v in trans_map.items():
-    if k in df_raw.index:
+    if k in df_limited.index:
       row_data = {"item": v}
-      for col in df_raw.columns:
-        val = df_raw.loc[k, col]
+      for col in df_limited.columns:
+        val = df_limited.loc[k, col]
         if pd.notnull(val):
-          unit, value = _classify_unit(abs(val))
-          value_str = f"{value:,.0f}" # 재무제표는 정수로 표현
-          formatted = f"{currency_prefix}{'-' if val < 0 else ''}{value_str}{unit}"
-          row_data[str(col.year)] = formatted
+          formatted_value = await _format_financial_value(val, is_korean_stock, base_currency, exchange_rate)
+          row_data[str(col.year)] = formatted_value
         else:
           row_data[str(col.year)] = '-'
       formatted_rows.append(row_data)
           
   return {"years": years, "data": formatted_rows}
+
+async def _format_financial_value(value: float, is_korean_stock: bool, base_currency: str, exchange_rate: float = None) -> str:
+  """재무제표 값을 통화별로 포맷팅"""
+  from app.core.constants import CURRENCY_SYMBOLS
+  
+  if is_korean_stock:
+    # 한국 주식: 원화만 표시
+    unit, converted_value = _classify_unit(abs(value))
+    value_str = f"{converted_value:,.2f}"
+    return f"₩{'-' if value < 0 else ''}{value_str}{unit}"
+  else:
+    # 해외 주식: 현지통화 + 원화 병기
+    currency_symbol = CURRENCY_SYMBOLS.get(base_currency, "$")
+    unit, converted_value = _classify_unit(abs(value))
+    value_str = f"{converted_value:,.2f}"
+    local_fmt = f"{currency_symbol}{'-' if value < 0 else ''}{value_str}{unit}"
+    
+    # 환율이 있으면 원화도 표시
+    if exchange_rate:
+      try:
+        # JPY는 100엔 단위 보정
+        actual_rate = exchange_rate / 100 if base_currency == "JPY" else exchange_rate
+        krw_amount = value * actual_rate
+        krw_unit, krw_value = _classify_unit(abs(krw_amount))
+        krw_fmt = f"₩{'-' if krw_amount < 0 else ''}{krw_value:,.2f}{krw_unit}"
+        return f"{local_fmt} ({krw_fmt})"
+      except Exception as e:
+        logger.warning(f"원화 변환 실패: {e}")
+        return f"{local_fmt} (환율 정보 없음)"
+    else:
+      return f"{local_fmt} (환율 정보 없음)"
 
 def process_price_dataframe(df: pd.DataFrame) -> pd.DataFrame:
   """주가 데이터프레임을 API 응답에 맞게 처리"""

@@ -1,5 +1,4 @@
 import {
-  AnalysisInfoType,
   CompanySummary,
   FinancialSummary,
   InvestmentIndex,
@@ -9,6 +8,7 @@ import {
   AnalysisAPIError,
   AnalysisResponse,
   AnalysisParams,
+  PriceHistoryResponse,
 } from '@/types/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -132,7 +132,7 @@ export class AnalysisAPI {
     countryCode: string = 'US'
   ): Promise<MajorExecutors> {
     const params = new URLSearchParams();
-    
+
     // exchangeCode가 있을 때만 추가
     if (exchangeCode) {
       params.append('exchange_code', exchangeCode);
@@ -145,5 +145,59 @@ export class AnalysisAPI {
     const endpoint = `/api/v1/analysis/${symbol}/major-executors?${queryString}`;
 
     return this.request<MajorExecutors>(endpoint);
+  }
+
+  // 재무제표 상세 조회
+  static async getFinancialStatements(
+    symbol: string,
+    statementType: 'income' | 'balance' | 'cashflow',
+    exchangeCode?: string
+  ): Promise<{
+    success: boolean;
+    data: {
+      years: string[];
+      data: Array<{ item: string; [year: string]: string }>;
+    };
+  }> {
+    const params = new URLSearchParams();
+
+    if (exchangeCode) {
+      params.append('exchange_code', exchangeCode);
+    }
+
+    const queryString = params.toString();
+    const endpoint = `/api/v1/analysis/${symbol}/financial-statements/${statementType}${
+      queryString ? `?${queryString}` : ''
+    }`;
+
+    return this.request<{
+      success: boolean;
+      data: {
+        years: string[];
+        data: Array<{ item: string; [year: string]: string }>;
+      };
+    }>(endpoint);
+  }
+
+  // 주가 히스토리 조회
+  static async getPriceHistory(
+    symbol: string,
+    startDate: string,
+    endDate: string,
+    exchangeCode?: string
+  ): Promise<PriceHistoryResponse> {
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+    });
+
+    if (exchangeCode) {
+      params.append('exchange_code', exchangeCode);
+    }
+
+    const queryString = params.toString();
+    const endpoint = `/api/v1/analysis/${symbol}/price-history?${queryString}`;
+
+    return this.request<PriceHistoryResponse>(endpoint);
   }
 }

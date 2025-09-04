@@ -369,3 +369,24 @@ class AnalysisResponse(BaseModel):
   data: Dict
   success: bool = True
   message: Optional[str] = None
+
+# 주가 히스토리 관련 스키마
+class PriceHistoryData(BaseModel):
+  """개별 주가 데이터"""
+  Date: str
+  Open: float
+  High: float
+  Low: float
+  Close: float
+  Volume: int
+
+class PriceHistoryResponse(BaseModel):
+  """주가 히스토리 응답"""
+  success: bool
+  symbol: str
+  start_date: str
+  end_date: str
+  exchange_code: Optional[str] = None
+  last_available_date: Optional[str] = None
+  data_count: int
+  data: List[PriceHistoryData]

@@ -27,13 +27,18 @@ export function DatePicker({
   placeholder = '날짜를 선택하세요',
   className,
 }: DatePickerProps) {
+  const isTextCenter = className?.includes('text-center');
+
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
           variant={'outline'}
           className={cn(
-            'w-full justify-start text-left font-normal',
+            'w-full font-normal',
+            isTextCenter
+              ? 'justify-center text-center'
+              : 'justify-start text-left',
             !date && 'text-muted-foreground',
             className
           )}
