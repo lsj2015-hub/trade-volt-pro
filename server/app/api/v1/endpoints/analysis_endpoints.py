@@ -465,14 +465,6 @@ async def ask_david_question(
     history_data = request_data.price_history_data or ""
     news_data = request_data.news_data or ""
 
-    # 디버깅 로그 추가
-    logger.info(f"=== David AI 수신 데이터 ===")
-    logger.info(f"Company Data Length: {len(company_data)}")
-    logger.info(f"Financial Data Length: {len(financial_data)}")
-    logger.info(f"History Data Length: {len(history_data)}")
-    logger.info(f"News Data Length: {len(news_data)}")
-    logger.info(f"Company Data Preview: {company_data[:200]}...")
-    
     # 대화 히스토리 변환
     conversation_history = []
     if request_data.conversation_history:

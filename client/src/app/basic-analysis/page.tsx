@@ -467,6 +467,46 @@ export default function BasicAnalysisPage() {
     return result;
   };
 
+  // 재무제표 데이터를 AI용으로 포매팅하는 함수 추가
+  const formatFinancialDataForAI = (): string => {
+    if (
+      !financialData ||
+      !financialData.data ||
+      !Array.isArray(financialData.data) ||
+      financialData.data.length === 0
+    ) {
+      return '';
+    }
+
+    let result = `=== 재무제표 정보 ===\n`;
+    result += `재무제표 유형: ${
+      activeFinancialTab === 'income'
+        ? '손익계산서'
+        : activeFinancialTab === 'balance'
+        ? '대차대조표'
+        : '현금흐름표'
+    }\n`;
+
+    // financialData.years가 배열인 경우에만 처리
+    if (financialData.years && Array.isArray(financialData.years)) {
+      result += `연도: ${financialData.years.join(', ')}\n\n`;
+
+      // 주요 항목들만 선별해서 포함
+      financialData.data.forEach((item: any) => {
+        if (item && typeof item === 'object' && 'item' in item) {
+          result += `${item.item}: `;
+          financialData.years.forEach((year: string) => {
+            const value = item[year] || '-';
+            result += `${year}년 ${value}, `;
+          });
+          result += '\n';
+        }
+      });
+    }
+
+    return result;
+  };
+
   const formatPriceDataForAI = (): string => {
     if (!priceHistoryData || !showPriceHistory) return '';
     const recentData = priceHistoryData.data.slice(-10);
@@ -503,26 +543,13 @@ export default function BasicAnalysisPage() {
     const currentQuestion = davidQuestion;
     setDavidQuestion('');
 
-    // 디버깅 로그 추가
-    const companyData = formatCompanyDataForAI();
-    const priceData = formatPriceDataForAI();
-    const newsDataStr = formatNewsDataForAI();
-
-    console.log('=== David AI 전송 데이터 ===');
-    console.log('Company Data:', companyData);
-    console.log('Price Data:', priceData);
-    console.log('News Data:', newsDataStr);
-    console.log('Analysis Data:', analysisData);
-    console.log('Price History Data:', priceHistoryData);
-    console.log('News Data:', newsData);
-
     try {
       const result = await AnalysisAPI.askDavidQuestion(
         selectedStock.symbol,
         currentQuestion,
         conversationHistory,
         formatCompanyDataForAI(),
-        '', // 재무 데이터 (현재 구현되지 않음)
+        formatFinancialDataForAI(),
         formatPriceDataForAI(),
         formatNewsDataForAI()
       );

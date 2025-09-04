@@ -254,7 +254,6 @@ export class AnalysisAPI {
   }
 
   // David AI 질문
-  // David AI 질문
   static async askDavidQuestion(
     symbol: string,
     question: string,

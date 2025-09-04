@@ -219,7 +219,6 @@ class YahooFinance:
   def get_financials(self, symbol: str, exchange_code: str = None) -> dict | None:
     """재무제표 조회"""
     try:
-      # exchange_code가 있으면 항상 _get_yfinance_ticker_with_suffix 사용
       if exchange_code:
         try:
           yfs_ticker = self._get_yfinance_ticker_with_suffix(symbol, exchange_code)
