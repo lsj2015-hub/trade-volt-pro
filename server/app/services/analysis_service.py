@@ -3,10 +3,9 @@ from typing import Dict, Optional
 from sqlalchemy.orm import Session
 
 from app.external.yahoo_finance import yahoo_finance
-from app.external.translation import tranlation_service
+from app.external.translation import translation_service
 from app.utils.formatting import (
-  format_stock_profile, format_financial_summary, format_investment_metrics,
-  format_market_data, format_analyst_recommendations, format_currency, format_financial_statement_response
+  format_stock_profile, format_investment_metrics, format_financial_statement_response
 )
 
 logger = logging.getLogger(__name__)
@@ -45,7 +44,7 @@ class AnalysisService:
       if business_summary_en:
         logger.info(f"사업개요 번역 시작: {symbol}")
         try:
-          business_summary_kr = tranlation_service.translate_to_korean(business_summary_en)
+          business_summary_kr = translation_service.translate_text(business_summary_en)
           logger.info(f"사업개요 번역 완료: {symbol}")
         except Exception as e:
           logger.error(f"사업개요 번역 실패: {e}")
@@ -207,6 +206,7 @@ class AnalysisService:
     except Exception as e:
       logger.error(f"재무제표 조회 오류 (symbol: {symbol}, type: {statement_type}): {e}", exc_info=True)
       return None
+    
 
 # 싱글톤 인스턴스
 analysis_service = AnalysisService()

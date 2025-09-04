@@ -390,3 +390,99 @@ class PriceHistoryResponse(BaseModel):
   last_available_date: Optional[str] = None
   data_count: int
   data: List[PriceHistoryData]
+
+class NewsItem(BaseModel):
+  """개별 뉴스 아이템"""
+  title: str = Field(description="뉴스 제목")
+  url: str = Field(description="뉴스 링크")
+  publishedDate: Optional[str] = Field(description="발행일 (ISO 형식)")
+  source: str = Field(description="뉴스 소스")
+  summary: str = Field(description="뉴스 요약")
+  # 번역 필드 추가
+  translated_title: Optional[str] = Field(default=None, description="번역된 제목")
+  translated_summary: Optional[str] = Field(default=None, description="번역된 요약")
+  is_translated: bool = Field(default=False, description="번역 여부")
+
+class NewsResponse(BaseModel):
+  """뉴스 조회 응답"""
+  success: bool
+  symbol: str
+  start_date: str
+  end_date: str
+  news_count: int = Field(description="뉴스 개수")
+  data: List[NewsItem] = Field(description="뉴스 목록")
+  message: Optional[str] = None
+
+# ====== 번역 관련 스키마 ======
+class TranslateRequest(BaseModel):
+  """번역 요청"""
+  text: str = Field(..., min_length=1, max_length=10000, description="번역할 텍스트")
+  target_lang: str = Field(default="ko", description="대상 언어 코드")
+  source_lang: str = Field(default="auto", description="원본 언어 코드")
+
+class TranslateResponse(BaseModel):
+  """번역 응답"""
+  success: bool
+  original_text: str = Field(description="원본 텍스트")
+  translated_text: str = Field(description="번역된 텍스트")
+  source_lang: str = Field(description="감지된 원본 언어")
+  target_lang: str = Field(description="대상 언어")
+  message: Optional[str] = None
+
+class OriginalContent(BaseModel):
+  """원본 컨텐츠"""
+  title: str
+  summary: str
+
+class TranslatedContent(BaseModel):
+  """번역된 컨텐츠"""
+  title: str
+  summary: str
+
+class NewsTranslateRequest(BaseModel):
+  """뉴스 번역 요청 (뉴스 전용)"""
+  original: OriginalContent
+  target_lang: str = Field(default="ko", description="대상 언어")
+
+class NewsTranslateResponse(BaseModel):
+  """뉴스 번역 응답"""
+  success: bool
+  original: OriginalContent
+  translated: TranslatedContent
+  target_lang: str
+  message: Optional[str] = None
+
+# ====== David AI 관련 스키마 ======
+class ChatMessage(BaseModel):
+  """개별 채팅 메시지"""
+  role: str = Field(description="메시지 역할 (user/assistant)")
+  content: str = Field(description="메시지 내용")
+  timestamp: str = Field(description="메시지 시간")
+
+class LLMQuestionRequest(BaseModel):
+  """LLM 질문 요청"""
+  question: str = Field(..., min_length=1, max_length=1000, description="사용자 질문")
+  conversation_history: List[ChatMessage] = Field(default=[], description="대화 히스토리")
+  
+  # 실제 데이터 필드 추가
+  company_data: Optional[str] = Field(default="", description="회사 기본 정보 데이터")
+  financial_data: Optional[str] = Field(default="", description="재무 정보 데이터") 
+  price_history_data: Optional[str] = Field(default="", description="주가 히스토리 데이터")
+  news_data: Optional[str] = Field(default="", description="뉴스 데이터")
+  
+  # 기존 플래그들 (사용하지 않지만 호환성 유지)
+  include_company_summary: bool = Field(default=True, description="회사 기본 정보 포함 여부")
+  include_financial_summary: bool = Field(default=True, description="재무 정보 포함 여부")
+  include_market_info: bool = Field(default=True, description="시장 정보 포함 여부")
+  include_price_history: bool = Field(default=True, description="주가 히스토리 포함 여부")
+  include_news_data: bool = Field(default=True, description="뉴스 데이터 포함 여부")
+
+class LLMQuestionResponse(BaseModel):
+  """LLM 질문 응답"""
+  success: bool
+  symbol: str
+  question: str
+  answer: str
+  conversation_history: List[ChatMessage] = Field(description="업데이트된 대화 히스토리")
+  context_used: Dict[str, bool] = Field(description="사용된 컨텍스트 데이터 유형")
+  message: Optional[str] = None

@@ -537,7 +537,7 @@ export interface AnalysisParams {
   exchangeCode?: string
 }
 
-// 주가 히스토리 관련 타입
+// ====== 주가 히스토리 관련 타입 ======
 export interface PriceHistoryData {
   Date: string;
   Open: number;
@@ -556,4 +556,103 @@ export interface PriceHistoryResponse {
   last_available_date?: string;
   data_count: number;
   data: PriceHistoryData[];
+}
+
+// ====== 뉴스 관련 타입 ======
+export interface NewsItem {
+  title: string;
+  url: string;
+  publishedDate?: string;
+  source: string;
+  summary: string;
+  // 번역 필드 추가
+  translated_title?: string;
+  translated_summary?: string;
+  is_translated?: boolean;
+}
+
+export interface NewsResponse {
+  success: boolean;
+  symbol: string;
+  start_date: string;
+  end_date: string;
+  news_count: number;
+  data: NewsItem[];
+  message?: string;
+}
+
+// ====== 번역 관련 타입 =======
+export interface TranslateRequest {
+  text: string;
+  target_lang?: string;
+  source_lang?: string;
+}
+
+export interface TranslateResponse {
+  success: boolean;
+  original_text: string;
+  translated_text: string;
+  source_lang: string;
+  target_lang: string;
+  message?: string;
+}
+
+export interface OriginalContent {
+  title: string;
+  summary: string;
+}
+
+export interface TranslatedContent {
+  title: string;
+  summary: string;
+}
+
+export interface NewsTranslateRequest {
+  original: OriginalContent;
+  target_lang?: string;
+}
+
+export interface NewsTranslateResponse {
+  success: boolean;
+  original: OriginalContent;
+  translated: TranslatedContent;
+  target_lang: string;
+  message?: string;
+}
+
+// ====== David AI 관련 타입 ======
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+export interface LLMQuestionRequest {
+  question: string;
+  conversation_history?: ChatMessage[];
+
+  // 실제 데이터 필드 추가
+  company_data?: string;
+  financial_data?: string;
+  price_history_data?: string;
+  news_data?: string;
+
+  // 기존 플래그들 (호환성 유지)
+  include_company_summary?: boolean;
+  include_financial_summary?: boolean;
+  include_market_info?: boolean;
+  include_price_history?: boolean;
+  include_news_data?: boolean;
+}
+
+export interface LLMQuestionResponse {
+  success: boolean;
+  symbol: string;
+  question: string;
+  answer: string;
+  conversation_history: ChatMessage[];
+  context_used: {
+    [key: string]: boolean;
+  };
+  message?: string;
 }

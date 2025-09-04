@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -46,6 +46,8 @@ import {
   StockInfo,
   AnalysisData,
   PriceHistoryResponse,
+  NewsResponse,
+  NewsTranslateResponse,
 } from '@/types/types';
 import { AnalysisAPI } from '@/lib/analysis-api';
 import { StockAPI } from '@/lib/stock-api';
@@ -86,6 +88,47 @@ export default function BasicAnalysisPage() {
   const [priceHistoryError, setPriceHistoryError] = useState<string>('');
   const [showPriceHistory, setShowPriceHistory] = useState(false);
 
+  // 뉴스 관련 상태 (추가)
+  const [newsStartDate, setNewsStartDate] = useState<Date | undefined>(() => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday;
+  });
+  const [newsEndDate, setNewsEndDate] = useState<Date | undefined>(() => {
+    return new Date();
+  });
+  const [newsData, setNewsData] = useState<NewsResponse | null>(null);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [showNews, setShowNews] = useState(false);
+
+  // 번역 관련 상태 추가
+  const [translatingNews, setTranslatingNews] = useState<{
+    [key: number]: boolean;
+  }>({});
+
+  // David AI 관련 상태 추가
+  const [davidQuestion, setDavidQuestion] = useState<string>('');
+  const [davidLoading, setDavidLoading] = useState<boolean>(false);
+  const [davidError, setDavidError] = useState<string>('');
+  const [conversationHistory, setConversationHistory] = useState<any[]>([]);
+  const [showDavidChat, setShowDavidChat] = useState<boolean>(false);
+
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (chatContainerRef.current && conversationHistory.length > 0) {
+      const scrollToBottom = () => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop =
+            chatContainerRef.current.scrollHeight;
+        }
+      };
+
+      // 약간의 지연을 두어 DOM 업데이트 후 스크롤
+      setTimeout(scrollToBottom, 50);
+    }
+  }, [conversationHistory, davidLoading]);
+
   // 종목 검색 함수
   const handleSearchInput = async (value: string) => {
     setSearchTicker(value);
@@ -111,31 +154,71 @@ export default function BasicAnalysisPage() {
     }
   };
 
-  // 종목 선택 함수
   const handleStockSelect = (stock: StockInfo) => {
-    setSearchTicker(stock.symbol);
     setSelectedStock(stock);
+    setSearchTicker(`${stock.company_name} (${stock.symbol})`);
     setShowSearchResults(false);
-    // 기존 분석 데이터와 선택된 정보 유형 초기화
-    setSelectedInfo('');
-    setAnalysisData(null);
-    setError('');
-    setHasSearched(false);
+    setHasSearched(true);
     setResetKey((prev) => prev + 1);
+
+    // 새로운 종목 선택 시 모든 섹션 초기화
+    resetAllSections();
+  };
+
+  // 모든 섹션 초기화 함수
+  const resetAllSections = () => {
+    // 기본 정보 초기화
+    setAnalysisData(null);
+    setLoading(false);
+    setError('');
+    setSelectedInfo('');
+
+    // 재무제표 초기화
+    setFinancialData(null);
+    setFinancialLoading(false);
+    setFinancialError('');
+    setActiveFinancialTab('income');
+
+    // 주가 히스토리 초기화
+    setPriceHistoryData(null);
+    setPriceHistoryLoading(false);
+    setPriceHistoryError('');
+    setShowPriceHistory(false);
+    setStartDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+    setEndDate(new Date());
+
+    // 뉴스 초기화
+    setNewsData(null);
+    setNewsLoading(false);
+    setShowNews(false);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    setNewsStartDate(yesterday);
+    setNewsEndDate(new Date());
+    setTranslatingNews({});
+
+    // David AI 초기화
+    setDavidQuestion('');
+    setDavidLoading(false);
+    setDavidError('');
+    setConversationHistory([]);
+    setShowDavidChat(false);
   };
 
   const handleInputClick = () => {
     if (hasSearched) {
-      // 이미 검색이 완료된 상태에서 input 클릭 시 초기화
+      // 이미 검색이 완료된 상태에서 input 클릭 시 전체 초기화
       setSearchTicker('');
-      setSelectedInfo('');
-      setResetKey((prev) => prev + 1);
       setSelectedStock(null);
-      setAnalysisData(null);
-      setError('');
-      setHasSearched(false);
       setSearchResults([]);
+      setHasSearched(false);
       setShowSearchResults(false);
+      setResetKey((prev) => prev + 1);
+
+      // 모든 섹션 초기화
+      resetAllSections();
+    } else if (searchResults.length > 0) {
+      setShowSearchResults(true);
     }
   };
 
@@ -269,6 +352,207 @@ export default function BasicAnalysisPage() {
     } finally {
       setPriceHistoryLoading(false);
     }
+  };
+
+  // 뉴스 조회/숨기기 함수
+  const handleNewsToggle = async () => {
+    if (showNews) {
+      // 뉴스 숨기기
+      setShowNews(false);
+      return;
+    }
+
+    // 뉴스 조회
+    if (!selectedStock || !newsStartDate || !newsEndDate) {
+      return;
+    }
+
+    setNewsLoading(true);
+
+    try {
+      const startDateStr = newsStartDate.toISOString().split('T')[0];
+      const endDateStr = newsEndDate.toISOString().split('T')[0];
+
+      const result = await AnalysisAPI.getStockNews(
+        selectedStock.symbol,
+        startDateStr,
+        endDateStr,
+        selectedStock.exchange_code, // exchange_code 전달
+        50
+      );
+
+      setNewsData(result);
+      setShowNews(true);
+    } catch (error) {
+      console.error('뉴스 조회 오류:', error);
+    } finally {
+      setNewsLoading(false);
+    }
+  };
+
+  // 뉴스 번역 함수
+  const handleTranslateNews = async (newsIndex: number) => {
+    if (!newsData || newsIndex >= newsData.data.length) return;
+
+    const newsItem = newsData.data[newsIndex];
+
+    // 이미 번역된 경우 원문/번역 토글
+    if (newsItem.is_translated) {
+      const updatedNews = { ...newsData };
+      updatedNews.data[newsIndex] = {
+        ...newsItem,
+        is_translated: false, // 원문으로 돌리기
+      };
+      setNewsData(updatedNews);
+      return;
+    }
+
+    // 번역 시작
+    setTranslatingNews((prev) => ({ ...prev, [newsIndex]: true }));
+
+    try {
+      const result: NewsTranslateResponse = await AnalysisAPI.translateNews(
+        newsItem.title,
+        newsItem.summary || '',
+        'ko'
+      );
+
+      if (result.success) {
+        // 번역 결과로 뉴스 데이터 업데이트
+        const updatedNews = { ...newsData };
+        updatedNews.data[newsIndex] = {
+          ...newsItem,
+          translated_title: result.translated.title,
+          translated_summary: result.translated.summary,
+          is_translated: true,
+        };
+        setNewsData(updatedNews);
+      }
+    } catch (error) {
+      console.error('뉴스 번역 오류:', error);
+      // 에러 처리 (필요시 toast 알림)
+    } finally {
+      setTranslatingNews((prev) => ({ ...prev, [newsIndex]: false }));
+    }
+  };
+
+  // 데이터를 문자열로 변환하는 함수들
+  const formatCompanyDataForAI = (): string => {
+    let result = '';
+
+    // 선택된 종목 기본 정보
+    if (selectedStock) {
+      result += `=== 기본 종목 정보 ===\n`;
+      result += `종목코드: ${selectedStock.symbol}\n`;
+      result += `회사명: ${selectedStock.company_name}\n`;
+      result += `영문명: ${selectedStock.company_name_en || 'N/A'}\n`;
+      result += `국가: ${selectedStock.country_code}\n`;
+      result += `거래소: ${selectedStock.exchange_code}\n`;
+      result += `통화: ${selectedStock.currency}\n`;
+      result += `시장구분: ${selectedStock.market_type}\n\n`;
+    }
+
+    // 상세 분석 데이터 (있는 경우)
+    if (analysisData) {
+      result += `=== 상세 분석 정보 ===\n`;
+      const data = analysisData as any;
+      result += `업종: ${data.sector || 'N/A'} / ${data.industry || 'N/A'}\n`;
+      result += `직원 수: ${data.fullTimeEmployees || 'N/A'}명\n`;
+      result += `소재지: ${data.city || 'N/A'}, ${data.country || 'N/A'}\n`;
+      if (data.longBusinessSummary) {
+        result += `사업 개요: ${data.longBusinessSummary}\n`;
+      }
+    }
+
+    return result;
+  };
+
+  const formatPriceDataForAI = (): string => {
+    if (!priceHistoryData || !showPriceHistory) return '';
+    const recentData = priceHistoryData.data.slice(-10);
+    let result = `최근 주가 동향 (${priceHistoryData.start_date} ~ ${priceHistoryData.end_date}):\n`;
+    recentData.forEach((item) => {
+      result += `${item.Date}: 시가 $${item.Open}, 고가 $${item.High}, 저가 $${
+        item.Low
+      }, 종가 $${item.Close}, 거래량 ${item.Volume.toLocaleString()}\n`;
+    });
+    return result;
+  };
+
+  const formatNewsDataForAI = (): string => {
+    if (!newsData || !showNews) return '';
+    let result = `최신 뉴스 (총 ${newsData.news_count}건):\n`;
+    newsData.data.slice(0, 5).forEach((news, index) => {
+      result += `${index + 1}. ${news.title}\n`;
+      if (news.summary) result += `   요약: ${news.summary.slice(0, 100)}...\n`;
+    });
+    return result;
+  };
+
+  // David AI 질문 함수
+  const handleDavidQuestion = async () => {
+    if (!selectedStock || !davidQuestion.trim()) {
+      setDavidError('종목을 선택하고 질문을 입력해주세요.');
+      return;
+    }
+
+    setDavidLoading(true);
+    setDavidError('');
+
+    setShowDavidChat(true);
+    const currentQuestion = davidQuestion;
+    setDavidQuestion('');
+
+    // 디버깅 로그 추가
+    const companyData = formatCompanyDataForAI();
+    const priceData = formatPriceDataForAI();
+    const newsDataStr = formatNewsDataForAI();
+
+    console.log('=== David AI 전송 데이터 ===');
+    console.log('Company Data:', companyData);
+    console.log('Price Data:', priceData);
+    console.log('News Data:', newsDataStr);
+    console.log('Analysis Data:', analysisData);
+    console.log('Price History Data:', priceHistoryData);
+    console.log('News Data:', newsData);
+
+    try {
+      const result = await AnalysisAPI.askDavidQuestion(
+        selectedStock.symbol,
+        currentQuestion,
+        conversationHistory,
+        formatCompanyDataForAI(),
+        '', // 재무 데이터 (현재 구현되지 않음)
+        formatPriceDataForAI(),
+        formatNewsDataForAI()
+      );
+
+      if (result.success) {
+        setConversationHistory(result.conversation_history);
+      } else {
+        setDavidError('질문 처리에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('David AI 질문 오류:', error);
+      setDavidError('David AI 질문 중 오류가 발생했습니다.');
+    } finally {
+      setDavidLoading(false);
+    }
+  };
+
+  // Enter 키 처리 함수
+  const handleDavidKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleDavidQuestion();
+    }
+  };
+
+  // 대화 초기화 함수
+  const handleClearChat = () => {
+    setConversationHistory([]);
+    setShowDavidChat(false);
+    setDavidError('');
   };
 
   // Skeleton UI 컴포넌트들
@@ -1037,6 +1321,110 @@ export default function BasicAnalysisPage() {
     );
   };
 
+  // 뉴스 렌더링 함수 (번역 기능 포함)
+  const renderNews = () => {
+    if (!newsData) return null;
+
+    if (newsData.news_count === 0) {
+      return (
+        <div className="text-center py-8">
+          <div className="text-4xl mb-4">📰</div>
+          <p className="text-muted-foreground">해당 기간에 뉴스가 없습니다.</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            다른 기간을 선택해보세요.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">
+            최신 뉴스 ({newsData.news_count}건)
+          </h3>
+          <div className="text-sm text-muted-foreground">
+            {newsData.start_date} ~ {newsData.end_date}
+          </div>
+        </div>
+
+        <div className="space-y-3 max-h-96 overflow-y-auto">
+          {newsData.data.map((news, index) => (
+            <div
+              key={index}
+              className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+            >
+              <div className="space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="font-medium text-sm leading-5 line-clamp-2 flex-1">
+                    <a
+                      href={news.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {news.is_translated && news.translated_title
+                        ? news.translated_title
+                        : news.title}
+                    </a>
+                  </h4>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleTranslateNews(index)}
+                    disabled={translatingNews[index]}
+                    className="text-xs px-2 py-1 h-6 shrink-0"
+                  >
+                    {translatingNews[index] ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : news.is_translated ? (
+                      '원문'
+                    ) : (
+                      '번역'
+                    )}
+                  </Button>
+                </div>
+
+                {(news.summary || news.translated_summary) && (
+                  <p className="text-xs text-muted-foreground line-clamp-3">
+                    {news.is_translated && news.translated_summary
+                      ? news.translated_summary
+                      : news.summary}
+                  </p>
+                )}
+
+                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span>{news.source}</span>
+                    {news.is_translated && (
+                      <span className="bg-blue-100 text-blue-600 px-1 py-0.5 rounded text-xs">
+                        번역됨
+                      </span>
+                    )}
+                  </div>
+                  {news.publishedDate && (
+                    <span>
+                      {new Date(news.publishedDate).toLocaleDateString(
+                        'ko-KR',
+                        {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        }
+                      )}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* 페이지 제목 */}
@@ -1238,37 +1626,38 @@ export default function BasicAnalysisPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-            <div className="md:col-span-3">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 mb-4 lg:items-end">
+            <div className="lg:col-span-3">
               <div className="space-y-2">
                 <label className="text-sm font-medium">시작일</label>
                 <DatePicker
                   date={startDate}
                   onSelect={setStartDate}
                   placeholder="시작일 선택"
-                  className="h-11 text-center"
+                  className="h-11 text-center w-full"
                 />
               </div>
             </div>
-            <div className="md:col-span-1 text-center flex items-center justify-center h-11">
-              <span className="text-muted-foreground text-lg">~</span>
+            <div className="hidden lg:flex lg:col-span-1 lg:items-center lg:justify-center">
+              <span className="text-muted-foreground text-lg mb-2">~</span>
             </div>
-            <div className="md:col-span-3">
+            <div className="lg:col-span-3">
               <div className="space-y-2">
                 <label className="text-sm font-medium">종료일</label>
                 <DatePicker
                   date={endDate}
                   onSelect={setEndDate}
                   placeholder="종료일 선택"
-                  className="h-11 text-center"
+                  className="h-11 text-center w-full"
                 />
               </div>
             </div>
-            <div className="md:col-span-3 md:col-start-11">
+            <div className="lg:col-span-3 lg:col-start-10">
               <div className="space-y-2">
-                <label className="text-sm font-medium">&nbsp;</label>
+                <label className="text-sm font-medium lg:hidden">&nbsp;</label>
                 <Button
-                  variant="outline"
+                  variant="basic"
+                  size="lg"
                   className="w-full h-11"
                   onClick={handlePriceHistorySearch}
                   disabled={
@@ -1316,38 +1705,230 @@ export default function BasicAnalysisPage() {
             관련 최신 뉴스
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="border rounded-lg p-4 min-h-[100px] bg-muted/20">
-            <p className="text-muted-foreground text-center">
-              종목 관련 최신 뉴스가 여기에 표시됩니다.
-            </p>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4 mb-4 lg:items-end">
+            <div className="lg:col-span-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">시작일</label>
+                <DatePicker
+                  date={newsStartDate}
+                  onSelect={setNewsStartDate}
+                  placeholder="시작일 선택"
+                  className="h-11 text-center w-full"
+                />
+              </div>
+            </div>
+            <div className="hidden lg:flex lg:col-span-1 lg:items-center lg:justify-center">
+              <span className="text-muted-foreground text-lg mb-2">~</span>
+            </div>
+            <div className="lg:col-span-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">종료일</label>
+                <DatePicker
+                  date={newsEndDate}
+                  onSelect={setNewsEndDate}
+                  placeholder="종료일 선택"
+                  className="h-11 text-center w-full"
+                />
+              </div>
+            </div>
+            <div className="lg:col-span-3 lg:col-start-10">
+              <div className="space-y-2">
+                <label className="text-sm font-medium lg:hidden">&nbsp;</label>
+                <Button
+                  variant="basic"
+                  size="lg"
+                  className="w-full h-11"
+                  onClick={handleNewsToggle}
+                  disabled={
+                    !selectedStock ||
+                    !newsStartDate ||
+                    !newsEndDate ||
+                    newsLoading
+                  }
+                >
+                  {newsLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      조회 중...
+                    </>
+                  ) : showNews && newsData ? (
+                    '뉴스 숨기기'
+                  ) : (
+                    '뉴스 조회'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="border rounded-lg p-3 min-h-[100px] bg-muted/20">
+            {showNews ? (
+              renderNews()
+            ) : (
+              <div className="text-center py-4">
+                <div className="text-2xl mb-2">📰</div>
+                <p className="text-muted-foreground text-sm">
+                  조회 기간을 선택하고 '뉴스 조회' 버튼을 클릭하여 최신 뉴스를
+                  확인하세요.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
       <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <MessageSquare className="h-5 w-5" />
-            David에게 자유롭게 질문하세요
+          <CardTitle className="flex items-center justify-between text-lg sm:text-xl">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              David에게 자유롭게 질문하세요
+              {selectedStock && (
+                <span className="text-sm text-muted-foreground font-normal">
+                  ({selectedStock.symbol})
+                </span>
+              )}
+            </div>
+            {showDavidChat && conversationHistory.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearChat}
+                className="text-xs"
+              >
+                대화 초기화
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="border rounded-lg p-4 min-h-[150px] bg-muted/20 flex flex-col items-center justify-center">
-              <div className="text-4xl mb-4">💡</div>
-              <p className="text-center font-medium">질문 예시:</p>
-              <p className="text-center text-muted-foreground text-sm">
-                "이 기업의 최신 뉴스를 분석하여, 긍정적/부정적 요소를 정리해줘."
-              </p>
+            {/* 대화 내용 표시 영역 */}
+            <div
+              ref={chatContainerRef}
+              className="border rounded-lg p-4 min-h-[200px] max-h-[400px] bg-muted/20 overflow-y-auto scroll-smooth"
+              style={{ scrollBehavior: 'smooth' }}
+            >
+              {showDavidChat && conversationHistory.length > 0 ? (
+                <div className="space-y-4">
+                  {conversationHistory.map((message, index) => (
+                    <div
+                      key={index}
+                      className={`flex ${
+                        message.role === 'user'
+                          ? 'justify-end'
+                          : 'justify-start'
+                      }`}
+                    >
+                      <div
+                        className={`max-w-[80%] p-3 rounded-lg ${
+                          message.role === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-white border shadow-sm'
+                        }`}
+                      >
+                        <div className="flex items-start gap-2">
+                          {message.role === 'assistant' && (
+                            <MessageSquare className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                          )}
+                          <div className="flex-1">
+                            <div
+                              className={`text-sm whitespace-pre-wrap ${
+                                message.role === 'user'
+                                  ? 'text-right'
+                                  : 'text-left'
+                              }`}
+                            >
+                              {message.content}
+                            </div>
+                            <div
+                              className={`text-xs mt-1 opacity-70 ${
+                                message.role === 'user'
+                                  ? 'text-right'
+                                  : 'text-left'
+                              }`}
+                            >
+                              {new Date(message.timestamp).toLocaleTimeString(
+                                'ko-KR',
+                                {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                }
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* 로딩 중일 때 표시 */}
+                  {davidLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-white border shadow-sm p-3 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4 text-primary" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-sm text-muted-foreground">
+                            David가 분석 중입니다...
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-2">
+                  <div className="text-4xl mb-4">💡</div>
+                  <p className="text-center font-medium mb-2">질문 예시:</p>
+                  <div className="text-center text-muted-foreground text-sm space-y-1">
+                    <p>"이 기업의 재무상태는 어떤가요?"</p>
+                    <p>"최근 주가 흐름을 분석해주세요."</p>
+                    <p>"최신 뉴스가 주가에 미칠 영향은?"</p>
+                  </div>
+                  {!selectedStock && (
+                    <p className="text-red-500 text-xs mt-4">
+                      ※ 먼저 상단에서 종목을 선택해주세요
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+
+            {/* 오류 메시지 */}
+            {davidError && (
+              <div className="text-red-500 text-sm bg-red-50 p-2 rounded">
+                ⚠️ {davidError}
+              </div>
+            )}
+
+            {/* 질문 입력 영역 */}
             <div className="flex gap-2">
               <Input
-                placeholder="David에게 궁금한 점을 입력하세요 (Shift+Enter로 줄바꿈)"
+                placeholder={
+                  selectedStock
+                    ? 'David에게 궁금한 점을 입력하세요 (Enter로 전송)'
+                    : '먼저 종목을 선택해주세요'
+                }
+                value={davidQuestion}
+                onChange={(e) => setDavidQuestion(e.target.value)}
+                onKeyDown={handleDavidKeyDown}
+                disabled={!selectedStock || davidLoading}
                 className="flex-1"
               />
-              <Button variant="outline">
-                <MessageSquare className="h-4 w-4" />
+              <Button
+                variant="outline"
+                onClick={handleDavidQuestion}
+                disabled={
+                  !selectedStock || !davidQuestion.trim() || davidLoading
+                }
+              >
+                {davidLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MessageSquare className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>

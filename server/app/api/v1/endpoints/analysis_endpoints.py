@@ -1,18 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.orm import Session
 import logging
 from typing import Optional
 import pandas as pd
+from datetime import datetime
 
 from app.config.database import get_sync_session
 from app.schemas.common_schemas import (
   AnalysisInfoType, AnalysisResponse, CompanySummaryResponse,
   FinancialSummaryResponse, InvestmentIndexResponse, MarketInfoResponse,
-  AnalystOpinionResponse, MajorExecutorsResponse, PriceHistoryResponse
+  AnalystOpinionResponse, MajorExecutorsResponse, PriceHistoryResponse,
+  NewsResponse, TranslateResponse, TranslateRequest, NewsTranslateResponse, 
+  NewsTranslateRequest, TranslatedContent, 
+  ChatMessage, LLMQuestionRequest, LLMQuestionResponse
 )
 from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.services.analysis_service import analysis_service
+from app.external.yahoo_finance import yahoo_finance
+from app.external.translation import translation_service
+from app.external.llm import llm_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -319,3 +326,214 @@ async def get_price_history(
     except Exception as e:
         logger.error(f"주가 히스토리 조회 오류: symbol={symbol}, error={str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="주가 히스토리 조회 중 오류가 발생했습니다.")
+    
+@router.get("/{symbol}/news", response_model=NewsResponse)
+async def get_stock_news(
+  symbol: str = Path(..., description="종목 코드"),
+  exchange_code: Optional[str] = Query(None, description="거래소 코드"),
+  start_date: str = Query(..., description="시작일 (YYYY-MM-DD)"),
+  end_date: str = Query(..., description="종료일 (YYYY-MM-DD)"),
+  limit: int = Query(50, ge=1, le=100, description="최대 뉴스 개수"),
+  current_user: User = Depends(get_current_user)
+) -> NewsResponse:
+  """종목별 뉴스 조회"""
+  try:
+    logger.info(f"종목 뉴스 요청: user_id={current_user.id}, symbol={symbol}, start_date={start_date}, end_date={end_date}")
+    
+    # Yahoo Finance RSS에서 뉴스 조회
+    news_data = await yahoo_finance.get_news_from_rss(
+      symbol=symbol.upper(), 
+      start_date=start_date, 
+      end_date=end_date,
+      exchange_code=exchange_code,
+      limit=limit
+    )
+    
+    if not news_data:
+      logger.warning(f"뉴스 데이터 없음: symbol={symbol}")
+      return NewsResponse(
+        success=True,
+        symbol=symbol.upper(),
+        start_date=start_date,
+        end_date=end_date,
+        news_count=0,
+        data=[],
+        message="해당 기간의 뉴스가 없습니다."
+      )
+    
+    logger.info(f"종목 뉴스 조회 완료: symbol={symbol}, count={len(news_data)}")
+    
+    return NewsResponse(
+      success=True,
+      symbol=symbol.upper(),
+      start_date=start_date,
+      end_date=end_date,
+      news_count=len(news_data),
+      data=news_data,
+      message=f"{len(news_data)}개의 뉴스를 찾았습니다."
+    )
+    
+  except Exception as e:
+    logger.error(f"종목 뉴스 조회 중 오류: {e}", exc_info=True)
+    raise HTTPException(status_code=500, detail="뉴스 조회 중 오류가 발생했습니다.")
+  
+@router.post("/translate", response_model=TranslateResponse)
+async def translate_text(
+  request: TranslateRequest,
+  current_user: User = Depends(get_current_user)
+) -> TranslateResponse:
+  """텍스트 번역"""
+  try:
+    logger.info(f"번역 요청: user_id={current_user.id}, text_length={len(request.text)}, target_lang={request.target_lang}")
+    
+    translated_text = translation_service.translate_text(
+      request.text, 
+      request.source_lang, 
+      request.target_lang
+    )
+    
+    logger.info(f"번역 완료: user_id={current_user.id}, target_lang={request.target_lang}")
+    
+    return TranslateResponse(
+      success=True,
+      original_text=request.text,
+      translated_text=translated_text,
+      source_lang=request.source_lang,
+      target_lang=request.target_lang,
+      message="번역이 완료되었습니다."
+    )
+    
+  except Exception as e:
+    logger.error(f"번역 API 오류: user_id={current_user.id}, error={e}")
+    raise HTTPException(status_code=500, detail="번역 중 오류가 발생했습니다.")
+
+@router.post("/translate-news", response_model=NewsTranslateResponse)
+async def translate_news(
+  request: NewsTranslateRequest,
+  current_user: User = Depends(get_current_user)
+) -> NewsTranslateResponse:
+  """뉴스 번역 (제목 + 요약 동시 번역)"""
+  try:
+    logger.info(f"뉴스 번역 요청: user_id={current_user.id}, target_lang={request.target_lang}")
+  
+    # 제목 번역
+    translated_title = translation_service.translate_text(
+      request.original.title, 
+      'auto', 
+      request.target_lang
+    )
+    
+    # 요약 번역 (있는 경우만)
+    translated_summary = ""
+    if request.original.summary:
+      translated_summary = translation_service.translate_text(
+        request.original.summary, 
+        'auto', 
+        request.target_lang
+      )
+    
+    logger.info(f"뉴스 번역 완료: user_id={current_user.id}, target_lang={request.target_lang}")
+    
+    return NewsTranslateResponse(
+      success=True,
+      original=request.original,
+      translated=TranslatedContent(
+        title=translated_title,
+        summary=translated_summary
+      ),
+      target_lang=request.target_lang,
+      message="뉴스 번역이 완료되었습니다."
+    )
+    
+  except Exception as e:
+    logger.error(f"뉴스 번역 API 오류: user_id={current_user.id}, error={e}")
+    raise HTTPException(status_code=500, detail="뉴스 번역 중 오류가 발생했습니다.")
+  
+@router.post("/{symbol}/ask-david", response_model=LLMQuestionResponse)
+async def ask_david_question(
+  request_data: LLMQuestionRequest,
+  symbol: str = Path(..., description="종목 코드"),
+  current_user: User = Depends(get_current_user)
+) -> LLMQuestionResponse:
+  """David AI에게 질문하기"""
+  try:
+    logger.info(f"David 질문 요청: user_id={current_user.id}, symbol={symbol}")
+    
+    # 클라이언트에서 전달받은 실제 데이터 사용
+    company_data = request_data.company_data or ""
+    financial_data = request_data.financial_data or ""
+    history_data = request_data.price_history_data or ""
+    news_data = request_data.news_data or ""
+
+    # 디버깅 로그 추가
+    logger.info(f"=== David AI 수신 데이터 ===")
+    logger.info(f"Company Data Length: {len(company_data)}")
+    logger.info(f"Financial Data Length: {len(financial_data)}")
+    logger.info(f"History Data Length: {len(history_data)}")
+    logger.info(f"News Data Length: {len(news_data)}")
+    logger.info(f"Company Data Preview: {company_data[:200]}...")
+    
+    # 대화 히스토리 변환
+    conversation_history = []
+    if request_data.conversation_history:
+      conversation_history = [
+        {
+          "role": msg.role,
+          "content": msg.content
+        }
+        for msg in request_data.conversation_history
+      ]
+    
+    # LLM 서비스 호출
+    answer = await llm_service.get_qa_response(
+      symbol=symbol.upper(),
+      user_question=request_data.question,
+      company_data=company_data,
+      financial_data=financial_data,
+      history_data=history_data,
+      news_data=news_data,
+      conversation_history=conversation_history
+    )
+    
+    # 업데이트된 대화 히스토리 생성
+    updated_history = list(request_data.conversation_history)
+    
+    # 사용자 질문 추가
+    updated_history.append(ChatMessage(
+      role="user",
+      content=request_data.question,
+      timestamp=datetime.now().isoformat()
+    ))
+    
+    # AI 답변 추가
+    updated_history.append(ChatMessage(
+      role="assistant", 
+      content=answer,
+      timestamp=datetime.now().isoformat()
+    ))
+    
+    # 최대 20개 메시지만 유지
+    if len(updated_history) > 20:
+      updated_history = updated_history[-20:]
+    
+    logger.info(f"David 질문 응답 완료: user_id={current_user.id}, symbol={symbol}")
+    
+    return LLMQuestionResponse(
+      success=True,
+      symbol=symbol.upper(),
+      question=request_data.question,
+      answer=answer,
+      conversation_history=updated_history,
+      context_used={
+        "company_summary": False,
+        "financial_summary": False, 
+        "market_info": False,
+        "price_history": False,
+        "news_data": False
+      },
+      message="질문에 대한 답변이 완료되었습니다."
+    )
+    
+  except Exception as e:
+    logger.error(f"David AI 질문 처리 오류: user_id={current_user.id}, symbol={symbol}, error={e}")
+    raise HTTPException(status_code=500, detail="AI 질문 처리 중 오류가 발생했습니다.")

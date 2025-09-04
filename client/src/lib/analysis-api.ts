@@ -9,6 +9,12 @@ import {
   AnalysisResponse,
   AnalysisParams,
   PriceHistoryResponse,
+  NewsResponse,
+  NewsTranslateResponse,
+  NewsTranslateRequest,
+  ChatMessage,
+  LLMQuestionRequest,
+  LLMQuestionResponse,
 } from '@/types/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -199,5 +205,84 @@ export class AnalysisAPI {
     const endpoint = `/api/v1/analysis/${symbol}/price-history?${queryString}`;
 
     return this.request<PriceHistoryResponse>(endpoint);
+  }
+
+  // 뉴스 조회
+  static async getStockNews(
+    symbol: string,
+    startDate: string,
+    endDate: string,
+    exchangeCode?: string,
+    limit: number = 50
+  ): Promise<NewsResponse> {
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+      limit: limit.toString(),
+    });
+
+    if (exchangeCode) {
+      params.append('exchange_code', exchangeCode);
+    }
+
+    const queryString = params.toString();
+    const endpoint = `/api/v1/analysis/${symbol}/news?${queryString}`;
+
+    return this.request<NewsResponse>(endpoint);
+  }
+
+  // 뉴스 번역 (제목 + 요약 동시)
+  static async translateNews(
+    title: string,
+    summary: string,
+    targetLang: string = 'ko'
+  ): Promise<NewsTranslateResponse> {
+    const endpoint = `/api/v1/analysis/translate-news`;
+
+    const requestData: NewsTranslateRequest = {
+      original: {
+        title,
+        summary,
+      },
+      target_lang: targetLang,
+    };
+
+    return this.request<NewsTranslateResponse>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    });
+  }
+
+  // David AI 질문
+  // David AI 질문
+  static async askDavidQuestion(
+    symbol: string,
+    question: string,
+    conversationHistory: ChatMessage[] = [],
+    companyData: string = '',
+    financialData: string = '',
+    priceHistoryData: string = '',
+    newsData: string = ''
+  ): Promise<LLMQuestionResponse> {
+    const endpoint = `/api/v1/analysis/${symbol}/ask-david`;
+
+    const requestData: LLMQuestionRequest = {
+      question,
+      conversation_history: conversationHistory,
+      company_data: companyData,
+      financial_data: financialData,
+      price_history_data: priceHistoryData,
+      news_data: newsData,
+      include_company_summary: !!companyData,
+      include_financial_summary: !!financialData,
+      include_market_info: false,
+      include_price_history: !!priceHistoryData,
+      include_news_data: !!newsData,
+    };
+
+    return this.request<LLMQuestionResponse>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    });
   }
 }
