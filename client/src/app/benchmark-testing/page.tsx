@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import { Target, BarChart, TrendingUp, Activity, Gauge } from 'lucide-react';
+import { SectorAnalysis } from './components/sector-analysis';
+import { PerformanceAnalysis } from './components/performance-analysis';
 
 export default function BenchmarkTestingPage() {
   const [selectedMarket, setSelectedMarket] = useState('');
@@ -44,7 +46,7 @@ export default function BenchmarkTestingPage() {
       </div>
 
       {/* 섹터 수익률 비교 분석 */}
-      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
+      {/* <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <BarChart className="h-5 w-5" />
@@ -104,16 +106,18 @@ export default function BenchmarkTestingPage() {
           </div>
 
           {/* 조회 결과 표시 영역 */}
-          <div className="border rounded-lg p-4 min-h-[50px] bg-muted/20">
+      {/* <div className="border rounded-lg p-4 min-h-[50px] bg-muted/20">
             <p className="text-muted-foreground text-center">
               조건을 선택하여 조회하면 요청한 데이타가 여기로 나옵니다.
             </p>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
+
+      <SectorAnalysis />
 
       {/* 수익률 종목 분석 */}
-      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
+      {/* <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <TrendingUp className="h-5 w-5" />
@@ -171,7 +175,7 @@ export default function BenchmarkTestingPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">중복 수 (N)</label>
+              <label className="text-sm font-medium">중목수 (N)</label>
               <Input
                 type="number"
                 placeholder="10"
@@ -186,16 +190,18 @@ export default function BenchmarkTestingPage() {
                 분석 실행
               </Button>
             </div>
-          </div>
+          </div> */}
 
-          {/* 조회 결과 표시 영역 */}
-          <div className="border rounded-lg p-4 min-h-[50px] bg-muted/20">
+      {/* 조회 결과 표시 영역 */}
+      {/* <div className="border rounded-lg p-4 min-h-[50px] bg-muted/20">
             <p className="text-muted-foreground text-center">
               조건을 선택하여 조회하면 요청한 데이타가 여기로 나옵니다.
             </p>
           </div>
         </CardContent>
-      </Card>
+      </Card>  */}
+
+      <PerformanceAnalysis />
 
       {/* 종목 및 지수 수익률 비교 */}
       <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
