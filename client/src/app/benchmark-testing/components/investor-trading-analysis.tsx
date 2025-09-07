@@ -12,7 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Badge } from '@/components/ui/badge';
 import { Target, Search, Loader2, X } from 'lucide-react';
 import { getDefaultDates } from '@/lib/utils';
 import { StockSearchResults } from '@/components/common/stock-search-results';
@@ -485,7 +484,7 @@ export function InvestorTradingAnalysis() {
                 <DatePicker
                   date={dailyStartDate}
                   onSelect={setDailyStartDate}
-                  placeholder="시작일"
+                  placeholder=""
                   className="text-center"
                 />
               </div>
@@ -494,7 +493,7 @@ export function InvestorTradingAnalysis() {
                 <DatePicker
                   date={dailyEndDate}
                   onSelect={setDailyEndDate}
-                  placeholder="종료일"
+                  placeholder=""
                   className="text-center"
                 />
               </div>
@@ -662,7 +661,7 @@ export function InvestorTradingAnalysis() {
                 <DatePicker
                   date={topStocksStartDate}
                   onSelect={setTopStocksStartDate}
-                  placeholder="2025년 08월 16일"
+                  placeholder=""
                   className="text-center"
                 />
               </div>
@@ -671,7 +670,7 @@ export function InvestorTradingAnalysis() {
                 <DatePicker
                   date={topStocksEndDate}
                   onSelect={setTopStocksEndDate}
-                  placeholder="2025년 08월 23일"
+                  placeholder=""
                   className="text-center"
                 />
               </div>
@@ -692,20 +691,15 @@ export function InvestorTradingAnalysis() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">종목수</label>
-                <Select
-                  value={topStocksCount}
-                  onValueChange={setTopStocksCount}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="10" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="20">20</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  type="number"
+                  value={topStocksMarket}
+                  onChange={(e) => setTopStocksMarket(e.target.value)}
+                  placeholder="10"
+                  min="1"
+                  max="30"
+                  className="text-center"
+                />
               </div>
             </div>
 
