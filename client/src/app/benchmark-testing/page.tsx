@@ -16,6 +16,7 @@ import { Target, BarChart, TrendingUp, Activity, Gauge } from 'lucide-react';
 import { SectorAnalysis } from './components/sector-analysis';
 import { PerformanceAnalysis } from './components/performance-analysis';
 import { StockIndexComparison } from './components/stock-index-comparison';
+import { InvestorTradingAnalysis } from './components/investor-trading-analysis';
 
 export default function BenchmarkTestingPage() {
   // Date states
@@ -47,151 +48,8 @@ export default function BenchmarkTestingPage() {
       {/* 종목 및 지수 수익률 비교 */}
       <StockIndexComparison />
 
-      {/* 투자지표 매매현황 */}
-      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <Target className="h-5 w-5" />
-            투자지표 매매현황
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <p className="text-muted-foreground text-sm">
-            기간별, 투자자별 거래 동향 및 순매수 상위 종목을 분석합니다.
-          </p>
-
-          {/* 일자별 투자지표 매매현황 */}
-          <div className="space-y-4">
-            <div className="text-sm font-medium">일자별 투자지표 매매현황</div>
-
-            <div className="flex flex-col lg:flex-row items-start lg:items-end gap-4">
-              <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">시작일</label>
-                  <DatePicker
-                    date={investmentStartDate1}
-                    onSelect={setInvestmentStartDate1}
-                    placeholder="시작일"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">종료일</label>
-                  <DatePicker
-                    date={investmentEndDate1}
-                    onSelect={setInvestmentEndDate1}
-                    placeholder="종료일"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">시장/종목코드</label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="KOSPI" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="kospi">KOSPI</SelectItem>
-                      <SelectItem value="kosdaq">KOSDAQ</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex flex-col space-y-2 w-full lg:w-auto">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                  <label className="flex items-center space-x-2 text-sm">
-                    <input type="checkbox" className="rounded" />
-                    <span>일자별 상세</span>
-                  </label>
-                  <label className="flex items-center space-x-2 text-sm">
-                    <input type="checkbox" className="rounded" />
-                    <span>기관 세부항목</span>
-                  </label>
-                </div>
-              </div>
-
-              <Button className="bg-slate-700 hover:bg-slate-600 w-full lg:w-auto">
-                조회
-              </Button>
-            </div>
-
-            {/* 조회 결과 표시 영역 */}
-            <div className="border rounded-lg p-4 min-h-[50px] bg-muted/20">
-              <p className="text-muted-foreground text-center">
-                조건을 선택하여 조회하면 요청한 데이타가 여기로 나옵니다.
-              </p>
-            </div>
-          </div>
-
-          {/* 투자지표 순매수 상위종목 */}
-          <div className="space-y-4 border-t pt-4">
-            <div className="text-sm font-medium">투자지표 순매수 상위종목</div>
-
-            <div className="flex flex-col lg:flex-row items-start lg:items-end gap-4">
-              <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">시작일</label>
-                  <DatePicker
-                    date={investmentStartDate2}
-                    onSelect={setInvestmentStartDate2}
-                    placeholder="2025년 08월 16일"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">종료일</label>
-                  <DatePicker
-                    date={investmentEndDate2}
-                    onSelect={setInvestmentEndDate2}
-                    placeholder="2025년 08월 23일"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">시장</label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="KOSPI" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="kospi">KOSPI</SelectItem>
-                      <SelectItem value="kosdaq">KOSDAQ</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">투자자</label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="기관법인" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="institution">기관법인</SelectItem>
-                      <SelectItem value="foreign">외국인</SelectItem>
-                      <SelectItem value="individual">개인</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex items-center w-full lg:w-auto">
-                <label className="flex items-center space-x-2 text-sm">
-                  <input type="checkbox" className="rounded" />
-                  <span>기관 세부</span>
-                </label>
-              </div>
-
-              <Button className="bg-slate-700 hover:bg-slate-600 w-full lg:w-auto">
-                조회
-              </Button>
-            </div>
-
-            {/* 조회 결과 표시 영역 */}
-            <div className="border rounded-lg p-4 min-h-[50px] bg-muted/20">
-              <p className="text-muted-foreground text-center">
-                조건을 선택하여 조회하면 요청한 데이타가 여기로 나옵니다.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* 투자자별 매매현황 */}
+      <InvestorTradingAnalysis />
 
       {/* 변동성 종목 분석 */}
       <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
