@@ -15,15 +15,10 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Target, BarChart, TrendingUp, Activity, Gauge } from 'lucide-react';
 import { SectorAnalysis } from './components/sector-analysis';
 import { PerformanceAnalysis } from './components/performance-analysis';
+import { StockIndexComparison } from './components/stock-index-comparison';
 
 export default function BenchmarkTestingPage() {
-  const [selectedMarket, setSelectedMarket] = useState('');
-
   // Date states
-  const [benchmarkStartDate, setBenchmarkStartDate] = useState<Date>();
-  const [benchmarkEndDate, setBenchmarkEndDate] = useState<Date>();
-  const [performanceStartDate, setPerformanceStartDate] = useState<Date>();
-  const [performanceEndDate, setPerformanceEndDate] = useState<Date>();
   const [comparisonStartDate, setComparisonStartDate] = useState<Date>();
   const [comparisonEndDate, setComparisonEndDate] = useState<Date>();
   const [investmentStartDate1, setInvestmentStartDate1] = useState<Date>();
@@ -32,8 +27,6 @@ export default function BenchmarkTestingPage() {
   const [investmentEndDate2, setInvestmentEndDate2] = useState<Date>();
   const [volatilityStartDate, setVolatilityStartDate] = useState<Date>();
   const [volatilityEndDate, setVolatilityEndDate] = useState<Date>();
-
-  const [investmentPeriod, setInvestmentPeriod] = useState(10);
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -46,237 +39,13 @@ export default function BenchmarkTestingPage() {
       </div>
 
       {/* 섹터 수익률 비교 분석 */}
-      {/* <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <BarChart className="h-5 w-5" />
-            섹터 수익률 비교 분석
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground text-sm">
-            관심있는 섹터를 선택하여 기간별 누적 수익률을 비교해보세요.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">분석 시작일</label>
-              <DatePicker
-                date={benchmarkStartDate}
-                onSelect={setBenchmarkStartDate}
-                placeholder="2025년 08월 16일"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">분석 종료일</label>
-              <DatePicker
-                date={benchmarkEndDate}
-                onSelect={setBenchmarkEndDate}
-                placeholder="2025년 08월 23일"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">시장</label>
-              <Select value={selectedMarket} onValueChange={setSelectedMarket}>
-                <SelectTrigger>
-                  <SelectValue placeholder="시장 선택..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="kospi">KOSPI</SelectItem>
-                  <SelectItem value="kosdaq">KOSDAQ</SelectItem>
-                  <SelectItem value="nasdaq">NASDAQ</SelectItem>
-                  <SelectItem value="nyse">NYSE</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">섹터 그룹</label>
-              <Input placeholder="섹터 선택" />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">&nbsp;</label>
-              <Button className="bg-slate-700 hover:bg-slate-600 w-full">
-                분석 실행
-              </Button>
-            </div>
-          </div>
-
-          {/* 조회 결과 표시 영역 */}
-      {/* <div className="border rounded-lg p-4 min-h-[50px] bg-muted/20">
-            <p className="text-muted-foreground text-center">
-              조건을 선택하여 조회하면 요청한 데이타가 여기로 나옵니다.
-            </p>
-          </div>
-        </CardContent>
-      </Card> */}
-
       <SectorAnalysis />
 
       {/* 수익률 종목 분석 */}
-      {/* <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <TrendingUp className="h-5 w-5" />
-            수익률 종목 분석
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground text-sm">
-            국가, 시장, 기간별 수익률 상위/하위 종목을 조회합니다.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">국가</label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="미국" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="usa">미국</SelectItem>
-                  <SelectItem value="korea">한국</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">시장</label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="시장 선택..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="kospi">KOSPI</SelectItem>
-                  <SelectItem value="nasdaq">NASDAQ</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">시작일</label>
-              <DatePicker
-                date={performanceStartDate}
-                onSelect={setPerformanceStartDate}
-                placeholder="2025년 08월 16일"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">종료일</label>
-              <DatePicker
-                date={performanceEndDate}
-                onSelect={setPerformanceEndDate}
-                placeholder="2025년 08월 23일"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">중목수 (N)</label>
-              <Input
-                type="number"
-                placeholder="10"
-                value={investmentPeriod}
-                onChange={(e) => setInvestmentPeriod(Number(e.target.value))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">&nbsp;</label>
-              <Button className="bg-slate-700 hover:bg-slate-600 w-full">
-                분석 실행
-              </Button>
-            </div>
-          </div> */}
-
-      {/* 조회 결과 표시 영역 */}
-      {/* <div className="border rounded-lg p-4 min-h-[50px] bg-muted/20">
-            <p className="text-muted-foreground text-center">
-              조건을 선택하여 조회하면 요청한 데이타가 여기로 나옵니다.
-            </p>
-          </div>
-        </CardContent>
-      </Card>  */}
-
       <PerformanceAnalysis />
 
       {/* 종목 및 지수 수익률 비교 */}
-      <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-            <Activity className="h-5 w-5" />
-            종목 및 지수 수익률 비교
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground text-sm">
-            여러 종목과 시장 지수의 주가 수익률을 정규화하여 비교합니다.
-            (분석시작일 = 100)
-          </p>
-
-          {/* 비교 종목 5개 */}
-          <div className="space-y-3">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                비교 종목 (최대 5개)
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-                {[1, 2, 3, 4, 5].map((num) => (
-                  <Input key={num} placeholder="AAPL" className="text-center" />
-                ))}
-              </div>
-            </div>
-
-            {/* 나머지 요소들을 한 줄로 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">국가 선택</label>
-                <Input placeholder="국가 선택" />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">지수 선택</label>
-                <Input placeholder="지수 선택" />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">분석 시작일</label>
-                <DatePicker
-                  date={comparisonStartDate}
-                  onSelect={setComparisonStartDate}
-                  placeholder="2025년 08월 16일"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">분석 종료일</label>
-                <DatePicker
-                  date={comparisonEndDate}
-                  onSelect={setComparisonEndDate}
-                  placeholder="2025년 08월 23일"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">&nbsp;</label>
-                <Button className="bg-slate-700 hover:bg-slate-600 w-full">
-                  분석 실행
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* 조회 결과 표시 영역 */}
-          <div className="border rounded-lg p-4 min-h-[50px] bg-muted/20">
-            <p className="text-muted-foreground text-center">
-              조건을 선택하여 조회하면 요청한 데이타가 여기로 나옵니다.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <StockIndexComparison />
 
       {/* 투자지표 매매현황 */}
       <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
@@ -302,7 +71,7 @@ export default function BenchmarkTestingPage() {
                   <DatePicker
                     date={investmentStartDate1}
                     onSelect={setInvestmentStartDate1}
-                    placeholder="2025년 08월 16일"
+                    placeholder="시작일"
                   />
                 </div>
                 <div className="space-y-2">
@@ -310,7 +79,7 @@ export default function BenchmarkTestingPage() {
                   <DatePicker
                     date={investmentEndDate1}
                     onSelect={setInvestmentEndDate1}
-                    placeholder="2025년 08월 23일"
+                    placeholder="종료일"
                   />
                 </div>
                 <div className="space-y-2">

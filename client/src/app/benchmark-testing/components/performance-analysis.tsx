@@ -22,6 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { getDefaultDates } from '../../../lib/utils';
 
 // 국가별 거래소 매핑
 const COUNTRY_EXCHANGES = {
@@ -191,21 +192,15 @@ const MiniChart = ({ data }: { data: number[] }) => {
 };
 
 export const PerformanceAnalysis = () => {
-  // 기본값 설정 함수
-  const getDefaultDates = () => {
-    const today = new Date();
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(today.getDate() - 7);
-    return { today, sevenDaysAgo };
-  };
-
-  const { today, sevenDaysAgo } = getDefaultDates();
-
   // 필터 상태 (기본값 적용)
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedExchange, setSelectedExchange] = useState('');
-  const [startDate, setStartDate] = useState<Date | undefined>(sevenDaysAgo);
-  const [endDate, setEndDate] = useState<Date | undefined>(today);
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    getDefaultDates().sevenDaysAgo
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    getDefaultDates().today
+  );
   const [stockCount, setStockCount] = useState(10);
 
   // 결과 상태
@@ -330,7 +325,8 @@ export const PerformanceAnalysis = () => {
             <DatePicker
               date={startDate}
               onSelect={setStartDate}
-              placeholder="2025년 08월 16일"
+              placeholder="시작일"
+              className="text-center"
             />
           </div>
 
@@ -339,7 +335,8 @@ export const PerformanceAnalysis = () => {
             <DatePicker
               date={endDate}
               onSelect={setEndDate}
-              placeholder="2025년 08월 23일"
+              placeholder="종료일"
+              className="text-center"
             />
           </div>
 
@@ -349,7 +346,7 @@ export const PerformanceAnalysis = () => {
               type="number"
               value={stockCount}
               onChange={(e) => setStockCount(Number(e.target.value))}
-              placeholder="10"
+              placeholder=""
               min="1"
               max="100"
               className="text-center"

@@ -7,6 +7,7 @@ import { DatePicker } from '@/components/ui/date-picker';
 import { Loader2, Rss } from 'lucide-react';
 import { StockInfo, NewsResponse, NewsTranslateResponse } from '@/types/types';
 import { AnalysisAPI } from '@/lib/analysis-api';
+import { getDefaultDates } from '@/lib/utils';
 
 interface NewsSectionProps {
   selectedStock: StockInfo | null;
@@ -14,14 +15,12 @@ interface NewsSectionProps {
 }
 
 export const NewsSection = ({ selectedStock, onDataUpdate }: NewsSectionProps) => {
-  const [newsStartDate, setNewsStartDate] = useState<Date | undefined>(() => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    return yesterday;
-  });
-  const [newsEndDate, setNewsEndDate] = useState<Date | undefined>(() => {
-    return new Date();
-  });
+  const [newsStartDate, setNewsStartDate] = useState<Date | undefined>(
+    getDefaultDates().sevenDaysAgo
+  );
+  const [newsEndDate, setNewsEndDate] = useState<Date | undefined>(
+    getDefaultDates().today
+  );
   const [newsData, setNewsData] = useState<NewsResponse | null>(null);
   const [newsLoading, setNewsLoading] = useState(false);
   const [showNews, setShowNews] = useState(false);

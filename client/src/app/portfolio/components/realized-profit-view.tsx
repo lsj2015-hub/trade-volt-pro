@@ -24,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { format, subMonths } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { PortfolioAPI } from '@/lib/portfolio-api';
@@ -42,7 +41,7 @@ export const RealizedProfitView = () => {
   const [selectedBroker, setSelectedBroker] = useState<string>('all');
   const [selectedStock, setSelectedStock] = useState<string>('all');
   const [startDate, setStartDate] = useState<Date | undefined>(
-    subMonths(new Date(), 12)
+    subMonths(new Date(), 6)
   );
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
 

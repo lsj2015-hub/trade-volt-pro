@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { StockInfo } from '@/types/types';
 
@@ -79,7 +79,8 @@ export const StockSearchResults = ({
         position: 'absolute',
         top: position.top,
         left: position.left,
-        width: position.width,
+        // width: position.width,
+        width: '400px',
         zIndex: 9999,
         backgroundColor: 'white',
         border: '1px solid #e5e7eb',

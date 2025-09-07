@@ -23,6 +23,7 @@ import {
   AnalysisAPIError,
 } from '@/types/types';
 import { AnalysisAPI } from '@/lib/analysis-api';
+import { getDefaultDates } from '@/lib/utils';
 
 interface PriceHistorySectionProps {
   selectedStock: StockInfo | null;
@@ -34,9 +35,11 @@ export const PriceHistorySection = ({
   onDataUpdate,
 }: PriceHistorySectionProps) => {
   const [startDate, setStartDate] = useState<Date | undefined>(
-    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    getDefaultDates().sevenDaysAgo
   );
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    getDefaultDates().today
+  );
   const [priceHistoryData, setPriceHistoryData] =
     useState<PriceHistoryResponse | null>(null);
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { StockInfo } from '@/types/types';
 import { StockAPI } from '@/lib/stock-api';
-import { StockSearchResults } from './stock-search-results';
+import { StockSearchResults } from '@/components/common/stock-search-results';
 
 interface StockSearchBarProps {
   selectedStock: StockInfo | null;

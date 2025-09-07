@@ -25,7 +25,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { BarChart, X, Check, ChevronsUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, getDefaultDates } from '@/lib/utils';
 
 // 상수 정의
 const MARKET_OPTIONS = [
@@ -202,7 +202,7 @@ const MultiSelectCombobox = ({
         </PopoverTrigger>
         <PopoverContent className="w-full p-0">
           <Command>
-            <CommandInput placeholder="검색..." className='my-3 h-4' />
+            <CommandInput placeholder="검색..." className="my-3 h-4" />
             <CommandEmpty>검색 결과가 없습니다.</CommandEmpty>
             <CommandGroup className="max-h-64 w-[200px] overflow-auto">
               {options.map((option) => (
@@ -231,22 +231,12 @@ const MultiSelectCombobox = ({
 };
 
 export const SectorAnalysis = () => {
-  // 기본값 설정 함수
-  const getDefaultDates = () => {
-    const today = new Date();
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(today.getDate() - 7);
-    return { today, sevenDaysAgo };
-  };
-
-  const { today, sevenDaysAgo } = getDefaultDates();
-
   // 기본 상태
   const [analysisStartDate, setAnalysisStartDate] = useState<Date | undefined>(
-    sevenDaysAgo
+    getDefaultDates().sevenDaysAgo
   );
   const [analysisEndDate, setAnalysisEndDate] = useState<Date | undefined>(
-    today
+    getDefaultDates().today
   );
   const [selectedMarket, setSelectedMarket] = useState('');
 
@@ -460,7 +450,8 @@ export const SectorAnalysis = () => {
             <DatePicker
               date={analysisStartDate}
               onSelect={setAnalysisStartDate}
-              placeholder="2025년 08월 16일"
+              placeholder="시작일"
+              className="text-center"
             />
           </div>
 
@@ -469,7 +460,8 @@ export const SectorAnalysis = () => {
             <DatePicker
               date={analysisEndDate}
               onSelect={setAnalysisEndDate}
-              placeholder="2025년 08월 23일"
+              placeholder="종료일"
+              className="text-center"
             />
           </div>
 
@@ -502,7 +494,7 @@ export const SectorAnalysis = () => {
                 selectedValues={selectedIndexes}
                 onSelectionChange={setSelectedIndexes}
                 placeholder="선택..."
-                className="w-full"
+                className="w-full justify-between text-muted-foreground"
               />
             </div>
           )}
@@ -543,7 +535,7 @@ export const SectorAnalysis = () => {
                       selectedValues={selectedKospiSizes}
                       onSelectionChange={setSelectedKospiSizes}
                       placeholder="선택..."
-                      className="w-full"
+                      className="w-full text-muted-foreground"
                     />
                   ) : kospiSectorGroup === 'sectors' ? (
                     <MultiSelectCombobox
@@ -551,14 +543,14 @@ export const SectorAnalysis = () => {
                       selectedValues={selectedKospiSectors}
                       onSelectionChange={setSelectedKospiSectors}
                       placeholder="선택..."
-                      className="w-full"
+                      className="w-full text-muted-foreground"
                     />
                   ) : (
                     // 버튼을 선택하기 전까지는 비활성화된 combobox 표시
                     <Button
                       variant="outline"
                       disabled
-                      className="w-full justify-between cursor-not-allowed opacity-50"
+                      className="w-full justify-between cursor-not-allowed opacity-50 text-muted-foreground"
                     >
                       SIZE 또는 SEC 선택...
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -578,7 +570,7 @@ export const SectorAnalysis = () => {
                 selectedValues={selectedKosdaqSectors}
                 onSelectionChange={setSelectedKosdaqSectors}
                 placeholder="선택..."
-                className="w-full"
+                className="w-full text-muted-foreground"
               />
             </div>
           )}
@@ -592,7 +584,7 @@ export const SectorAnalysis = () => {
                 selectedValues={selectedOverseasSectors}
                 onSelectionChange={setSelectedOverseasSectors}
                 placeholder="선택..."
-                className="w-full"
+                className="w-full text-muted-foreground"
               />
             </div>
           )}

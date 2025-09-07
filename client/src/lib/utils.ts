@@ -92,3 +92,13 @@ export const getExchangeDisplayName = (exchangeCode: string) => {
   };
   return exchangeNames[exchangeCode] || exchangeCode;
 };
+
+   // 기본값 설정 함수
+export const getDefaultDates = () => {
+  const today = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 7);
+  return { today, sevenDaysAgo };
+};
+
+  // const { today, sevenDaysAgo } = getDefaultDates();
