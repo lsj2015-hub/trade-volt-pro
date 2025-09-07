@@ -285,7 +285,7 @@ export const StockIndexComparison = () => {
 
   const getButtonText = () => {
     if (isLoading) return '분석 중...';
-    if (hasResults) return '분석 완료 (초기화)';
+    if (hasResults) return '초기화';
     return '분석 실행';
   };
 

@@ -285,15 +285,15 @@ export function InvestorTradingAnalysis() {
 
   // 색상 결정 함수들
   const getBarColor = (value: number): string => {
-    return value > 0 ? '#f87171' : '#60a5fa';
+    return value > 0 ? '#23cf65' : '#e31515';
   };
 
   const getTextColor = (value: number): string => {
-    return value > 0 ? 'text-red-600' : 'text-blue-600';
+    return value > 0 ? 'text-green-600' : 'text-red-600';
   };
 
   const getChangeColor = (change: string): string => {
-    return change.startsWith('+') ? 'text-red-600' : 'text-blue-600';
+    return change.startsWith('+') ? 'text-green-600' : 'text-red-600';
   };
 
   // 일자별 매매현황 필터 초기화
@@ -503,7 +503,7 @@ export function InvestorTradingAnalysis() {
                   <SelectTrigger>
                     <SelectValue placeholder="거래소 선택..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="text-center">
                     <SelectItem value="kospi">KOSPI</SelectItem>
                     <SelectItem value="kosdaq">KOSDAQ</SelectItem>
                   </SelectContent>
