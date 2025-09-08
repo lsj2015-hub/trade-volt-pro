@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 from decimal import Decimal
@@ -8,7 +8,9 @@ from app.crud.transaction_crud import transaction_crud
 from app.crud.broker_crud import broker_crud
 from app.crud.fee_tax_crud import fee_tax_crud
 from app.models.user import User
-from app.schemas.common_schemas import TransactionCreateRequest, TransactionResponse
+from app.schemas.common_schemas import (
+  TransactionCreateRequest, TransactionResponse, TransactionHistoryResponse, TransactionHistoryItem
+)
 from app.core.dependencies import get_current_user
 
 logger = logging.getLogger(__name__)
@@ -92,7 +94,7 @@ async def create_order(
       transaction_date=new_transaction.transaction_date,
       notes=new_transaction.notes,
       created_at=new_transaction.created_at,
-      broker_name=broker.display_name if broker else None,
+      broker_name=broker.display_name,
       stock_symbol=stock.symbol,
       company_name=stock.company_name
     )
@@ -103,8 +105,10 @@ async def create_order(
     logger.error(f"거래 생성 중 오류: {str(e)}")
     raise HTTPException(status_code=500, detail="거래 생성 중 오류가 발생했습니다.")
 
-@router.get("/history")
+@router.get("/history", response_model=TransactionHistoryResponse)
 async def get_trading_history(
+  limit: int = Query(100, ge=1, le=500, description="최대 결과 수"),
+  offset: int = Query(0, ge=0, description="페이지 오프셋"),
   current_user: User = Depends(get_current_user),
   db: AsyncSession = Depends(get_async_session)
 ):
@@ -112,35 +116,39 @@ async def get_trading_history(
   내 거래 내역 전체
   """
   try:
-    transactions = await transaction_crud.get_user_transactions(db, current_user.id)
-    
+    transactions = await transaction_crud.get_user_transactions(
+      db, current_user.id, limit, offset
+    )
+
+    # transaction_crud.get_user_transactions는 List[Dict]를 반환하므로 직접 변환
     transaction_list = []
     for transaction in transactions:
-      transaction_item = {
-        "id": transaction.id,
-        "stock_id": transaction.stock_id,
-        "broker_id": transaction.broker_id,
-        "transaction_type": transaction.transaction_type,
-        "quantity": transaction.quantity,
-        "price": float(transaction.price),
-        "commission": float(transaction.commission),
-        "transaction_tax": float(transaction.transaction_tax),
-        "exchange_rate": float(transaction.exchange_rate),
-        "transaction_date": transaction.transaction_date,
-        "notes": transaction.notes,
-        "created_at": transaction.created_at,
-        "stock_symbol": transaction.stock.symbol if transaction.stock else None,
-        "company_name": transaction.stock.company_name if transaction.stock else None,
-        "broker_name": transaction.broker.display_name if transaction.broker else None
-      }
+      transaction_item = TransactionHistoryItem(
+        id=transaction["id"],
+        stock_id=transaction["stock_id"],
+        broker_id=transaction["broker_id"],
+        transaction_type=transaction["transaction_type"],
+        quantity=transaction["quantity"],
+        price=float(transaction["price"]),
+        commission=float(transaction["commission"]),
+        transaction_tax=float(transaction["transaction_tax"]),
+        exchange_rate=float(transaction["exchange_rate"]),
+        transaction_date=transaction["transaction_date"],
+        notes=transaction["notes"],
+        created_at=transaction["created_at"],
+        stock_symbol=transaction["stock_symbol"],
+        company_name=transaction["company_name"],
+        broker_name=transaction["broker_name"]
+      )
       transaction_list.append(transaction_item)
     
-    return {
-      "success": True,
-      "data": transaction_list,
-      "total_count": len(transaction_list)
-    }
+    return TransactionHistoryResponse(
+      success=True,
+      data=transaction_list,
+      total_count=len(transaction_list)
+    )
     
   except Exception as e:
     logger.error(f"거래 내역 조회 중 오류: user_id={current_user.id}, error={str(e)}")
     raise HTTPException(status_code=500, detail="거래 내역 조회 중 오류가 발생했습니다.")
+  

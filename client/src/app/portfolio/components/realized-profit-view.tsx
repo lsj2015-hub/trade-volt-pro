@@ -90,7 +90,7 @@ export const RealizedProfitView = () => {
     if (!allData.length) return [];
 
     return allData.filter((item) => {
-      const sellDate = new Date(item.sellDate);
+      const sellDate = new Date(item.sell_date);
       const dateMatch =
         (!startDate || sellDate >= startDate) &&
         (!endDate || sellDate <= endDate);
@@ -113,7 +113,7 @@ export const RealizedProfitView = () => {
 
     // 사용 가능한 시장구분 추출
     const marketTypes = Array.from(
-      new Set(baseData.map((item) => item.marketType))
+      new Set(baseData.map((item) => item.market_type))
     );
     const availableMarkets = [
       ...(marketTypes.includes('DOMESTIC') ? ['domestic'] : []),
@@ -125,8 +125,8 @@ export const RealizedProfitView = () => {
     if (selectedMarket !== 'all') {
       filteredByMarket = baseData.filter(
         (item) =>
-          (selectedMarket === 'domestic' && item.marketType === 'DOMESTIC') ||
-          (selectedMarket === 'overseas' && item.marketType === 'OVERSEAS')
+          (selectedMarket === 'domestic' && item.market_type === 'DOMESTIC') ||
+          (selectedMarket === 'overseas' && item.market_type === 'OVERSEAS')
       );
     }
 
@@ -134,9 +134,9 @@ export const RealizedProfitView = () => {
     const availableBrokers = Array.from(
       new Map(
         filteredByMarket.map((item) => [
-          item.brokerId,
+          item.broker_id,
           {
-            id: item.brokerId,
+            id: item.broker_id,
             name: item.broker,
             displayName: item.broker,
           },
@@ -148,7 +148,7 @@ export const RealizedProfitView = () => {
     let filteredByBroker = filteredByMarket;
     if (selectedBroker !== 'all') {
       filteredByBroker = filteredByMarket.filter(
-        (item) => item.brokerId.toString() === selectedBroker
+        (item) => item.broker_id.toString() === selectedBroker
       );
     }
 
@@ -159,9 +159,9 @@ export const RealizedProfitView = () => {
           item.symbol,
           {
             symbol: item.symbol,
-            companyName: item.companyName,
-            companyNameEn: item.companyNameEn,
-            marketType: item.marketType,
+            companyName: item.company_name,
+            companyNameEn: item.company_name_en,
+            marketType: item.market_type,
           },
         ])
       ).values()
@@ -183,7 +183,7 @@ export const RealizedProfitView = () => {
 
     return allData.filter((item) => {
       // 날짜 필터 (최우선)
-      const sellDate = new Date(item.sellDate);
+      const sellDate = new Date(item.sell_date);
       const dateMatch =
         (!startDate || sellDate >= startDate) &&
         (!endDate || sellDate <= endDate);
@@ -191,12 +191,13 @@ export const RealizedProfitView = () => {
       // 시장구분 필터
       const marketMatch =
         selectedMarket === 'all' ||
-        (selectedMarket === 'domestic' && item.marketType === 'DOMESTIC') ||
-        (selectedMarket === 'overseas' && item.marketType === 'OVERSEAS');
+        (selectedMarket === 'domestic' && item.market_type === 'DOMESTIC') ||
+        (selectedMarket === 'overseas' && item.market_type === 'OVERSEAS');
 
       // 증권사 필터
       const brokerMatch =
-        selectedBroker === 'all' || item.brokerId.toString() === selectedBroker;
+        selectedBroker === 'all' ||
+        item.broker_id.toString() === selectedBroker;
 
       // 종목 필터
       const stockMatch =
@@ -296,12 +297,12 @@ export const RealizedProfitView = () => {
     }
 
     const totalKRW = currentFilteredData.reduce(
-      (sum, item) => sum + item.realizedProfitKRW,
+      (sum, item) => sum + item.realized_profit_krw,
       0
     );
     const avgReturn =
       currentFilteredData.reduce(
-        (sum, item) => sum + item.realizedProfitPercent,
+        (sum, item) => sum + item.realized_profit_percent,
         0
       ) / currentFilteredData.length;
 

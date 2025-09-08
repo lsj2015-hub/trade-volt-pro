@@ -1,35 +1,48 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict
 from datetime import datetime, date
 from enum import Enum
+from decimal import Decimal
 
-# ========== 공통 Enum ==========
+# ========== 실제 사용되는 공통 Enum ==========
 
 class MarketType(str, Enum):
-  """시장 구분"""
+  """시장 구분 (여러 스키마에서 사용)"""
   DOMESTIC = "DOMESTIC"
   OVERSEAS = "OVERSEAS"
 
 class TransactionType(str, Enum):
-  """거래 타입"""
+  """거래 타입 (transaction_schema에서 사용)"""
   BUY = "BUY"
   SELL = "SELL"
+
+# ========== 공통 응답 필드 Mixin ==========
+
+class BaseEntityResponse(BaseModel):
+  """공통 응답 필드 (id, timestamps, is_active)"""
+  id: int
+  is_active: bool
+  created_at: datetime
+  updated_at: datetime
+
+  class Config:
+    from_attributes = True
 
 # ========== Stock 관련 ==========
 
 class StockInfo(BaseModel):
-  """종목 정보 스키마"""
-  symbol: str
-  company_name: str
-  company_name_en: str
-  corp_cord: str
-  country_code: str
-  exchange_code: str
-  currency: str
-  market_type: MarketType
+ """종목 정보 스키마 (DB Stock)"""
+ symbol: str                    # 종목코드 (Stock.symbol)
+ company_name: str              # 종목명 (Stock.company_name)
+ company_name_en: str           # 영문 종목명 (Stock.company_name_en)
+ corp_cord: str                 # Dart 회사 조회 코드 (Stock.corp_cord)
+ country_code: str              # 국가 (Stock.country_code)
+ exchange_code: str             # 거래소 (Stock.exchange_code)
+ currency: str                  # 거래통화 (Stock.currency)
+ market_type: MarketType        # 시장 구분 (기존 정의된 MarketType 사용)
 
-  class Config:
-    from_attributes = True
+ class Config:
+   from_attributes = True
 
 class StockPriceResponse(BaseModel):
   """주가 정보 응답 스키마"""
@@ -45,12 +58,13 @@ class StockPriceResponse(BaseModel):
   open_price: float = Field(..., description="시가")
   currency: str = Field(..., description="통화")
   updated_at: str = Field(..., description="업데이트 시간")
-  query_date: Optional[str] = Field(None, description="조회 날짜")
+  query_date: Optional[str] = Field(None, description="조회 날짜 (과거 시세의 경우)")
   
   class Config:
     from_attributes = True
+    
 
-# ========== Transaction 관련 ==========
+# ========== Transaction History 관련 (trading_endpoints.py용) ==========
 
 class TransactionCreateRequest(BaseModel):
   """거래 생성 요청 스키마"""
@@ -58,13 +72,13 @@ class TransactionCreateRequest(BaseModel):
   quantity: int = Field(..., gt=0, description="거래수량")
   price: float = Field(..., gt=0, description="체결가격")
   broker_id: int = Field(..., description="증권사 ID")
-  transaction_type: TransactionType = Field(..., description="거래타입")
-  market_type: MarketType = Field(..., description="시장타입")
+  transaction_type: TransactionType = Field(..., description="거래타입 (BUY/SELL)")
+  market_type: MarketType = Field(..., description="시장타입 (DOMESTIC/OVERSEAS)")
   transaction_date: datetime = Field(..., description="거래일시")
   notes: Optional[str] = Field(None, description="메모")
-  commission: Optional[float] = Field(None, ge=0, description="수수료")
-  transaction_tax: Optional[float] = Field(None, ge=0, description="거래세")
-  exchange_rate: Optional[float] = Field(1.0, gt=0, description="환율")
+  commission: Optional[float] = Field(None, ge=0, description="수수료 (선택사항)")
+  transaction_tax: Optional[float] = Field(None, ge=0, description="거래세 (선택사항)")
+  exchange_rate: Optional[float] = Field(1.0, gt=0, description="환율 (기본값: 1.0)")
 
 class TransactionResponse(BaseModel):
   """거래 응답 스키마"""
@@ -81,7 +95,7 @@ class TransactionResponse(BaseModel):
   transaction_date: datetime
   notes: Optional[str]
   created_at: datetime
-  
+
   # 관계 정보
   broker_name: Optional[str] = None
   stock_symbol: Optional[str] = None
@@ -91,7 +105,7 @@ class TransactionResponse(BaseModel):
     from_attributes = True
 
 class TransactionHistoryItem(BaseModel):
-  """거래 내역 개별 항목"""
+  """거래 내역 개별 항목 (기존 TransactionResponse와 구분)"""
   id: int
   stock_id: int
   broker_id: int
@@ -104,6 +118,8 @@ class TransactionHistoryItem(BaseModel):
   transaction_date: datetime
   notes: Optional[str]
   created_at: datetime
+  
+  # 조인된 데이터
   stock_symbol: str
   company_name: str
   broker_name: str
@@ -112,7 +128,7 @@ class TransactionHistoryItem(BaseModel):
     from_attributes = True
 
 class TransactionHistoryResponse(BaseModel):
-  """거래 내역 목록 응답"""
+  """거래 내역 목록 응답 (기존 패턴 따름)"""
   success: bool
   data: List[TransactionHistoryItem]
   total_count: int
@@ -131,19 +147,73 @@ class BrokerResponse(BaseModel):
   class Config:
     from_attributes = True
 
+# ========== Commission & Tex ==========
+
+class CommissionRateRequest(BaseModel):
+  """수수료율 조회 요청 스키마"""
+  broker_id: int = Field(..., description="증권사 ID")
+  market_type: MarketType = Field(..., description="시장타입")
+  transaction_type: TransactionType = Field(..., description="거래타입")
+
 class CommissionRateResponse(BaseModel):
   """수수료율 조회 응답 스키마"""
-  fee_rate: float = Field(..., description="수수료율")
-  transaction_tax_rate: float = Field(..., description="거래세율")
+  fee_rate: float = Field(..., description="수수료율 (예: 0.00015는 0.015%)")
+  transaction_tax_rate: float = Field(..., description="거래세율 (예: 0.0023은 0.23%)")
   broker_name: str = Field(..., description="증권사명")
   
   class Config:
     from_attributes = True
 
-# ========== Portfolio 관련 ==========
+# ========== Portfolio ==========
+
+class PortfolioHoldingResponse(BaseModel):
+  """포트폴리오 보유 종목 응답 스키마 (stock_id별, broker별 합산)"""
+  stock_id: int
+  broker_id: int
+  stock_symbol: str
+  company_name: str
+  company_name_en: Optional[str]
+  broker_name: str
+  
+  total_quantity: int = Field(..., description="총 보유 수량")
+  total_cost_amount: float = Field(..., description="총 매입금액 (가격*수량+수수료)")
+  average_cost_price: float = Field(..., description="평균 매입단가 (매입금액/수량)")
+  
+  market_type: str = Field(..., description="시장타입")
+  currency: str = Field(..., description="통화")
+  
+  class Config:
+    from_attributes = True
+
+class PortfolioSummaryResponse(BaseModel):
+  """포트폴리오 요약 응답 스키마"""
+  holdings: List[PortfolioHoldingResponse]
+  total_holdings_count: int
+  
+  class Config:
+    from_attributes = True
+
+class PortfolioOverviewData(BaseModel):
+  """포트폴리오 통계 데이터"""
+  total_stocks: int = Field(..., description="총 보유 종목 수")
+  total_brokers: int = Field(..., description="사용 증권사 수")
+  total_investment_krw: float = Field(..., description="총 투자금액 (원화)")
+  total_realized_gain_krw: float = Field(..., description="총 실현손익 (원화)")
+  total_positions: int = Field(..., description="총 포지션 수")
+  
+  class Config:
+    from_attributes = True
+
+class PortfolioOverviewResponse(BaseModel):
+  """포트폴리오 개요 응답 (기존 success + data 패턴)"""
+  success: bool
+  data: PortfolioOverviewData
+  
+  class Config:
+    from_attributes = True
 
 class StockDataResponse(BaseModel):
-  """포트폴리오 종목별 데이터 응답"""
+  """포트폴리오 종목별 데이터 응답 (Symbol별 합산된 결과)"""
   symbol: str = Field(..., description="종목코드")
   company_name: str = Field(..., description="종목명")
   shares: int = Field(..., description="보유 수량")
@@ -169,48 +239,8 @@ class PortfolioSummaryData(BaseModel):
   class Config:
     from_attributes = True
 
-class CompletePortfolioResponse(BaseModel):
-  """완전한 포트폴리오 응답"""
-  # 전체 포트폴리오 카드 (KRW 기준)
-  total_portfolio_value_krw: float = Field(..., description="총 포트폴리오 가치 (원화)")
-  total_day_gain_krw: float = Field(..., description="총 일일 손익 (원화)")
-  total_day_gain_percent: float = Field(..., description="총 일일 수익률 (%)")
-  total_total_gain_krw: float = Field(..., description="총 누적 손익 (원화)")
-  total_total_gain_percent: float = Field(..., description="총 누적 수익률 (%)")
-  
-  domestic_summary: PortfolioSummaryData = Field(..., description="국내주식 요약")
-  overseas_summary: PortfolioSummaryData = Field(..., description="해외주식 요약")
-  
-  domestic_stocks: List[StockDataResponse] = Field(..., description="국내주식 목록")
-  overseas_stocks: List[StockDataResponse] = Field(..., description="해외주식 목록")
-  
-  exchange_rate: float = Field(..., description="USD/KRW 환율")
-  updated_at: str = Field(..., description="업데이트 시간")
-  
-  class Config:
-    from_attributes = True
-
-class PortfolioOverviewData(BaseModel):
-  """포트폴리오 통계 데이터"""
-  total_stocks: int = Field(..., description="총 보유 종목 수")
-  total_brokers: int = Field(..., description="사용 증권사 수")
-  total_investment_krw: float = Field(..., description="총 투자금액 (원화)")
-  total_realized_gain_krw: float = Field(..., description="총 실현손익 (원화)")
-  total_positions: int = Field(..., description="총 포지션 수")
-  
-  class Config:
-    from_attributes = True
-
-class PortfolioOverviewResponse(BaseModel):
-  """포트폴리오 개요 응답"""
-  success: bool
-  data: PortfolioOverviewData
-  
-  class Config:
-    from_attributes = True
-
 class PortfolioStockItem(BaseModel):
-  """종목별 포트폴리오 항목"""
+  """종목별 포트폴리오 항목 (holding_crud.get_user_portfolio_by_stocks 결과용)"""
   stock_id: int
   stock_symbol: str
   company_name: str
@@ -231,7 +261,7 @@ class PortfolioStockItem(BaseModel):
     from_attributes = True
 
 class PortfolioStocksResponse(BaseModel):
-  """종목별 포트폴리오 응답"""
+  """종목별 포트폴리오 응답 (기존 success + data 패턴)"""
   success: bool
   data: List[PortfolioStockItem]
   total_count: int
@@ -239,57 +269,28 @@ class PortfolioStocksResponse(BaseModel):
   class Config:
     from_attributes = True
 
-# ========== Realized Profit 관련 ==========
-
-class RealizedProfitResponse(BaseModel):
-  """실현손익 응답 스키마 - 개별 거래 (snake_case 통일)"""
-  id: str = Field(..., description="거래 ID")
-  symbol: str = Field(..., description="종목 심볼")
-  company_name: str = Field(..., description="회사명")
-  company_name_en: str = Field(..., description="영문 회사명")
-  broker: str = Field(..., description="증권사명")
-  broker_id: int = Field(..., description="증권사 ID")
-  market_type: str = Field(..., description="시장구분")
-  sell_date: str = Field(..., description="매도일")
-  shares: int = Field(..., description="매도 수량")
-  sell_price: float = Field(..., description="매도가")
-  avg_cost: float = Field(..., description="평균 매입가")
-  realized_profit: float = Field(..., description="실현손익")
-  realized_profit_percent: float = Field(..., description="실현수익률 (%)")
-  realized_profit_krw: float = Field(..., description="실현손익 (KRW)")
-  currency: str = Field(..., description="통화")
-  exchange_rate: float = Field(..., description="매도 당시 환율")
-  commission: float = Field(..., description="수수료")
-  transaction_tax: float = Field(..., description="거래세")
+class CompletePortfolioResponse(BaseModel):
+  """완전한 포트폴리오 응답 (카드 + 테이블 통합)"""
+  # 전체 포트폴리오 카드 (KRW 기준)
+  total_portfolio_value_krw: float = Field(..., description="총 포트폴리오 가치 (원화)")
+  total_day_gain_krw: float = Field(..., description="총 일일 손익 (원화)")
+  total_day_gain_percent: float = Field(..., description="총 일일 수익률 (%)")
+  total_total_gain_krw: float = Field(..., description="총 누적 손익 (원화)")
+  total_total_gain_percent: float = Field(..., description="총 누적 수익률 (%)")
+  
+  domestic_summary: PortfolioSummaryData = Field(..., description="국내주식 요약")
+  overseas_summary: PortfolioSummaryData = Field(..., description="해외주식 요약")
+  
+  domestic_stocks: List[StockDataResponse] = Field(..., description="국내주식 목록")
+  overseas_stocks: List[StockDataResponse] = Field(..., description="해외주식 목록")
+  
+  exchange_rate: float = Field(..., description="USD/KRW 환율")
+  updated_at: str = Field(..., description="업데이트 시간")
   
   class Config:
     from_attributes = True
 
-class RealizedProfitMetadata(BaseModel):
-  """실현손익 메타데이터"""
-  available_stocks: List[Dict[str, Any]] = Field(..., description="실현손익이 있는 종목 목록")
-  available_brokers: List[Dict[str, Any]] = Field(..., description="실현손익이 있는 증권사 목록")
-  
-  class Config:
-    from_attributes = True
-
-class RealizedProfitData(BaseModel):
-  """실현손익 전체 데이터"""
-  transactions: List[RealizedProfitResponse] = Field(..., description="실현손익 거래 목록")
-  metadata: RealizedProfitMetadata = Field(..., description="메타데이터")
-  
-  class Config:
-    from_attributes = True
-
-class RealizedProfitListResponse(BaseModel):
-  """실현손익 목록 응답 스키마"""
-  success: bool = Field(..., description="성공 여부")
-  data: RealizedProfitData = Field(..., description="실현손익 데이터")
-  
-  class Config:
-    from_attributes = True
-
-# ========== Exchange Rate 관련 ========== 
+# ========== Exchange Rate ==========
 
 class ExchangeRateResponse(BaseModel):
   """환율 정보 응답 스키마"""
@@ -305,8 +306,74 @@ class ExchangeRatesResponse(BaseModel):
   """전체 환율 정보 응답 스키마"""
   search_date: str = Field(..., description="조회 날짜")
   data_count: int = Field(..., description="환율 데이터 개수")
-  exchange_rates: Dict[str, Any] = Field(..., description="환율 정보")
+  exchange_rates: Dict = Field(..., description="환율 정보")
   retrieved_at: str = Field(..., description="조회 시간")
+  
+  class Config:
+    from_attributes = True
+
+class StockLotResponse(BaseModel):
+  broker_id: int
+  broker_name: str
+  net_quantity: int
+  average_cost_price: float
+  total_cost: float
+  realized_gain: float
+  realized_gain_krw: float
+  latest_transaction_date: date
+  current_price: float
+  market_value: float
+  
+  class Config:
+    from_attributes = True
+
+# ========== Realized Profit 관련 ==========
+
+class RealizedProfitResponse(BaseModel):
+  """실현손익 응답 스키마 - 개별 거래"""
+  id: str = Field(..., description="거래 ID")
+  symbol: str = Field(..., description="종목 심볼")
+  companyName: str = Field(..., description="회사명")
+  companyNameEn: str = Field(..., description="영문 회사명")
+  broker: str = Field(..., description="증권사명")
+  brokerId: int = Field(..., description="증권사 ID")
+  marketType: str = Field(..., description="시장구분 (DOMESTIC/OVERSEAS)")
+  sellDate: str = Field(..., description="매도일 (ISO format)")
+  shares: int = Field(..., description="매도 수량")
+  sellPrice: float = Field(..., description="매도가")
+  avgCost: float = Field(..., description="평균 매입가")
+  realizedProfit: float = Field(..., description="실현손익 (원화폐)")
+  realizedProfitPercent: float = Field(..., description="실현수익률 (%)")
+  realizedProfitKRW: float = Field(..., description="실현손익 (KRW)")
+  currency: str = Field(..., description="통화 (KRW/USD)")
+  exchangeRate: float = Field(..., description="매도 당시 환율")
+  commission: float = Field(..., description="수수료")
+  transactionTax: float = Field(..., description="거래세")
+  
+  class Config:
+    from_attributes = True
+
+class RealizedProfitMetadata(BaseModel):
+  """실현손익 메타데이터"""
+  # exchangeRateToday: float = Field(..., description="현재 환율")
+  availableStocks: List[Dict] = Field(..., description="실현손익이 있는 종목 목록")
+  availableBrokers: List[Dict] = Field(..., description="실현손익이 있는 증권사 목록")
+  
+  class Config:
+    from_attributes = True
+
+class RealizedProfitData(BaseModel):
+  """실현손익 전체 데이터"""
+  transactions: List[RealizedProfitResponse] = Field(..., description="실현손익 거래 목록")
+  metadata: RealizedProfitMetadata = Field(..., description="메타데이터")
+  
+  class Config:
+    from_attributes = True
+
+class RealizedProfitListResponse(BaseModel):
+  """실현손익 목록 응답 스키마 (새로운 구조)"""
+  success: bool = Field(..., description="성공 여부")
+  data: RealizedProfitData = Field(..., description="실현손익 데이터 + 메타데이터")
   
   class Config:
     from_attributes = True
@@ -325,65 +392,65 @@ class AnalysisInfoType(str, Enum):
 class CompanySummaryResponse(BaseModel):
   """Company Summary 응답"""
   symbol: str
-  long_name: str
+  longName: str
   industry: str
   sector: str
-  long_business_summary: str
+  longBusinessSummary: str
   city: Optional[str] = None
   state: Optional[str] = None
   country: Optional[str] = None
   website: Optional[str] = None
-  full_time_employees: str
+  fullTimeEmployees: str
 
 class FinancialSummaryResponse(BaseModel):
   """Financial Summary 응답"""
-  total_revenue: str
-  net_income_to_common: str
-  operating_margins: str
-  dividend_yield: str
-  trailing_eps: str
-  total_cash: str
-  total_debt: str
-  debt_to_equity: str
-  ex_dividend_date: Optional[str] = None
+  totalRevenue: str
+  netIncomeToCommon: str
+  operatingMargins: str
+  dividendYield: str
+  trailingEps: str
+  totalCash: str
+  totalDebt: str
+  debtToEquity: str
+  exDividendDate: Optional[str] = None
 
 class InvestmentIndexResponse(BaseModel):
   """Investment Index 응답"""
-  trailing_pe: str
-  forward_pe: str
-  price_to_book: str
-  return_on_equity: str
-  return_on_assets: str
+  trailingPE: str
+  forwardPE: str
+  priceToBook: str
+  returnOnEquity: str
+  returnOnAssets: str
   beta: str
 
 class MarketInfoResponse(BaseModel):
   """Market Info 응답"""
-  current_price: str
-  previous_close: str
-  day_high: str
-  day_low: str
-  fifty_two_week_high: str
-  fifty_two_week_low: str
-  market_cap: str
-  shares_outstanding: str
+  currentPrice: str
+  previousClose: str
+  dayHigh: str
+  dayLow: str
+  fiftyTwoWeekHigh: str
+  fiftyTwoWeekLow: str
+  marketCap: str
+  sharesOutstanding: str
   volume: str
 
 class AnalystOpinionResponse(BaseModel):
   """Analyst Opinion 응답"""
-  recommendation_mean: float
-  recommendation_key: str
-  number_of_analyst_opinions: int
-  target_mean_price: str
-  target_high_price: str
-  target_low_price: str
+  recommendationMean: float
+  recommendationKey: str
+  numberOfAnalystOpinions: int
+  targetMeanPrice: str
+  targetHighPrice: str
+  targetLowPrice: str
 
 class OfficerInfo(BaseModel):
   """임원 정보"""
   name: str
   title: str
-  total_pay: str
+  totalPay: str
   age: Optional[int] = None
-  year_born: Optional[int] = None
+  yearBorn: Optional[int] = None
 
 class MajorExecutorsResponse(BaseModel):
   """Major Executors 응답"""
@@ -393,7 +460,7 @@ class AnalysisResponse(BaseModel):
   """종목 분석 응답"""
   symbol: str
   info_type: str
-  data: Dict[str, Any]
+  data: Dict
   success: bool = True
   message: Optional[str] = None
 
@@ -401,12 +468,12 @@ class AnalysisResponse(BaseModel):
 
 class PriceHistoryData(BaseModel):
   """개별 주가 데이터"""
-  date: str
-  open: float
-  high: float
-  low: float
-  close: float
-  volume: int
+  Date: str
+  Open: float
+  High: float
+  Low: float
+  Close: float
+  Volume: int
 
 class PriceHistoryResponse(BaseModel):
   """주가 히스토리 응답"""
@@ -419,15 +486,16 @@ class PriceHistoryResponse(BaseModel):
   data_count: int
   data: List[PriceHistoryData]
 
-# ========== News & Translation 관련 ==========
+# ========== 뉴스 데이터 관련 ==========
 
 class NewsItem(BaseModel):
   """개별 뉴스 아이템"""
   title: str = Field(description="뉴스 제목")
   url: str = Field(description="뉴스 링크")
-  published_date: Optional[str] = Field(description="발행일 (ISO 형식)")
+  publishedDate: Optional[str] = Field(description="발행일 (ISO 형식)")
   source: str = Field(description="뉴스 소스")
   summary: str = Field(description="뉴스 요약")
+  # 번역 필드 추가
   translated_title: Optional[str] = Field(default=None, description="번역된 제목")
   translated_summary: Optional[str] = Field(default=None, description="번역된 요약")
   is_translated: bool = Field(default=False, description="번역 여부")
@@ -441,6 +509,8 @@ class NewsResponse(BaseModel):
   news_count: int = Field(description="뉴스 개수")
   data: List[NewsItem] = Field(description="뉴스 목록")
   message: Optional[str] = None
+
+# ====== 번역 관련 스키마 ======
 
 class TranslateRequest(BaseModel):
   """번역 요청"""
@@ -468,7 +538,7 @@ class TranslatedContent(BaseModel):
   summary: str
 
 class NewsTranslateRequest(BaseModel):
-  """뉴스 번역 요청"""
+  """뉴스 번역 요청 (뉴스 전용)"""
   original: OriginalContent
   target_lang: str = Field(default="ko", description="대상 언어")
 
@@ -480,7 +550,7 @@ class NewsTranslateResponse(BaseModel):
   target_lang: str
   message: Optional[str] = None
 
-# ========== AI Chat 관련 ==========
+# ====== David AI 관련 스키마 ======
 
 class ChatMessage(BaseModel):
   """개별 채팅 메시지"""
@@ -492,10 +562,14 @@ class LLMQuestionRequest(BaseModel):
   """LLM 질문 요청"""
   question: str = Field(..., min_length=1, max_length=1000, description="사용자 질문")
   conversation_history: List[ChatMessage] = Field(default=[], description="대화 히스토리")
+  
+  # 실제 데이터 필드 추가
   company_data: Optional[str] = Field(default="", description="회사 기본 정보 데이터")
   financial_data: Optional[str] = Field(default="", description="재무 정보 데이터") 
   price_history_data: Optional[str] = Field(default="", description="주가 히스토리 데이터")
   news_data: Optional[str] = Field(default="", description="뉴스 데이터")
+  
+  # 기존 플래그들 (사용하지 않지만 호환성 유지)
   include_company_summary: bool = Field(default=True, description="회사 기본 정보 포함 여부")
   include_financial_summary: bool = Field(default=True, description="재무 정보 포함 여부")
   include_market_info: bool = Field(default=True, description="시장 정보 포함 여부")

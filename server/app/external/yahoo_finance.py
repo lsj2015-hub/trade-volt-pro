@@ -380,7 +380,7 @@ class YahooFinance:
           news_list.append({
             "title": title,
             "url": item.findtext('link', '#'),
-            "publishedDate": published_date_iso,
+            "published_date": published_date_iso,
             "source": "Yahoo Finance RSS",
             "summary": item.findtext('description', '')
           })

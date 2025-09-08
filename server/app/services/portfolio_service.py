@@ -9,10 +9,12 @@ from app.crud.holding_crud import holding_crud
 from app.crud.stock_crud import stock_crud
 from app.external.kis_api import kis_api_service
 from app.external.exchange_rate_api import exchange_rate_service
-from app.schemas.common_schemas import StockDataResponse, CompletePortfolioResponse, PortfolioSummaryData
+from app.schemas.common_schemas import (
+  StockDataResponse, CompletePortfolioResponse,  PortfolioSummaryData
+)
 from app.core.exceptions import CustomHTTPException
 from app.config.database import get_async_session
-
+from app.config.database import AsyncSessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -436,53 +438,74 @@ class PortfolioService:
       total_gain_percent=total_gain_percent
     )
   
-  @staticmethod
-  async def get_lots_by_broker(user_id: int, stock_symbol: str):
-    """broker별 집계 + 현재가 조합 (Holdings 기반)"""
-    
-    db_gen = get_async_session()
-    db = await db_gen.__anext__()
-    
+  async def get_lots_by_broker(self, user_id: int, stock_symbol: str):
+    """특정 종목의 브로커별 상세 보유현황 """
+    async with AsyncSessionLocal() as db:
+      try:
+        # 1. 종목 정보 조회
+        stock = await stock_crud.get_stock_by_symbol(db, stock_symbol)
+        if not stock:
+          raise ValueError(f"종목을 찾을 수 없습니다: {stock_symbol}")
+        
+        # 2. 브로커별 보유현황 조회
+        holdings_detail = await holding_crud.get_stock_holdings_by_brokers(
+          db, user_id, stock.id
+        )
+        
+        if not holdings_detail["broker_details"]:
+          return []
+        
+        # 3. 현재가 조회 (비즈니스 로직)
+        current_price = await self._get_current_price(user_id, stock_symbol, stock.country_code)
+        
+        # 4. 미실현 손익 계산 및 데이터 가공 (static method 사용)
+        enhanced_lots = self._calculate_unrealized_gains(
+          holdings_detail["broker_details"], current_price
+        )
+        
+        return enhanced_lots
+        
+      except Exception as e:
+        logger.error(f"브로커별 종목 상세 조회 실패: user_id={user_id}, symbol={stock_symbol}, error={str(e)}")
+        raise
+
+  async def _get_current_price(self, user_id: int, stock_symbol: str, country_code: str) -> float:
+    """현재가 조회"""
     try:
-      # 1. 종목 정보 조회
-      stock = await stock_crud.get_stock_by_symbol(db, stock_symbol)
-      if not stock:
-        return []
+      from app.external.kis_api import kis_api_service
+      market_type = "DOMESTIC" if country_code == "KR" else "OVERSEAS"
+      price_data = await kis_api_service.get_stock_price(user_id, stock_symbol, market_type)
+      return price_data.get("current_price", 0.0)
+    except Exception as e:
+      logger.warning(f"현재가 조회 실패, 기본값 사용: {str(e)}")
+      return 0.0
+    
+  @staticmethod
+  def _calculate_unrealized_gains(broker_details: List[Dict], current_price: float) -> List[Dict]:
+    """미실현 손익 계산"""
+    enhanced_details = []
+    for detail in broker_details:
+      market_value = detail["quantity"] * current_price if current_price > 0 else 0.0
+      unrealized_gain = market_value - detail["total_cost"] if current_price > 0 else 0.0
+      unrealized_gain_percent = (unrealized_gain / detail["total_cost"] * 100) if detail["total_cost"] > 0 else 0.0
       
-      # 2. Holdings 기반 broker별 상세 데이터 조회
-      holdings_data = await holding_crud.get_stock_holdings_by_brokers(db, user_id, stock.id)
-      
-      if not holdings_data or not holdings_data["broker_details"]:
-        return []
-      
-      # 3. country_code로 market_type 결정
-      market_type = "DOMESTIC" if stock.country_code == "KR" else "OVERSEAS"
-      
-      # 4. 현재가 조회 (_get_price_safe 사용)
-      price_data = await PortfolioService._get_price_safe(user_id, stock_symbol, market_type)
-      current_price = price_data.get("current_price", 0) if price_data else 0
-      
-      # 5. 각 broker별 데이터에 현재가와 평가금액 추가
-      lots_data = []
-      for broker_detail in holdings_data["broker_details"]:
-        lot_item = {
-          "broker_id": broker_detail["broker_id"],
-          "broker_name": broker_detail["broker_name"],
-          "net_quantity": broker_detail["quantity"],
-          "average_cost_price": broker_detail["average_cost"],
-          "total_cost": broker_detail["total_cost"],
-          "realized_gain": broker_detail["realized_gain"],
-          "realized_gain_krw": broker_detail["realized_gain_krw"],
-          "latest_transaction_date": broker_detail["last_transaction_date"],
-          "current_price": float(current_price),
-          "market_value": float(broker_detail["quantity"] * current_price)
-        }
-        lots_data.append(lot_item)
-      
-      return lots_data
-      
-    finally:
-      await db.close()
+      enhanced_detail = {
+        "broker_id": detail["broker_id"],
+        "broker_name": detail["broker_name"],
+        "net_quantity": detail["quantity"],
+        "average_cost_price": detail["average_cost"],
+        "total_cost": detail["total_cost"],
+        "realized_gain": detail["realized_gain"],
+        "realized_gain_krw": detail["realized_gain_krw"],
+        "latest_transaction_date": detail["last_transaction_date"],
+        "current_price": current_price,
+        "market_value": market_value,
+        "unrealized_gain": unrealized_gain,
+        "unrealized_gain_percent": unrealized_gain_percent
+      }
+      enhanced_details.append(enhanced_detail)
+    
+    return enhanced_details
 
   @staticmethod
   async def get_realized_profits(user_id: int) -> Dict:
@@ -555,22 +578,22 @@ class PortfolioService:
         profit_item = {
           "id": str(row["id"]),
           "symbol": row["symbol"],
-          "companyName": company_name,
-          "companyNameEn": company_name_en,
+          "company_name": company_name,           # ✅
+          "company_name_en": company_name_en,     # ✅
           "broker": row["broker_name"],
-          "brokerId": row["broker_id"],
-          "marketType": market_type_value,
-          "sellDate": row["transaction_date"].isoformat(),
+          "broker_id": row["broker_id"],          # ✅
+          "market_type": market_type_value,       # ✅
+          "sell_date": row["transaction_date"].isoformat(),  # ✅
           "shares": int(row["quantity"]),
-          "sellPrice": float(row["price"]),
-          "avgCost": float(row["avg_cost_at_transaction"]) if row["avg_cost_at_transaction"] else 0.0,
-          "realizedProfit": float(row["total_realized_profit"]) if row["total_realized_profit"] else 0.0,
-          "realizedProfitPercent": round(realized_profit_percent, 2),
-          "realizedProfitKRW": round(realized_profit_krw, 0),  # 원화 실현손익 (매도시점 환율 적용)
+          "sell_price": float(row["price"]),      # ✅
+          "avg_cost": float(row["avg_cost_at_transaction"]) if row["avg_cost_at_transaction"] else 0.0,  # ✅
+          "realized_profit": float(row["total_realized_profit"]) if row["total_realized_profit"] else 0.0,  # ✅
+          "realized_profit_percent": round(realized_profit_percent, 2),  # ✅
+          "realized_profit_krw": round(realized_profit_krw, 0),  # ✅
           "currency": row["currency"],
-          "exchangeRate": float(row["exchange_rate"]) if row["exchange_rate"] else exchange_rate,  # 매도 당시 환율
+          "exchange_rate": float(row["exchange_rate"]) if row["exchange_rate"] else exchange_rate,  # ✅
           "commission": float(row["commission"]) if row["commission"] else 0.0,
-          "transactionTax": float(row["transaction_tax"]) if row["transaction_tax"] else 0.0
+          "transaction_tax": float(row["transaction_tax"]) if row["transaction_tax"] else 0.0  # ✅
         }
         transactions.append(profit_item)
         
@@ -579,8 +602,8 @@ class PortfolioService:
         if symbol not in unique_stocks:
           unique_stocks[symbol] = {
             "symbol": symbol,
-            "companyName": row["company_name"],
-            "companyNameEn": row.get("company_name_en", "") or ""
+            "company_name": row["company_name"],
+            "company_name_en": row.get("company_name_en", "") or ""
           }
         
         broker_id = row["broker_id"]
@@ -588,12 +611,12 @@ class PortfolioService:
           unique_brokers[broker_id] = {
             "id": broker_id,
             "name": row["broker_name"],
-            "displayName": row["broker_name"]
+            "display_name": row["broker_name"]
           }
       
       # 4. 메타데이터 정렬
       available_stocks = sorted(unique_stocks.values(), key=lambda x: x["symbol"])
-      available_brokers = sorted(unique_brokers.values(), key=lambda x: x["displayName"])
+      available_brokers = sorted(unique_brokers.values(), key=lambda x: x["display_name"])
       
       # 5. 응답 데이터 구성
       response_data = {
@@ -601,8 +624,8 @@ class PortfolioService:
         "data": {
           "transactions": transactions,
           "metadata": {
-            "availableStocks": available_stocks,
-            "availableBrokers": available_brokers
+            "available_stocks": available_stocks,
+            "available_brokers": available_brokers
           }
         }
       }

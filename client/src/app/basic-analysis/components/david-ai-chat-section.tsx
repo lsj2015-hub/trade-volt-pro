@@ -175,9 +175,9 @@ export const DavidAIChatSection = ({
     const recentData = priceHistoryData.data.slice(-10);
     let result = `최근 주가 동향 (${priceHistoryData.start_date} ~ ${priceHistoryData.end_date}):\n`;
     recentData.forEach((item) => {
-      result += `${item.Date}: 시가 $${item.Open}, 고가 $${item.High}, 저가 $${
-        item.Low
-      }, 종가 $${item.Close}, 거래량 ${item.Volume.toLocaleString()}\n`;
+      result += `${item.date}: 시가 $${item.open}, 고가 $${item.high}, 저가 $${
+        item.low
+      }, 종가 $${item.close}, 거래량 ${item.volume.toLocaleString()}\n`;
     });
     return result;
   };

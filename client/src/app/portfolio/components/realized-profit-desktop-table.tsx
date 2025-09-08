@@ -63,7 +63,7 @@ export const RealizedProfitDesktopTable = ({
                 className="border-b hover:bg-muted/20 transition-colors"
               >
                 <td className="px-3 py-4 text-sm whitespace-nowrap">
-                  {format(new Date(item.sellDate), 'yyyy.MM.dd', {
+                  {format(new Date(item.sell_date), 'yyyy.MM.dd', {
                     locale: ko,
                   })}
                 </td>
@@ -73,9 +73,9 @@ export const RealizedProfitDesktopTable = ({
                       {item.symbol}
                     </div>
                     <div className="text-xs text-muted-foreground truncate">
-                      {item.marketType === 'OVERSEAS'
-                        ? item.companyNameEn || item.companyName
-                        : item.companyName}
+                      {item.market_type === 'OVERSEAS'
+                        ? item.company_name_en || item.company_name
+                        : item.company_name}
                     </div>
                   </div>
                 </td>
@@ -91,29 +91,29 @@ export const RealizedProfitDesktopTable = ({
                   {item.shares.toLocaleString()}주
                 </td>
                 <td className="px-3 py-4 text-right text-sm whitespace-nowrap">
-                  {formatOriginalCurrency(item.sellPrice, item.currency)}
+                  {formatOriginalCurrency(item.sell_price, item.currency)}
                 </td>
                 <td className="px-3 py-4 text-right text-sm whitespace-nowrap">
-                  {formatOriginalCurrency(item.avgCost, item.currency)}
+                  {formatOriginalCurrency(item.avg_cost, item.currency)}
                 </td>
                 <td
                   className={`px-3 py-4 text-right text-sm font-semibold whitespace-nowrap ${
-                    item.realizedProfitKRW >= 0
+                    item.realized_profit_krw >= 0
                       ? 'text-green-600'
                       : 'text-red-600'
                   }`}
                 >
-                  {formatCurrency(item.realizedProfitKRW)}
+                  {formatCurrency(item.realized_profit_krw)}
                 </td>
                 <td
                   className={`px-3 py-4 text-right text-sm font-semibold whitespace-nowrap ${
-                    item.realizedProfitPercent >= 0
+                    item.realized_profit_percent >= 0
                       ? 'text-green-600'
                       : 'text-red-600'
                   }`}
                 >
-                  {item.realizedProfitPercent > 0 ? '+' : ''}
-                  {item.realizedProfitPercent.toFixed(2)}%
+                  {item.realized_profit_percent > 0 ? '+' : ''}
+                  {item.realized_profit_percent.toFixed(2)}%
                 </td>
               </tr>
             ))}

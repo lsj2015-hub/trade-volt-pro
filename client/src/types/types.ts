@@ -388,22 +388,22 @@ export interface StockLotResponse {
 export interface RealizedProfitData {
   id: string;
   symbol: string;
-  companyName: string;
-  companyNameEn: string;
+  company_name: string;
+  company_name_en: string;
   broker: string;
-  brokerId: number;
-  marketType: 'DOMESTIC' | 'OVERSEAS';
-  sellDate: string;
+  broker_id: number;
+  market_type: 'DOMESTIC' | 'OVERSEAS';
+  sell_date: string;
   shares: number;
-  sellPrice: number;
-  avgCost: number;
-  realizedProfit: number;
-  realizedProfitPercent: number;
-  realizedProfitKRW: number;
+  sell_price: number;
+  avg_cost: number;
+  realized_profit: number;
+  realized_profit_percent: number;
+  realized_profit_krw: number;
   currency: 'KRW' | 'USD';
-  exchangeRate: number;
+  exchange_rate: number;
   commission: number;
-  transactionTax: number;
+  transaction_tax: number;
 }
 
 export interface RealizedProfitResponse {
@@ -411,16 +411,16 @@ export interface RealizedProfitResponse {
   data: {
     transactions: RealizedProfitData[];
     metadata: {
-      // exchangeRateToday: number;
+      // exchange_rate_today: number;
       availableStocks: Array<{
         symbol: string;
-        companyName: string;
-        companyNameEn: string;
+        company_name: string;
+        company_name_en: string;
       }>;
       availableBrokers: Array<{
         id: number;
         name: string;
-        displayName: string;
+        display_name: string;
       }>;
     };
   };
@@ -534,17 +534,17 @@ export interface AnalysisParams {
   infoType: AnalysisInfoType;
   countryCode?: string;
   companyName?: string;
-  exchangeCode?: string
+  exchangeCode?: string;
 }
 
 // ====== 주가 히스토리 관련 타입 ======
 export interface PriceHistoryData {
-  Date: string;
-  Open: number;
-  High: number;
-  Low: number;
-  Close: number;
-  Volume: number;
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
 }
 
 export interface PriceHistoryResponse {
@@ -556,13 +556,14 @@ export interface PriceHistoryResponse {
   last_available_date?: string;
   data_count: number;
   data: PriceHistoryData[];
+  message?: string;
 }
 
 // ====== 뉴스 관련 타입 ======
 export interface NewsItem {
   title: string;
   url: string;
-  publishedDate?: string;
+  published_date?: string;
   source: string;
   summary: string;
   // 번역 필드 추가

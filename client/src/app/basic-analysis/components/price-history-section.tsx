@@ -143,14 +143,14 @@ export const PriceHistorySection = ({
     // 캔들차트용 데이터 변환
     const chartData = priceHistoryData.data.map((item) => ({
       ...item,
-      date: item.Date,
+      date: item.date,
       // 캔들스틱을 위한 데이터 (High-Low를 막대로, Open-Close를 다른 색상으로)
-      highLow: [item.Low, item.High],
+      highLow: [item.low, item.high],
       openClose: [
-        Math.min(item.Open, item.Close),
-        Math.max(item.Open, item.Close),
+        Math.min(item.open, item.close),
+        Math.max(item.open, item.close),
       ],
-      isGreen: item.Close >= item.Open, // 상승/하락 구분
+      isGreen: item.close >= item.open, // 상승/하락 구분
     }));
 
     return (
@@ -194,9 +194,9 @@ export const PriceHistorySection = ({
                 content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload;
-                    const isUp = data.Close >= data.Open;
-                    const changeAmount = data.Close - data.Open;
-                    const changePercent = (changeAmount / data.Open) * 100;
+                    const isUp = data.close >= data.open;
+                    const changeAmount = data.close - data.open;
+                    const changePercent = (changeAmount / data.open) * 100;
 
                     return (
                       <div className="bg-white p-2 border rounded shadow-md text-xs">
@@ -207,19 +207,19 @@ export const PriceHistorySection = ({
                             <span
                               style={{ color: isUp ? '#10b981' : '#ef4444' }}
                             >
-                              ${data.Open.toFixed(2)}
+                              ${data.open.toFixed(2)}
                             </span>
                           </p>
                           <p>
                             고가:{' '}
                             <span className="text-blue-600">
-                              ${data.High.toFixed(2)}
+                              ${data.high.toFixed(2)}
                             </span>
                           </p>
                           <p>
                             저가:{' '}
                             <span className="text-orange-600">
-                              ${data.Low.toFixed(2)}
+                              ${data.low.toFixed(2)}
                             </span>
                           </p>
                           <p>
@@ -230,7 +230,7 @@ export const PriceHistorySection = ({
                                 fontWeight: 'bold',
                               }}
                             >
-                              ${data.Close.toFixed(2)}
+                              ${data.close.toFixed(2)}
                             </span>
                           </p>
                           <p>
@@ -248,7 +248,7 @@ export const PriceHistorySection = ({
                           <p className="pt-1">
                             거래량:{' '}
                             <span className="text-gray-600">
-                              {data.Volume.toLocaleString()}
+                              {data.volume.toLocaleString()}
                             </span>
                           </p>
                         </div>
@@ -262,7 +262,7 @@ export const PriceHistorySection = ({
               {/* 고가-저가 라인 */}
               <Line
                 type="monotone"
-                dataKey="High"
+                dataKey="high"
                 stroke="#3b82f6"
                 strokeWidth={1}
                 dot={false}
@@ -270,7 +270,7 @@ export const PriceHistorySection = ({
               />
               <Line
                 type="monotone"
-                dataKey="Low"
+                dataKey="low"
                 stroke="#f59e0b"
                 strokeWidth={1}
                 dot={false}
@@ -280,7 +280,7 @@ export const PriceHistorySection = ({
               {/* 종가 라인 (메인) */}
               <Line
                 type="monotone"
-                dataKey="Close"
+                dataKey="close"
                 stroke="#059669"
                 strokeWidth={3}
                 dot={{ fill: '#059669', strokeWidth: 2, r: 4 }}
@@ -323,7 +323,7 @@ export const PriceHistorySection = ({
                   }}
                 />
                 <Bar
-                  dataKey="Volume"
+                  dataKey="volume"
                   fill="#8884d8"
                   stroke="#7c3aed"
                   strokeWidth={1}
@@ -363,22 +363,22 @@ export const PriceHistorySection = ({
                 {priceHistoryData.data.map((row, index) => (
                   <tr key={index} className="border-b hover:bg-muted/50">
                     <td className="text-center px-3 py-1.5 font-medium text-xs">
-                      {row.Date}
+                      {row.date}
                     </td>
                     <td className="text-center px-3 py-1.5 text-xs font-bold">
-                      {row.Close.toFixed(2)}
+                      {row.close.toFixed(2)}
                     </td>
                     <td className="text-center px-3 py-1.5 text-xs">
-                      {row.Open.toFixed(2)}
+                      {row.open.toFixed(2)}
                     </td>
                     <td className="text-center px-3 py-1.5 text-xs">
-                      {row.High.toFixed(2)}
+                      {row.high.toFixed(2)}
                     </td>
                     <td className="text-center px-3 py-1.5 text-xs">
-                      {row.Low.toFixed(2)}
+                      {row.low.toFixed(2)}
                     </td>
                     <td className="text-center px-3 py-1.5 text-xs">
-                      {row.Volume.toLocaleString()}
+                      {row.volume.toLocaleString()}
                     </td>
                   </tr>
                 ))}

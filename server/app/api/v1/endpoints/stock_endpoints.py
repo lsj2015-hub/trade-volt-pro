@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import logging
 
-from app.config.database import get_sync_session
+from app.config.database import get_async_session
 from app.crud.stock_crud import stock_crud
 from app.schemas.common_schemas import StockInfo, StockPriceResponse
 from app.core.dependencies import get_current_user
@@ -18,21 +18,15 @@ async def search_stocks(
   q: str = Query(..., min_length=1, max_length=50, description="검색어 (종목명, 영문명, 종목코드)"),
   limit: int = Query(20, ge=1, le=100, description="최대 결과 수"),
   current_user: User = Depends(get_current_user),
-  db: Session = Depends(get_sync_session)
+  db: AsyncSession = Depends(get_async_session)  # ✅ 타입과 실제 일치
 ):
   """
   빠른 종목 검색 API (가격 정보 없음)
-  - 종목명, 영문 종목명, 종목코드로 검색 가능
-  - DB에서만 조회하여 빠른 응답
-  - 가격 정보는 포함되지 않음 (모두 0)
-  
-  Example:
-    GET /api/v1/stocks/search?q=삼성&limit=10
   """
   try:
     logger.info(f"빠른 종목 검색 요청: user_id={current_user.id}, query='{q}', limit={limit}")
     
-    stocks = stock_crud.search_stocks_by_db(db, q, limit)
+    stocks = await stock_crud.search_stocks_by_db(db, q, limit)
     
     logger.info(f"빠른 종목 검색 완료: {len(stocks)}개 결과 반환")
     return stocks
@@ -43,7 +37,7 @@ async def search_stocks(
       status_code=500, 
       detail=f"빠른 종목 검색 중 오류가 발생했습니다: {str(e)}"
     )
-  
+
 @router.get("/price/{symbol}", response_model=StockPriceResponse)
 async def get_stock_price(
   symbol: str,
@@ -53,13 +47,6 @@ async def get_stock_price(
 ):
   """
   종목 시세 조회 API (KIS API 사용)
-  - 현재가 또는 과거 시세 조회 가능
-  - 국내주식/해외주식 지원
-  
-  Examples:
-    GET /api/v1/stocks/price/005930?market_type=DOMESTIC (삼성전자 현재가)
-    GET /api/v1/stocks/price/005930?market_type=DOMESTIC&date=20250101 (과거 시세)
-    GET /api/v1/stocks/price/AAPL?market_type=OVERSEAS (애플 현재가)
   """
   try:
     logger.info(f"주가 조회 요청: user_id={current_user.id}, symbol={symbol}, market_type={market_type}, date={date}")

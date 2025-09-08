@@ -28,24 +28,24 @@ export const RealizedProfitMobileCard = ({
           <div className="flex-1">
             <div className="font-semibold text-base">{item.symbol}</div>
             <div className="text-sm text-muted-foreground line-clamp-1">
-              {item.marketType === 'OVERSEAS'
-                ? item.companyNameEn || item.companyName
-                : item.companyName}
+              {item.market_type === 'OVERSEAS'
+                ? item.company_name_en || item.company_name
+                : item.company_name}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              {format(new Date(item.sellDate), 'yyyy.MM.dd', { locale: ko })}
+              {format(new Date(item.sell_date), 'yyyy.MM.dd', { locale: ko })}
             </div>
           </div>
           <div className="text-right">
             <div
               className={`text-lg font-semibold ${
-                item.realizedProfitPercent >= 0
+                item.realized_profit_percent >= 0
                   ? 'text-green-600'
                   : 'text-red-600'
               }`}
             >
-              {item.realizedProfitPercent > 0 ? '+' : ''}
-              {item.realizedProfitPercent.toFixed(2)}%
+              {item.realized_profit_percent > 0 ? '+' : ''}
+              {item.realized_profit_percent.toFixed(2)}%
             </div>
             <Badge variant="outline" className="text-xs mt-1">
               {item.broker}
@@ -62,7 +62,7 @@ export const RealizedProfitMobileCard = ({
           <div>
             <div className="text-xs text-muted-foreground mb-1">매도가격</div>
             <div className="font-medium">
-              {formatOriginalCurrency(item.sellPrice, item.currency)}
+              {formatOriginalCurrency(item.sell_price, item.currency)}
             </div>
           </div>
         </div>
@@ -75,10 +75,12 @@ export const RealizedProfitMobileCard = ({
             </div>
             <div
               className={`font-semibold ${
-                item.realizedProfitKRW >= 0 ? 'text-green-600' : 'text-red-600'
+                item.realized_profit_krw >= 0
+                  ? 'text-green-600'
+                  : 'text-red-600'
               }`}
             >
-              {formatCurrency(item.realizedProfitKRW)}
+              {formatCurrency(item.realized_profit_krw)}
             </div>
           </div>
           <div>
@@ -86,15 +88,15 @@ export const RealizedProfitMobileCard = ({
               원화 손익 ({item.currency})
             </div>
             <div className="text-sm">
-              {formatOriginalCurrency(item.realizedProfit, item.currency)}
+              {formatOriginalCurrency(item.realized_profit, item.currency)}
             </div>
           </div>
         </div>
 
         {/* 평단가 정보 */}
         <div className="text-center text-sm text-muted-foreground border-t pt-2">
-          평단가: {formatOriginalCurrency(item.avgCost, item.currency)}→ 매도가:{' '}
-          {formatOriginalCurrency(item.sellPrice, item.currency)}
+          평단가: {formatOriginalCurrency(item.avg_cost, item.currency)}→
+          매도가: {formatOriginalCurrency(item.sell_price, item.currency)}
         </div>
       </div>
     </CardContent>

@@ -134,13 +134,13 @@ export class PortfolioAPI {
         // exchangeRateToday: number;
         availableStocks: Array<{
           symbol: string;
-          companyName: string;
-          companyNameEn: string;
+          company_name: string;
+          company_name_en: string;
         }>;
         availableBrokers: Array<{
           id: number;
           name: string;
-          displayName: string;
+          display_name: string;
         }>;
       };
     };
@@ -154,13 +154,13 @@ export class PortfolioAPI {
           exchangeRateToday: number;
           availableStocks: Array<{
             symbol: string;
-            companyName: string;
-            companyNameEn: string;
+            company_name: string;
+            company_name_en: string;
           }>;
           availableBrokers: Array<{
             id: number;
             name: string;
-            displayName: string;
+            display_name: string;
           }>;
         };
       };

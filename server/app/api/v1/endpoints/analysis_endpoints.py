@@ -295,14 +295,24 @@ async def get_price_history(
         # 필요한 컬럼만 선택하고 이름 정리
         required_columns = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
         df_clean = df[required_columns].copy()
+
+        # ✅ 컬럼명을 소문자로 변경
+        df_clean = df_clean.rename(columns={
+            'Date': 'date',
+            'Open': 'open', 
+            'High': 'high',
+            'Low': 'low',
+            'Close': 'close',
+            'Volume': 'volume'
+        })
         
         # 날짜를 문자열로 변환
-        df_clean['Date'] = df_clean['Date'].astype(str)
+        df_clean['date'] = df_clean['date'].astype(str)
         
         # 숫자형 컬럼을 적절한 타입으로 변환
-        for col in ['Open', 'High', 'Low', 'Close']:
+        for col in ['open', 'high', 'low', 'close']:
             df_clean[col] = df_clean[col].astype(float)
-        df_clean['Volume'] = df_clean['Volume'].astype(int)
+        df_clean['volume'] = df_clean['volume'].astype(int)
         
         # JSON으로 변환
         price_data = df_clean.to_dict('records')
