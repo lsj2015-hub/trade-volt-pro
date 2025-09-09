@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.external.yahoo_finance import yahoo_finance
 from app.external.translation import translation_service
 from app.utils.formatting import (
-  format_stock_profile, format_investment_metrics, format_financial_statement_response
+  format_stock_profile, format_investment_metrics, format_financial_statement_response, format_analyst_recommendations, format_financial_summary
 )
 
 logger = logging.getLogger(__name__)
@@ -33,12 +33,12 @@ class AnalysisService:
       # 데이터 결합
       combined_info = {
         "symbol": symbol,
-        "longName": company_name or yahoo_info.get("longName", ""),
+        "long_name": company_name or yahoo_info.get("long_name", ""),
         **yahoo_info
       }
 
       # 사업개요 번역 처리
-      business_summary_en = yahoo_info.get('longBusinessSummary', '')
+      business_summary_en = yahoo_info.get('long_business_summary', '')
       business_summary_kr = ""
       
       if business_summary_en:
@@ -68,13 +68,12 @@ class AnalysisService:
       
       # exchange_code 우선, 없으면 DB에서 추출
       if not exchange_code:
-        exchange_code = combined_info.get('exchangeCode')
+        exchange_code = combined_info.get('exchange_code')
       
       if not exchange_code:
         logger.error(f"거래소 정보를 찾을 수 없습니다: {symbol}")
         return None
       
-      from app.utils.formatting import format_financial_summary
       # ✅ 수정: symbol 파라미터 제거
       return await format_financial_summary(combined_info, exchange_code)
     except Exception as e:
@@ -101,7 +100,7 @@ class AnalysisService:
       
       # exchange_code 우선, 없으면 DB에서 추출
       if not exchange_code:
-        exchange_code = combined_info.get('exchangeCode')
+        exchange_code = combined_info.get('exchange_code')
       
       if not exchange_code:
         logger.error(f"거래소 정보를 찾을 수 없습니다: {symbol}")
@@ -123,13 +122,13 @@ class AnalysisService:
       
       # exchange_code 우선, 없으면 DB에서 추출
       if not exchange_code:
-        exchange_code = combined_info.get('exchangeCode')
+        exchange_code = combined_info.get('exchange_code')
       
       if not exchange_code:
         logger.error(f"거래소 정보를 찾을 수 없습니다: {symbol}")
         return None
       
-      from app.utils.formatting import format_analyst_recommendations
+      
       # ✅ 수정: symbol 파라미터 제거
       return await format_analyst_recommendations(combined_info, exchange_code)
     except Exception as e:
@@ -157,9 +156,9 @@ class AnalysisService:
         officer_info = {
           "name": officer.get("name", ""),
           "title": officer.get("title", ""),
-          "totalPay": await format_currency_by_exchange(officer.get("totalPay"), exchange_code),
+          "total_pay": await format_currency_by_exchange(officer.get("totalPay"), exchange_code),
           "age": officer.get("age"),
-          "yearBorn": officer.get("yearBorn")
+          "year_born": officer.get("yearBorn")
         }
         formatted_officers.append(officer_info)
       

@@ -1,6 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { PortfolioSummaryCardProps } from '@/types/types';
+
+interface PortfolioSummaryCardProps {
+  title: string;
+  icon: React.ComponentType<any>;
+  totalAmount: string;
+  dayGain: number;
+  dayGainPercent: number;
+  totalGain: number;
+  totalGainPercent: number;
+  formatAmount: (amount: number) => string;
+}
 
 export const PortfolioSummaryCard = ({
   title,

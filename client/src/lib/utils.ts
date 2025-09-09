@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { CommissionCalculationParams, CommissionResult } from '../types/types';
+import { CommissionCalculationParams, CommissionResult } from '@/types/types';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -30,33 +30,33 @@ export function calculateCommission(
 ): CommissionResult {
   const {
     shares,
-    pricePerShare,
-    feeRate,
-    transactionTaxRate,
-    transactionType,
+    price_per_share,
+    fee_rate,
+    transaction_tax_rate,
+    transaction_type,
   } = params;
 
-  const grossAmount = shares * pricePerShare;
-  const commission = Number((grossAmount * feeRate).toFixed(2));
+  const gross_amount = shares * price_per_share;
+  const commission = Number((gross_amount * fee_rate).toFixed(2));
 
   // 거래세는 매도시에만 적용
-  const transactionTax =
-    transactionType === 'SELL'
-      ? Math.ceil(grossAmount * transactionTaxRate)
+  const transaction_tax =
+    transaction_type === 'SELL'
+      ? Math.ceil(gross_amount * transaction_tax_rate)
       : 0;
 
-  const totalFees = commission + transactionTax;
-  const netAmount =
-    transactionType === 'BUY'
-      ? grossAmount + totalFees // 매수: 원금 + 수수료
-      : grossAmount - totalFees; // 매도: 원금 - 수수료
+  const total_fees = commission + transaction_tax;
+  const net_amount =
+    transaction_type === 'BUY'
+      ? gross_amount + total_fees // 매수: 원금 + 수수료
+      : gross_amount - total_fees; // 매도: 원금 - 수수료
 
   return {
     commission,
-    transactionTax,
-    totalFees,
-    grossAmount,
-    netAmount,
+    transaction_tax,
+    total_fees,
+    gross_amount,
+    net_amount,
   };
 }
 
@@ -65,20 +65,20 @@ export function calculateCommission(
  */
 export function calculateCommissionWithDefaults(
   shares: number,
-  pricePerShare: number,
-  transactionType: 'BUY' | 'SELL' = 'BUY',
-  marketType: 'DOMESTIC' | 'OVERSEAS' = 'DOMESTIC'
+  price_per_share: number,
+  transaction_type: 'BUY' | 'SELL' = 'BUY',
+  market_type: 'DOMESTIC' | 'OVERSEAS' = 'DOMESTIC'
 ): CommissionResult {
   const defaultFeeRate = 0.00015; // 0.015%
   const defaultTaxRate =
-    transactionType === 'SELL' && marketType === 'DOMESTIC' ? 0.0023 : 0; // 0.23%
+    transaction_type === 'SELL' && market_type === 'DOMESTIC' ? 0.0023 : 0; // 0.23%
 
   return calculateCommission({
     shares,
-    pricePerShare,
-    feeRate: defaultFeeRate,
-    transactionTaxRate: defaultTaxRate,
-    transactionType,
+    price_per_share,
+    fee_rate: defaultFeeRate,
+    transaction_tax_rate: defaultTaxRate,
+    transaction_type,
   });
 }
 

@@ -99,10 +99,10 @@ export const StockAnalysisSection = ({
 
       const data = await AnalysisAPI.getAnalysis({
         symbol: selectedStock.symbol.toUpperCase(),
-        infoType: infoType,
-        countryCode,
-        companyName,
-        exchangeCode,
+        info_type: infoType,
+        country_code: countryCode,
+        company_name: companyName,
+        exchange_code: exchangeCode,
       });
 
       setAnalysisData(data.data);

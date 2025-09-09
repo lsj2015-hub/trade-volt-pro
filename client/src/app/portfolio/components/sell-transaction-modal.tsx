@@ -57,9 +57,9 @@ export const SellTransactionModal = ({
 
   const [commissionData, setCommissionData] = useState({
     commission: 0,
-    transactionTax: 0,
-    totalFees: 0,
-    netAmount: 0,
+    transaction_tax: 0,
+    total_fees: 0,
+    net_amount: 0,
   });
 
   // 모달이 열릴 때마다 폼 초기화
@@ -90,9 +90,9 @@ export const SellTransactionModal = ({
     } else {
       setCommissionData({
         commission: 0,
-        transactionTax: 0,
-        totalFees: 0,
-        netAmount: 0,
+        transaction_tax: 0,
+        total_fees: 0,
+        net_amount: 0,
       });
     }
   }, [formData.shares, formData.pricePerShare, stockInfo]);
@@ -304,7 +304,7 @@ export const SellTransactionModal = ({
                 <span>Transaction Tax:</span>
                 <span>
                   -{currencySymbol}
-                  {commissionData.transactionTax.toFixed(2)}
+                  {commissionData.transaction_tax.toFixed(2)}
                 </span>
               </div>
               <Separator />
@@ -312,7 +312,7 @@ export const SellTransactionModal = ({
                 <span>Net Proceeds:</span>
                 <span className="text-green-600">
                   {currencySymbol}
-                  {commissionData.netAmount.toLocaleString()}
+                  {commissionData.net_amount.toLocaleString()}
                 </span>
               </div>
             </div>

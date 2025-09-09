@@ -7,24 +7,6 @@ declare global {
 }
 
 // ====== API 응답 및 에러 관련 타입 ======
-export interface ApiResponseBase {
-  success: boolean;
-  error?: {
-    code: string;
-    message: string;
-    path?: string;
-  };
-}
-
-export interface ErrorResponse {
-  success: boolean;
-  error: {
-    code: string;
-    message: string;
-    details?: any;
-    path: string;
-  };
-}
 
 export type ApiStatus = 'loading' | 'connected' | 'error';
 
@@ -71,15 +53,6 @@ export interface AuthContextType extends AuthState {
 }
 
 // ====== 종목 검색 관련 타입 ======
-export interface Stock {
-  ticker: string;
-  name: string;
-  name_en: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  market: string;
-}
 
 export interface StockInfo {
   symbol: string; // 종목코드
@@ -92,12 +65,6 @@ export interface StockInfo {
   market_type: 'DOMESTIC' | 'OVERSEAS'; // 시장 구분
 }
 
-export interface StockSearchResponse {
-  stocks: StockInfo[];
-  total: number;
-  query: string;
-}
-
 export interface StockSearchModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -107,69 +74,23 @@ export interface StockSearchModalProps {
 // ====== 포트폴리오 관련 타입 ======
 export interface StockData {
   symbol: string;
-  companyName: string;
+  company_name: string;
   shares: number;
-  avgCost: number;
-  currentPrice: number;
-  marketValue: number;
-  dayGain: number;
-  dayGainPercent: number;
-  totalGain: number;
-  totalGainPercent: number;
-}
-
-export interface StockTableProps {
-  domesticStocks: StockData[];
-  overseasStocks: StockData[];
-  formatCurrency: (amount: number, currency: 'KRW' | 'USD') => string;
-}
-
-export interface TotalPortfolioCardProps {
-  totalPortfolio: number;
-  totalDayGain: number;
-  totalTotalGain: number;
-  formatCurrency: (amount: number, currency: 'KRW' | 'USD') => string;
-}
-
-export interface PortfolioSummaryCardProps {
-  title: string;
-  icon: React.ComponentType<any>;
-  totalAmount: string;
-  dayGain: number;
-  dayGainPercent: number;
-  totalGain: number;
-  totalGainPercent: number;
-  formatAmount: (amount: number) => string;
+  avg_cost: number;
+  current_price: number;
+  market_value: number;
+  day_gain: number;
+  day_gain_percent: number;
+  total_gain: number;
+  total_gain_percent: number;
 }
 
 export type CurrencyType = 'KRW' | 'USD';
 
 // ====== UI 컴포넌트 관련 타입 ======
-import { ReactNode } from 'react';
 
-export interface BaseComponentProps {
-  className?: string;
-  children?: ReactNode;
-}
+// ======  Strategy ======
 
-export interface InputProps extends React.ComponentProps<'input'> {
-  className?: string;
-  type?: string;
-}
-
-export interface ButtonProps extends React.ComponentProps<'button'> {
-  variant?:
-    | 'default'
-    | 'destructive'
-    | 'outline'
-    | 'secondary'
-    | 'ghost'
-    | 'link';
-  size?: 'default' | 'sm' | 'lg' | 'icon';
-  asChild?: boolean;
-}
-
-// Strategy
 export interface TradingStrategy {
   id: string;
   name: string;
@@ -178,38 +99,14 @@ export interface TradingStrategy {
 
 export interface TradingResult {
   stock: string;
-  buyPrice: number;
-  sellPrice: number;
+  buy_price: number;
+  sell_price: number;
   quantity: number;
   profit: number;
-  returnRate: number;
-}
-
-export interface AvatarProps extends BaseComponentProps {
-  // Avatar 관련 props
-}
-
-export interface AvatarImageProps extends React.ComponentProps<'img'> {
-  // AvatarImage 관련 props
-}
-
-export interface AvatarFallbackProps extends BaseComponentProps {
-  // AvatarFallback 관련 props
+  return_rate: number;
 }
 
 // ====== 공통 UI 요소 타입 ======
-export interface Feature {
-  icon: ReactNode;
-  title: string;
-  description: string;
-  path: string;
-}
-
-export interface SidebarItem {
-  icon: React.ComponentType<any>;
-  label: string;
-  href: string;
-}
 
 // Transaction 관련 타입들
 export interface TransactionCreateRequest {
@@ -268,18 +165,18 @@ export interface CommissionRateResponse {
 // 수수료 계산 파라미터
 export interface CommissionCalculationParams {
   shares: number;
-  pricePerShare: number;
-  feeRate: number; // 서버에서 받은 수수료율
-  transactionTaxRate: number; // 서버에서 받은 거래세율
-  transactionType: 'BUY' | 'SELL';
+  price_per_share: number;
+  fee_rate: number; // 서버에서 받은 수수료율
+  transaction_tax_rate: number; // 서버에서 받은 거래세율
+  transaction_type: 'BUY' | 'SELL';
 }
 
 export interface CommissionResult {
   commission: number;
-  transactionTax: number;
-  totalFees: number;
-  grossAmount: number;
-  netAmount: number;
+  transaction_tax: number;
+  total_fees: number;
+  gross_amount: number;
+  net_amount: number;
 }
 
 // Portfolio 관련 타입
@@ -412,12 +309,12 @@ export interface RealizedProfitResponse {
     transactions: RealizedProfitData[];
     metadata: {
       // exchange_rate_today: number;
-      availableStocks: Array<{
+      available_stocks: Array<{
         symbol: string;
         company_name: string;
         company_name_en: string;
       }>;
-      availableBrokers: Array<{
+      available_brokers: Array<{
         id: number;
         name: string;
         display_name: string;
@@ -445,65 +342,65 @@ export interface AnalysisResponse {
 
 export interface CompanySummary {
   symbol: string;
-  longName: string;
+  long_name: string;
   industry: string;
   sector: string;
-  longBusinessSummary: string;
+  long_business_summary: string;
   city?: string;
   state?: string;
   country?: string;
   website?: string;
-  fullTimeEmployees: string;
+  full_time_employees: string;
 }
 
 export interface FinancialSummary {
-  totalRevenue: string;
-  netIncomeToCommon: string;
-  operatingMargins: string;
-  dividendYield: string;
-  trailingEps: string;
-  totalCash: string;
-  totalDebt: string;
-  debtToEquity: string;
-  exDividendDate?: string;
+  total_revenue: string;
+  net_income_to_common: string;
+  operating_margins: string;
+  dividend_yield: string;
+  trailing_eps: string;
+  total_cash: string;
+  total_debt: string;
+  debt_to_equity: string;
+  ex_dividend_date?: string;
 }
 
 export interface InvestmentIndex {
-  trailingPE: string;
-  forwardPE: string;
-  priceToBook: string;
-  returnOnEquity: string;
-  returnOnAssets: string;
+  trailing_pe: string;
+  forward_pe: string;
+  price_to_book: string;
+  return_on_equity: string;
+  return_on_assets: string;
   beta: string;
 }
 
 export interface MarketInfo {
-  currentPrice: string;
-  previousClose: string;
-  dayHigh: string;
-  dayLow: string;
-  fiftyTwoWeekHigh: string;
-  fiftyTwoWeekLow: string;
-  marketCap: string;
-  sharesOutstanding: string;
+  current_price: string;
+  previous_close: string;
+  day_high: string;
+  day_low: string;
+  fifty_two_week_high: string;
+  fifty_two_week_low: string;
+  market_cap: string;
+  shares_outstanding: string;
   volume: string;
 }
 
 export interface AnalystOpinion {
-  recommendationMean: number;
-  recommendationKey: string;
-  numberOfAnalystOpinions: number;
-  targetMeanPrice: string;
-  targetHighPrice: string;
-  targetLowPrice: string;
+  recommendation_mean: number;
+  recommendation_key: string;
+  number_of_analyst_opinions: number;
+  target_mean_price: string;
+  target_high_price: string;
+  target_low_price: string;
 }
 
 export interface OfficerInfo {
   name: string;
   title: string;
-  totalPay: string;
+  total_pay: string;
   age?: number;
-  yearBorn?: number;
+  year_born?: number;
 }
 
 export interface MajorExecutors {
@@ -531,10 +428,10 @@ export class AnalysisAPIError extends Error {
 
 export interface AnalysisParams {
   symbol: string;
-  infoType: AnalysisInfoType;
-  countryCode?: string;
-  companyName?: string;
-  exchangeCode?: string;
+  info_type: AnalysisInfoType;
+  country_code?: string;
+  company_name?: string;
+  exchange_code?: string;
 }
 
 // ====== 주가 히스토리 관련 타입 ======

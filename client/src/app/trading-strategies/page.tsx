@@ -49,27 +49,27 @@ export const tradingStrategies: TradingStrategy[] = [
 const tradingResults: TradingResult[] = [
   {
     stock: '삼성전자',
-    buyPrice: 85000,
-    sellPrice: 86500,
+    buy_price: 85000,
+    sell_price: 86500,
     quantity: 10,
     profit: 15000,
-    returnRate: 1.76,
+    return_rate: 1.76,
   },
   {
     stock: 'SK하이닉스',
-    buyPrice: 210000,
-    sellPrice: 205000,
+    buy_price: 210000,
+    sell_price: 205000,
     quantity: 5,
     profit: -25000,
-    returnRate: -2.38,
+    return_rate: -2.38,
   },
   {
     stock: 'LG에너지솔루션',
-    buyPrice: 350000,
-    sellPrice: 360500,
+    buy_price: 350000,
+    sell_price: 360500,
     quantity: 3,
     profit: 31500,
-    returnRate: 3.0,
+    return_rate: 3.0,
   },
 ];
 
@@ -89,7 +89,7 @@ export default function StrategyPage() {
     0
   );
   const totalInvestment = tradingResults.reduce(
-    (sum, item) => sum + item.buyPrice * item.quantity,
+    (sum, item) => sum + item.buy_price * item.quantity,
     0
   );
   const overallReturnRate =
@@ -235,10 +235,10 @@ export default function StrategyPage() {
                       : result.stock}
                   </TableCell>
                   <TableCell className="text-right text-xs sm:text-sm">
-                    {(result.buyPrice / 1000).toFixed(0)}k
+                    {(result.buy_price / 1000).toFixed(0)}k
                   </TableCell>
                   <TableCell className="text-right text-xs sm:text-sm">
-                    {(result.sellPrice / 1000).toFixed(0)}k
+                    {(result.sell_price / 1000).toFixed(0)}k
                   </TableCell>
                   <TableCell className="text-right text-xs sm:text-sm">
                     {result.quantity}
@@ -252,10 +252,12 @@ export default function StrategyPage() {
                   </TableCell>
                   <TableCell
                     className={`text-right text-xs sm:text-sm ${
-                      result.returnRate >= 0 ? 'text-green-600' : 'text-red-600'
+                      result.return_rate >= 0
+                        ? 'text-green-600'
+                        : 'text-red-600'
                     }`}
                   >
-                    {result.returnRate.toFixed(1)}%
+                    {result.return_rate.toFixed(1)}%
                   </TableCell>
                 </TableRow>
               ))}

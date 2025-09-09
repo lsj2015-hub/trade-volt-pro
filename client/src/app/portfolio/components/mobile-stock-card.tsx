@@ -28,14 +28,14 @@ export const MobileStockCard = ({
             <div>
               <div className="font-semibold text-lg">{stock.symbol}</div>
               <div className="text-sm text-muted-foreground">
-                {stock.companyName}
+                {stock.company_name}
               </div>
             </div>
             <div className="text-right">
               <div className="font-semibold">
                 {isOverseas
-                  ? formatCurrency(stock.currentPrice, 'USD')
-                  : formatCurrency(stock.currentPrice, 'KRW')}
+                  ? formatCurrency(stock.current_price, 'USD')
+                  : formatCurrency(stock.current_price, 'KRW')}
               </div>
               <div
                 className="text-sm text-muted-foreground"
@@ -54,22 +54,22 @@ export const MobileStockCard = ({
               </div>
               <div
                 className={`flex items-center space-x-1 ${
-                  stock.dayGain >= 0 ? 'text-green-600' : 'text-red-600'
+                  stock.day_gain >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}
               >
-                {stock.dayGain >= 0 ? (
+                {stock.day_gain >= 0 ? (
                   <TrendingUp className="h-3 w-3" />
                 ) : (
                   <TrendingDown className="h-3 w-3" />
                 )}
                 <span className="text-sm font-medium">
                   {isOverseas
-                    ? formatCurrency(stock.dayGain, 'USD')
-                    : formatCurrency(stock.dayGain, 'KRW')}
+                    ? formatCurrency(stock.day_gain, 'USD')
+                    : formatCurrency(stock.day_gain, 'KRW')}
                 </span>
               </div>
               <div className="text-xs text-muted-foreground">
-                {formatPercent(stock.dayGainPercent)}
+                {formatPercent(stock.day_gain_percent)}
               </div>
             </div>
 
@@ -79,22 +79,22 @@ export const MobileStockCard = ({
               </div>
               <div
                 className={`flex items-center space-x-1 ${
-                  stock.totalGain >= 0 ? 'text-green-600' : 'text-red-600'
+                  stock.total_gain >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}
               >
-                {stock.totalGain >= 0 ? (
+                {stock.total_gain >= 0 ? (
                   <TrendingUp className="h-3 w-3" />
                 ) : (
                   <TrendingDown className="h-3 w-3" />
                 )}
                 <span className="text-sm font-medium">
                   {isOverseas
-                    ? formatCurrency(stock.totalGain, 'USD')
-                    : formatCurrency(stock.totalGain, 'KRW')}
+                    ? formatCurrency(stock.total_gain, 'USD')
+                    : formatCurrency(stock.total_gain, 'KRW')}
                 </span>
               </div>
               <div className="text-xs text-muted-foreground">
-                {formatPercent(stock.totalGainPercent)}
+                {formatPercent(stock.total_gain_percent)}
               </div>
             </div>
           </div>
@@ -106,8 +106,8 @@ export const MobileStockCard = ({
             </div>
             <div className="font-semibold text-lg">
               {isOverseas
-                ? formatCurrency(stock.marketValue, 'USD')
-                : formatCurrency(stock.marketValue, 'KRW')}
+                ? formatCurrency(stock.market_value, 'USD')
+                : formatCurrency(stock.market_value, 'KRW')}
             </div>
           </div>
         </div>

@@ -196,9 +196,9 @@ export const NewsSection = ({ selectedStock, onDataUpdate }: NewsSectionProps) =
                       </span>
                     )}
                   </div>
-                  {news.publishedDate && (
+                  {news.published_date && (
                     <span>
-                      {new Date(news.publishedDate).toLocaleDateString(
+                      {new Date(news.published_date).toLocaleDateString(
                         'ko-KR',
                         {
                           month: 'short',

@@ -55,29 +55,29 @@ export const AddLotModal = ({
 
   const [formData, setFormData] = useState({
     shares: '',
-    costPerShare: '',
+    cost_per_share: '',
     broker: '',
     date: format(new Date(), 'yyyy-MM-dd'),
     comment: '',
   });
 
   const [commissionRates, setCommissionRates] = useState<{
-    feeRate: number;
-    transactionTaxRate: number;
+    fee_rate: number;
+    transaction_tax_rate: number;
   } | null>(null);
 
   const [commissionData, setCommissionData] = useState({
     commission: 0,
-    transactionTax: 0,
-    totalFees: 0,
-    netAmount: 0,
+    transaction_tax: 0,
+    total_fees: 0,
+    net_amount: 0,
   });
 
   // resetKey가 변경될 때마다 폼 초기화 (추가)
   useEffect(() => {
     setFormData({
       shares: '',
-      costPerShare: '',
+      cost_per_share: '',
       broker: '',
       date: format(new Date(), 'yyyy-MM-dd'),
       comment: '',
@@ -86,9 +86,9 @@ export const AddLotModal = ({
     setCommissionRates(null);
     setCommissionData({
       commission: 0,
-      transactionTax: 0,
-      totalFees: 0,
-      netAmount: 0,
+      transaction_tax: 0,
+      total_fees: 0,
+      net_amount: 0,
     });
   }, [resetKey]);
 
@@ -133,15 +133,15 @@ export const AddLotModal = ({
           });
 
           setCommissionRates({
-            feeRate: rates.fee_rate,
-            transactionTaxRate: rates.transaction_tax_rate,
+            fee_rate: rates.fee_rate,
+            transaction_tax_rate: rates.transaction_tax_rate,
           });
         } catch (error) {
           console.error('수수료율 조회 실패:', error);
           // 실패시 기본값 사용
           setCommissionRates({
-            feeRate: 0.00015, // 0.015%
-            transactionTaxRate:
+            fee_rate: 0.00015, // 0.015%
+            transaction_tax_rate:
               selectedStock.market_type === 'DOMESTIC' ? 0.0023 : 0, // 0.23%
           });
         }
@@ -154,17 +154,17 @@ export const AddLotModal = ({
   // 수량, 가격이 변경되면 수수료 계산
   useEffect(() => {
     const shares = parseFloat(formData.shares) || 0;
-    const pricePerShare = parseFloat(formData.costPerShare) || 0;
+    const price_per_share = parseFloat(formData.cost_per_share) || 0;
 
-    if (shares > 0 && pricePerShare > 0) {
+    if (shares > 0 && price_per_share > 0) {
       if (commissionRates) {
         // 서버에서 받은 수수료율로 계산
         const result = calculateCommission({
           shares,
-          pricePerShare,
-          feeRate: commissionRates.feeRate,
-          transactionTaxRate: commissionRates.transactionTaxRate,
-          transactionType: 'BUY',
+          price_per_share,
+          fee_rate: commissionRates.fee_rate,
+          transaction_tax_rate: commissionRates.transaction_tax_rate,
+          transaction_type: 'BUY',
         });
 
         setCommissionData(result);
@@ -172,7 +172,7 @@ export const AddLotModal = ({
         // 기본값으로 계산 (수수료율 로딩 중)
         const result = calculateCommissionWithDefaults(
           shares,
-          pricePerShare,
+          price_per_share,
           'BUY',
           selectedStock?.market_type
         );
@@ -182,12 +182,17 @@ export const AddLotModal = ({
     } else {
       setCommissionData({
         commission: 0,
-        transactionTax: 0,
-        totalFees: 0,
-        netAmount: 0,
+        transaction_tax: 0,
+        total_fees: 0,
+        net_amount: 0,
       });
     }
-  }, [formData.shares, formData.costPerShare, commissionRates, selectedStock]);
+  }, [
+    formData.shares,
+    formData.cost_per_share,
+    commissionRates,
+    selectedStock,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,7 +201,7 @@ export const AddLotModal = ({
     if (
       !selectedStock ||
       !formData.shares ||
-      !formData.costPerShare ||
+      !formData.cost_per_share ||
       !formData.broker
     ) {
       toast.error('필수 항목을 모두 입력해주세요.');
@@ -210,7 +215,7 @@ export const AddLotModal = ({
       const transactionData = {
         symbol: selectedStock.symbol,
         quantity: parseInt(formData.shares),
-        price: parseFloat(formData.costPerShare),
+        price: parseFloat(formData.cost_per_share),
         broker_id: parseInt(formData.broker),
         transaction_type: 'BUY' as const,
         market_type: selectedStock.market_type,
@@ -282,7 +287,7 @@ export const AddLotModal = ({
 
   const totalAmount =
     (parseFloat(formData.shares) || 0) *
-    (parseFloat(formData.costPerShare) || 0);
+    (parseFloat(formData.cost_per_share) || 0);
   const currencySymbol = selectedStock
     ? getCurrencySymbol(selectedStock.currency)
     : '₩';
@@ -387,9 +392,9 @@ export const AddLotModal = ({
                 id="costPerShare"
                 type="number"
                 placeholder=""
-                value={formData.costPerShare}
+                value={formData.cost_per_share}
                 onChange={(e) =>
-                  handleInputChange('costPerShare', e.target.value)
+                  handleInputChange('cost_per_share', e.target.value)
                 }
                 min="0"
                 step="0.01"
@@ -428,9 +433,11 @@ export const AddLotModal = ({
                 <span className="font-medium">최종 금액:</span>
                 <span className="font-semibold text-primary">
                   {currencySymbol}
-                  {commissionData.netAmount > 0
-                    ? commissionData.netAmount.toLocaleString()
-                    : (totalAmount + commissionData.totalFees).toLocaleString()}
+                  {commissionData.net_amount > 0
+                    ? commissionData.net_amount.toLocaleString()
+                    : (
+                        totalAmount + commissionData.total_fees
+                      ).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -460,7 +467,7 @@ export const AddLotModal = ({
               brokersLoading ||
               !selectedStock ||
               !formData.shares ||
-              !formData.costPerShare ||
+              !formData.cost_per_share ||
               !formData.broker
             }
           >
@@ -468,7 +475,7 @@ export const AddLotModal = ({
           </Button>
 
           {/* 확인 툴팁 */}
-          {!isLoading && formData.shares && formData.costPerShare && (
+          {!isLoading && formData.shares && formData.cost_per_share && (
             <div className="text-center space-y-1">
               <div className="text-sm text-amber-600 font-medium">
                 ⚠️ 매수 정보를 다시 한번 확인해주세요

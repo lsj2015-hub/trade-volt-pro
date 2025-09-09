@@ -67,20 +67,20 @@ export class AnalysisAPI {
   // 통합 분석 정보 조회
   static async getAnalysis({
     symbol,
-    infoType,
-    countryCode = 'US',
-    companyName = '',
-    exchangeCode,
+    info_type,
+    country_code = 'US',
+    company_name = '',
+    exchange_code,
   }: AnalysisParams): Promise<AnalysisResponse> {
     const params = new URLSearchParams({
-      info_type: infoType,
-      country_code: countryCode,
-      company_name: companyName,
+      info_type: info_type,
+      country_code: country_code,
+      company_name: company_name,
     });
 
     // exchangeCode가 있을 때만 추가
-    if (exchangeCode) {
-      params.append('exchange_code', exchangeCode);
+    if (exchange_code) {
+      params.append('exchange_code', exchange_code);
     }
 
     return this.request<AnalysisResponse>(

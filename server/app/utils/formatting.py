@@ -100,15 +100,15 @@ def format_stock_profile(info: dict, summary_kr: str) -> dict:
 
   return {
     "symbol": info.get('symbol', '').upper(),
-    "longName": info.get('longName', '정보 없음'),
+    "long_name": info.get('longName', '정보 없음'),
     "industry": info.get('industry', '정보 없음'),
     "sector": info.get('sector', '정보 없음'),
-    "longBusinessSummary": business_summary,
+    "long_business_summary": business_summary,
     "city": info.get('city', ''),
     "state": info.get('state', ''),
     "country": info.get('country', ''),
     "website": info.get('website'),
-    "fullTimeEmployees": f"{info.get('fullTimeEmployees', 0):,}" if info.get('fullTimeEmployees') else "정보 없음",
+    "full_time_employees": f"{info.get('fullTimeEmployees', 0):,}" if info.get('fullTimeEmployees') else "정보 없음",
   }
 
 async def format_financial_summary(info: dict, exchange_code: str) -> dict:
@@ -120,51 +120,51 @@ async def format_financial_summary(info: dict, exchange_code: str) -> dict:
     ex_dividend_date_str = datetime.fromtimestamp(ex_dividend_timestamp).strftime('%Y-%m-%d')
 
   return {
-    "totalRevenue": await format_currency_by_exchange(info.get('totalRevenue'), exchange_code),
-    "netIncomeToCommon": await format_currency_by_exchange(info.get('netIncomeToCommon'), exchange_code),
-    "operatingMargins": f"{info.get('operatingMargins', 0) * 100:.2f}%" if info.get('operatingMargins') is not None else "-",
-    "dividendYield": f"{info.get('dividendYield', 0):.2f}%" if info.get('dividendYield') is not None else "-",
-    "trailingEps": await format_currency_by_exchange(info.get('trailingEps'), exchange_code),
-    "totalCash": await format_currency_by_exchange(info.get('totalCash'), exchange_code),
-    "totalDebt": await format_currency_by_exchange(info.get('totalDebt'), exchange_code),
-    "debtToEquity": f"{info.get('debtToEquity'):.2f}" if info.get('debtToEquity') is not None else "-",
-    "exDividendDate": ex_dividend_date_str
+    "total_revenue": await format_currency_by_exchange(info.get('totalRevenue'), exchange_code),
+    "net_income_to_common": await format_currency_by_exchange(info.get('netIncomeToCommon'), exchange_code),
+    "operating_margins": f"{info.get('operatingMargins', 0) * 100:.2f}%" if info.get('operatingMargins') is not None else "-",
+    "dividend_yield": f"{info.get('dividendYield', 0):.2f}%" if info.get('dividendYield') is not None else "-",
+    "trailing_eps": await format_currency_by_exchange(info.get('trailingEps'), exchange_code),
+    "total_cash": await format_currency_by_exchange(info.get('totalCash'), exchange_code),
+    "total_debt": await format_currency_by_exchange(info.get('totalDebt'), exchange_code),
+    "debt_to_equity": f"{info.get('debtToEquity'):.2f}" if info.get('debtToEquity') is not None else "-",
+    "ex_dividend_date": ex_dividend_date_str
   }
     
 def format_investment_metrics(info: dict) -> dict:
   """투자 지표를 API 응답 포맷으로 변환"""
   return {
-    "trailingPE": f"{info.get('trailingPE'):.2f}" if info.get('trailingPE') is not None else "-",
-    "forwardPE": f"{info.get('forwardPE'):.2f}" if info.get('forwardPE') is not None else "-",
-    "priceToBook": f"{info.get('priceToBook'):.2f}" if info.get('priceToBook') is not None else "-",
-    "returnOnEquity": f"{info.get('returnOnEquity', 0) * 100:.2f}%" if info.get('returnOnEquity') is not None else "-",
-    "returnOnAssets": f"{info.get('returnOnAssets', 0) * 100:.2f}%" if info.get('returnOnAssets') is not None else "-",
+    "trailing_pe": f"{info.get('trailingPE'):.2f}" if info.get('trailingPE') is not None else "-",
+    "forward_pe": f"{info.get('forwardPE'):.2f}" if info.get('forwardPE') is not None else "-",
+    "price_to_book": f"{info.get('priceToBook'):.2f}" if info.get('priceToBook') is not None else "-",
+    "return_on_equity": f"{info.get('returnOnEquity', 0) * 100:.2f}%" if info.get('returnOnEquity') is not None else "-",
+    "return_on_assets": f"{info.get('returnOnAssets', 0) * 100:.2f}%" if info.get('returnOnAssets') is not None else "-",
     "beta": f"{info.get('beta'):.2f}" if info.get('beta') is not None else "-",
   }
 
 async def format_market_data(info: dict, exchange_code: str) -> dict:
   """시장 정보를 거래소별 통화로 포맷팅"""
   return {
-    "currentPrice": await format_currency_by_exchange(info.get('currentPrice'), exchange_code),
-    "previousClose": await format_currency_by_exchange(info.get('previousClose'), exchange_code),
-    "dayHigh": await format_currency_by_exchange(info.get('dayHigh'), exchange_code),
-    "dayLow": await format_currency_by_exchange(info.get('dayLow'), exchange_code),
-    "fiftyTwoWeekHigh": await format_currency_by_exchange(info.get('fiftyTwoWeekHigh'), exchange_code),
-    "fiftyTwoWeekLow": await format_currency_by_exchange(info.get('fiftyTwoWeekLow'), exchange_code),
-    "marketCap": await format_currency_by_exchange(info.get('marketCap'), exchange_code),
-    "sharesOutstanding": f"{info.get('sharesOutstanding', 0):,}주" if info.get('sharesOutstanding') else "-",
+    "current_price": await format_currency_by_exchange(info.get('currentPrice'), exchange_code),
+    "previous_close": await format_currency_by_exchange(info.get('previousClose'), exchange_code),
+    "day_high": await format_currency_by_exchange(info.get('dayHigh'), exchange_code),
+    "day_low": await format_currency_by_exchange(info.get('dayLow'), exchange_code),
+    "fifty_two_week_high": await format_currency_by_exchange(info.get('fiftyTwoWeekHigh'), exchange_code),
+    "fifty_two_week_low": await format_currency_by_exchange(info.get('fiftyTwoWeekLow'), exchange_code),
+    "market_cap": await format_currency_by_exchange(info.get('marketCap'), exchange_code),
+    "shares_outstanding": f"{info.get('sharesOutstanding', 0):,}주" if info.get('sharesOutstanding') else "-",
     "volume": f"{info.get('volume', 0):,}주" if info.get('volume') else "-",
   }
     
 async def format_analyst_recommendations(info: dict, exchange_code: str) -> dict:
   """분석가 의견을 거래소별 통화로 포맷팅"""
   return {
-    "recommendationMean": info.get('recommendationMean', 0),
-    "recommendationKey": info.get('recommendationKey', '').upper(),
-    "numberOfAnalystOpinions": info.get('numberOfAnalystOpinions', 0),
-    "targetMeanPrice": await format_currency_by_exchange(info.get('targetMeanPrice'), exchange_code),
-    "targetHighPrice": await format_currency_by_exchange(info.get('targetHighPrice'), exchange_code),
-    "targetLowPrice": await format_currency_by_exchange(info.get('targetLowPrice'), exchange_code),
+    "recommendation_mean": info.get('recommendationMean', 0),
+    "recommendation_key": info.get('recommendationKey', '').upper(),
+    "number_of_analyst_opinions": info.get('numberOfAnalystOpinions', 0),
+    "target_mean_price": await format_currency_by_exchange(info.get('targetMeanPrice'), exchange_code),
+    "target_high_price": await format_currency_by_exchange(info.get('targetHighPrice'), exchange_code),
+    "target_low_price": await format_currency_by_exchange(info.get('targetLowPrice'), exchange_code),
   }
 
 async def format_financial_statement_response(df_raw: pd.DataFrame, statement_type: str, symbol: str, exchange_code: str = None) -> dict:

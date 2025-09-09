@@ -120,15 +120,15 @@ export default function PortfolioPage() {
   const convertToStockData = (stocks: typeof portfolioData.domestic_stocks) => {
     return stocks.map((stock) => ({
       symbol: stock.symbol,
-      companyName: stock.company_name,
+      company_name: stock.company_name,
       shares: stock.shares,
-      avgCost: stock.avg_cost,
-      currentPrice: stock.current_price,
-      marketValue: stock.market_value,
-      dayGain: stock.day_gain,
-      dayGainPercent: stock.day_gain_percent,
-      totalGain: stock.total_gain,
-      totalGainPercent: stock.total_gain_percent,
+      avg_cost: stock.avg_cost,
+      current_price: stock.current_price,
+      market_value: stock.market_value,
+      day_gain: stock.day_gain,
+      day_gain_percent: stock.day_gain_percent,
+      total_gain: stock.total_gain,
+      total_gain_percent: stock.total_gain_percent,
     }));
   };
 
@@ -163,8 +163,8 @@ export default function PortfolioPage() {
       {/* 하단 주식 목록 섹션 */}
       <section>
         <StockTable
-          domesticStocks={convertToStockData(portfolioData.domestic_stocks)}
-          overseasStocks={convertToStockData(portfolioData.overseas_stocks)}
+          domestic_stocks={convertToStockData(portfolioData.domestic_stocks)}
+          overseas_stocks={convertToStockData(portfolioData.overseas_stocks)}
           formatCurrency={formatCurrency}
         />
       </section>

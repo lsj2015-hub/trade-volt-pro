@@ -1,7 +1,14 @@
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
-import { TotalPortfolioCardProps } from '@/types/types';
-import { ExchangeRateDisplay } from '../../../components/common/exchange-rate-display';
+
+import { ExchangeRateDisplay } from '@/components/common/exchange-rate-display';
+
+interface TotalPortfolioCardProps {
+  totalPortfolio: number;
+  totalDayGain: number;
+  totalTotalGain: number;
+  formatCurrency: (amount: number, currency: 'KRW' | 'USD') => string;
+}
 
 export const TotalPortfolioCard = ({
   totalPortfolio,

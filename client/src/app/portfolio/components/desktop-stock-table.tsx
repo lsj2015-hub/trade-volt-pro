@@ -26,7 +26,7 @@ export const DesktopStockTable = ({
             {stock.symbol}
           </div>
           <div className="text-xs md:text-sm text-muted-foreground">
-            {stock.companyName}
+            {stock.company_name}
           </div>
         </div>
       </td>
@@ -40,45 +40,45 @@ export const DesktopStockTable = ({
       </td>
       <td className="p-3 md:p-4 text-sm md:text-base">
         {isOverseas
-          ? formatCurrency(stock.avgCost, 'USD')
-          : formatCurrency(stock.avgCost, 'KRW')}
+          ? formatCurrency(stock.avg_cost, 'USD')
+          : formatCurrency(stock.avg_cost, 'KRW')}
       </td>
       <td className="p-3 md:p-4 font-medium text-sm md:text-base">
         {isOverseas
-          ? formatCurrency(stock.currentPrice, 'USD')
-          : formatCurrency(stock.currentPrice, 'KRW')}
+          ? formatCurrency(stock.current_price, 'USD')
+          : formatCurrency(stock.current_price, 'KRW')}
       </td>
       <td className="p-3 md:p-4 font-semibold text-sm md:text-base">
         {isOverseas
-          ? formatCurrency(stock.marketValue, 'USD')
-          : formatCurrency(stock.marketValue, 'KRW')}
+          ? formatCurrency(stock.market_value, 'USD')
+          : formatCurrency(stock.market_value, 'KRW')}
       </td>
       <td
         className={`p-3 md:p-4 font-medium text-sm md:text-base ${
-          stock.dayGain >= 0 ? 'text-green-600' : 'text-red-600'
+          stock.day_gain >= 0 ? 'text-green-600' : 'text-red-600'
         }`}
       >
         <div>
           {isOverseas
-            ? formatCurrency(stock.dayGain, 'USD')
-            : formatCurrency(stock.dayGain, 'KRW')}
+            ? formatCurrency(stock.day_gain, 'USD')
+            : formatCurrency(stock.day_gain, 'KRW')}
         </div>
         <div className="text-xs text-center">
-          ({formatPercent(stock.dayGainPercent)})
+          ({formatPercent(stock.day_gain_percent)})
         </div>
       </td>
       <td
         className={`p-3 md:p-4 font-medium text-sm md:text-base ${
-          stock.totalGain >= 0 ? 'text-green-600' : 'text-red-600'
+          stock.total_gain >= 0 ? 'text-green-600' : 'text-red-600'
         }`}
       >
         <div>
           {isOverseas
-            ? formatCurrency(stock.totalGain, 'USD')
-            : formatCurrency(stock.totalGain, 'KRW')}
+            ? formatCurrency(stock.total_gain, 'USD')
+            : formatCurrency(stock.total_gain, 'KRW')}
         </div>
         <div className="text-xs text-center">
-          ({formatPercent(stock.totalGainPercent)})
+          ({formatPercent(stock.total_gain_percent)})
         </div>
       </td>
     </tr>

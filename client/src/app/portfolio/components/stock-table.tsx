@@ -8,14 +8,14 @@ import { StockTransactionsModal } from './stock-transactions-modal';
 import { StockAPI } from '@/lib/stock-api';
 
 interface StockTableProps {
-  domesticStocks: StockData[];
-  overseasStocks: StockData[];
+  domestic_stocks: StockData[];
+  overseas_stocks: StockData[];
   formatCurrency: (amount: number, currency: 'KRW' | 'USD') => string;
 }
 
 export const StockTable = ({
-  domesticStocks,
-  overseasStocks,
+  domestic_stocks,
+  overseas_stocks,
   formatCurrency,
 }: StockTableProps) => {
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
@@ -104,11 +104,11 @@ export const StockTable = ({
         </TabsList>
 
         <TabsContent value="domestic" className="mt-0">
-          {renderContent(domesticStocks, false)}
+          {renderContent(domestic_stocks, false)}
         </TabsContent>
 
         <TabsContent value="overseas" className="mt-0">
-          {renderContent(overseasStocks, true)}
+          {renderContent(overseas_stocks, true)}
         </TabsContent>
       </Tabs>
 
@@ -118,9 +118,9 @@ export const StockTable = ({
           open={isModalOpen}
           onOpenChange={setIsModalOpen}
           stockSymbol={selectedStock.symbol}
-          companyName={selectedStock.companyName}
+          companyName={selectedStock.company_name}
           totalShares={selectedStock.shares}
-          totalValue={selectedStock.marketValue}
+          totalValue={selectedStock.market_value}
           marketType={
             selectedStockType === 'overseas' ? 'OVERSEAS' : 'DOMESTIC'
           }
