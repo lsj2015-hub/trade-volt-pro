@@ -5,20 +5,23 @@ import { useRouter, usePathname } from 'next/navigation';
 import { ProtectedRoute } from '@/components/layouts/protected-route';
 import { TopNavigation } from '@/components/dashboard/top-navigation';
 import { Sidebar } from '@/components/dashboard/sidebar';
-import { useAuth } from '@/hooks/use-auth';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { StockSearchModal } from '@/components/dashboard/stock-search-modal';
 import { AddLotModal } from './dashboard/add-lot-modal';
 import { AddLotProvider, useAddLot } from '@/contexts/add-lot-context';
+import { useAuth } from '@/hooks/use-auth';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface LayoutWrapperProps {
   children: React.ReactNode;
 }
 
 const LayoutWrapperContent = ({ children }: LayoutWrapperProps) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // const [sidebarOpen, setSidebarOpen] = useState(false);
+  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [stockSearchOpen, setStockSearchOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const { isAddLotOpen, selectedStock, resetKey, closeAddLotModal } =
     useAddLot();
@@ -53,18 +56,20 @@ const LayoutWrapperContent = ({ children }: LayoutWrapperProps) => {
         <div className="min-h-screen flex w-full">
           {/* Sidebar */}
           <Sidebar
-            sidebarOpen={sidebarOpen}
-            setSidebarOpen={setSidebarOpen}
-            sidebarCollapsed={sidebarCollapsed}
-            setSidebarCollapsed={setSidebarCollapsed}
+          // sidebarOpen={sidebarOpen}
+          // setSidebarOpen={setSidebarOpen}
+          // sidebarCollapsed={sidebarCollapsed}
+          // setSidebarCollapsed={setSidebarCollapsed}
           />
 
-          <SidebarInset className="flex flex-col w-full">
+          <SidebarInset
+            className={cn('flex flex-col w-full', !isMobile && 'ml-[16rem]')}
+          >
             {/* Top Navigation */}
             <TopNavigation
-              sidebarOpen={sidebarOpen}
-              setSidebarOpen={setSidebarOpen}
-              sidebarCollapsed={sidebarCollapsed}
+              // sidebarOpen={sidebarOpen}
+              // setSidebarOpen={setSidebarOpen}
+              // sidebarCollapsed={sidebarCollapsed}
               setStockSearchOpen={setStockSearchOpen}
               onLogout={handleLogout}
             />

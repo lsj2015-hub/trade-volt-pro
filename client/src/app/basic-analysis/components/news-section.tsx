@@ -269,7 +269,7 @@ export const NewsSection = ({ selectedStock, onDataUpdate }: NewsSectionProps) =
                 {newsLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : null}
-                {showNews ? '뉴스 숨기기' : '뉴스 조회'}
+                {showNews ? '초기화' : '뉴스 조회'}
               </Button>
             </div>
 

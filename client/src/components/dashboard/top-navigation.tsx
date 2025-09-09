@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Search, User, LogOut, Settings, ChevronDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,29 +13,30 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+
+import { ApiStatusIndicator } from '@/components/layouts/api-status-indicator';
 import { useAuth } from '@/hooks/use-auth';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ApiStatus } from '@/types/types';
 
-import { useEffect, useState } from 'react';
-import { ApiStatusIndicator } from '@/components/layouts/api-status-indicator';
-
 interface TopNavigationProps {
-  sidebarOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
-  sidebarCollapsed: boolean;
+  // sidebarOpen: boolean;
+  // setSidebarOpen: (open: boolean) => void;
+  // sidebarCollapsed: boolean;
   setStockSearchOpen: (open: boolean) => void;
   onLogout: () => void;
 }
 
 export const TopNavigation = ({
-  sidebarOpen,
-  setSidebarOpen,
-  sidebarCollapsed,
+  // sidebarOpen,
+  // setSidebarOpen,
+  // sidebarCollapsed,
   setStockSearchOpen,
   onLogout,
 }: TopNavigationProps) => {
   const [apiStatus, setApiStatus] = useState<ApiStatus>('loading');
 
+  const isMobile = useIsMobile();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export const TopNavigation = ({
       <div className="flex h-16">
         {/* Left Section - Logo and Sidebar Trigger */}
         <div className="flex items-center justify-between px-1 min-w-0">
-          <SidebarTrigger className="ml-2" />
+          {isMobile && <SidebarTrigger className="ml-2" />}
         </div>
 
         {/* Right Section - Search and User */}

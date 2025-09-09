@@ -441,7 +441,7 @@ export const PriceHistorySection = ({
                 {priceHistoryLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : null}
-                {showPriceHistory ? '데이터 숨기기' : '주가 데이터 조회'}
+                {showPriceHistory ? '초기화' : '데이터 조회'}
               </Button>
             </div>
 

@@ -16,31 +16,36 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { navigationItems } from '@/constants/navigation';
 import { Zap } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-interface SidebarProps {
-  sidebarOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
-  sidebarCollapsed: boolean;
-  setSidebarCollapsed: (collapsed: boolean) => void;
-}
+// interface SidebarProps {
+// }
 
-export const Sidebar = ({
-  sidebarOpen,
-  setSidebarOpen,
-  sidebarCollapsed,
-  setSidebarCollapsed,
-  ...props
-}: SidebarProps) => {
+export const Sidebar = (
+  {
+    // sidebarOpen,
+    // setSidebarOpen,
+    // sidebarCollapsed,
+    // setSidebarCollapsed,
+  }
+) => {
   const pathname = usePathname();
+  const isMobile = useIsMobile();
+  const { setOpenMobile } = useSidebar();
 
   // 대시보드에서만 표시할 네비게이션 아이템들 (홈 제외)
   const dashboardItems = navigationItems.filter((item) => item.requireAuth);
 
   return (
-    <ShadcnSidebar collapsible="icon" className="z-50" {...props}>
+    <ShadcnSidebar
+      collapsible={isMobile ? 'offcanvas' : 'none'}
+      className="z-50"
+      // {...props}
+    >
       <SidebarHeader>
         <div className="flex h-12 items-center justify-center px-2">
           <Link href="/">
@@ -73,7 +78,7 @@ export const Sidebar = ({
                       asChild
                       isActive={isActive}
                       tooltip={item.label}
-                      onClick={() => setSidebarOpen(false)}
+                      onClick={() => isMobile && setOpenMobile(false)}
                     >
                       <Link href={item.href}>
                         <Icon />
