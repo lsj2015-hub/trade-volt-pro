@@ -22,17 +22,7 @@ import { navigationItems } from '@/constants/navigation';
 import { Zap } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-// interface SidebarProps {
-// }
-
-export const Sidebar = (
-  {
-    // sidebarOpen,
-    // setSidebarOpen,
-    // sidebarCollapsed,
-    // setSidebarCollapsed,
-  }
-) => {
+export const Sidebar = () => {
   const pathname = usePathname();
   const isMobile = useIsMobile();
   const { setOpenMobile } = useSidebar();
@@ -44,7 +34,6 @@ export const Sidebar = (
     <ShadcnSidebar
       collapsible={isMobile ? 'offcanvas' : 'none'}
       className="z-50"
-      // {...props}
     >
       <SidebarHeader>
         <div className="flex h-12 items-center justify-center px-2">

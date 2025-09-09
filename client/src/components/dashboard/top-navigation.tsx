@@ -20,17 +20,11 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { ApiStatus } from '@/types/types';
 
 interface TopNavigationProps {
-  // sidebarOpen: boolean;
-  // setSidebarOpen: (open: boolean) => void;
-  // sidebarCollapsed: boolean;
   setStockSearchOpen: (open: boolean) => void;
   onLogout: () => void;
 }
 
 export const TopNavigation = ({
-  // sidebarOpen,
-  // setSidebarOpen,
-  // sidebarCollapsed,
   setStockSearchOpen,
   onLogout,
 }: TopNavigationProps) => {

@@ -18,8 +18,6 @@ interface LayoutWrapperProps {
 }
 
 const LayoutWrapperContent = ({ children }: LayoutWrapperProps) => {
-  // const [sidebarOpen, setSidebarOpen] = useState(false);
-  // const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [stockSearchOpen, setStockSearchOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -55,21 +53,13 @@ const LayoutWrapperContent = ({ children }: LayoutWrapperProps) => {
       <SidebarProvider>
         <div className="min-h-screen flex w-full">
           {/* Sidebar */}
-          <Sidebar
-          // sidebarOpen={sidebarOpen}
-          // setSidebarOpen={setSidebarOpen}
-          // sidebarCollapsed={sidebarCollapsed}
-          // setSidebarCollapsed={setSidebarCollapsed}
-          />
+          <Sidebar />
 
           <SidebarInset
             className={cn('flex flex-col w-full', !isMobile && 'ml-[16rem]')}
           >
             {/* Top Navigation */}
             <TopNavigation
-              // sidebarOpen={sidebarOpen}
-              // setSidebarOpen={setSidebarOpen}
-              // sidebarCollapsed={sidebarCollapsed}
               setStockSearchOpen={setStockSearchOpen}
               onLogout={handleLogout}
             />

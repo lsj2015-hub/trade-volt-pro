@@ -4,7 +4,7 @@ import { SectorAnalysis } from './components/sector-analysis';
 import { PerformanceAnalysis } from './components/performance-analysis';
 import { StockIndexComparison } from './components/stock-index-comparison';
 import { InvestorTradingAnalysis } from './components/investor-trading-analysis';
-import { VolatilityAnalysis } from './components/volatility-analysis';
+import { VolatilityAnalysis } from '../trading-strategies/components/volatility-analysis';
 
 export default function BenchmarkTestingPage() {
   return (
@@ -28,9 +28,6 @@ export default function BenchmarkTestingPage() {
 
       {/* 투자자별 매매현황 */}
       <InvestorTradingAnalysis />
-
-      {/* 변동성 종목 분석 */}
-      <VolatilityAnalysis />
     </div>
   );
 }

@@ -1,8 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { BrainCircuit, History, Settings, Play } from 'lucide-react';
-
+import { useState, useEffect } from 'react';
+import {
+  BrainCircuit,
+  History,
+  Settings,
+  Play,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import {
@@ -14,14 +20,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Button } from '@/components/ui/button';
 
 import { NewsfeedScalping } from './components/newsfeed-scalping';
-import { BollingerDay } from './components/bollinger-day';
 import { Multifunction } from './components/multi-function';
 import { AfterhourGapTrading } from './components/afterhour-gap-trading';
 import { TradingResult, TradingStrategy } from '@/types/types';
+import { VolatilityAnalysis } from './components/volatility-analysis';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export const tradingStrategies: TradingStrategy[] = [
   {
@@ -30,9 +36,9 @@ export const tradingStrategies: TradingStrategy[] = [
     description: 'AI가 뉴스를 분석하여 급등 가능성이 있는 종목을 스캘핑합니다.',
   },
   {
-    id: 'bollinger-day',
-    name: 'Bollinger Day Trading',
-    description: '볼린저밴드 지표를 활용한 단기 변동성 매매 전략입니다.',
+    id: 'volatility-momentum',
+    name: 'Volatility Momentum Strategy',
+    description: '일정 기간 급락과 급등의 패턴을 가진 종목을 선별합니다.',
   },
   {
     id: 'multi-function',
@@ -75,13 +81,50 @@ const tradingResults: TradingResult[] = [
 
 const strategyComponentMap: Record<string, React.ReactNode> = {
   'news-scalping': <NewsfeedScalping />,
-  'bollinger-day': <BollingerDay />,
+  'volatility-momentum': <VolatilityAnalysis />,
   'multi-function': <Multifunction />,
   'afterhour-gap-trading': <AfterhourGapTrading />,
 };
 
 export default function StrategyPage() {
   const [selectedStrategy, setSelectedStrategy] = useState('news-scalping');
+  const isMobile = useIsMobile();
+
+  // 이전 전략으로 이동 (순환)
+  const goToPrevStrategy = () => {
+    const currentIndex = tradingStrategies.findIndex(
+      (s) => s.id === selectedStrategy
+    );
+    const prevIndex =
+      currentIndex === 0 ? tradingStrategies.length - 1 : currentIndex - 1;
+    setSelectedStrategy(tradingStrategies[prevIndex].id);
+  };
+
+  // 다음 전략으로 이동 (순환)
+  const goToNextStrategy = () => {
+    const currentIndex = tradingStrategies.findIndex(
+      (s) => s.id === selectedStrategy
+    );
+    const nextIndex =
+      currentIndex === tradingStrategies.length - 1 ? 0 : currentIndex + 1;
+    setSelectedStrategy(tradingStrategies[nextIndex].id);
+  };
+
+  // 키보드 네비게이션
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        goToPrevStrategy();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        goToNextStrategy();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedStrategy]);
 
   // 수익률 계산 로직
   const totalProfit = tradingResults.reduce(
@@ -116,35 +159,80 @@ export default function StrategyPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <RadioGroup
-            value={selectedStrategy}
-            onValueChange={setSelectedStrategy}
-            className="space-y-3 sm:space-y-4"
-          >
-            {tradingStrategies.map((strategy) => (
+          <div className="relative">
+            {/* 위쪽 화살표 */}
+            <div
+              onClick={goToNextStrategy}
+              className="absolute -top-10 left-1/2 transform -translate-x-1/2 cursor-pointer group transition-all duration-300 ease-in-out hover:scale-125 active:scale-95 z-10 text-muted-foreground/0 hover:text-muted-foreground/60"
+              aria-label="Next strategy"
+              role="button"
+              tabIndex={0}
+            >
+              <ChevronUp className="" size={100} strokeWidth="1px" />
+            </div>
+            {/* 슬라이드 컨테이너 */}
+            <div className="relative overflow-hidden h-32 sm:h-36 border rounded-lg bg-gradient-to-br from-muted/30 to-muted/10">
               <div
-                key={strategy.id}
-                className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                className="flex flex-col transition-transform duration-500 ease-in-out"
+                style={{
+                  transform: `translateY(-${
+                    tradingStrategies.findIndex(
+                      (s) => s.id === selectedStrategy
+                    ) * (isMobile ? 128 : 144)
+                  }px)`,
+                }}
               >
-                <RadioGroupItem
-                  value={strategy.id}
-                  id={strategy.id}
-                  className="mt-1"
-                />
-                <div className="flex-1 min-w-0">
-                  <Label
-                    htmlFor={strategy.id}
-                    className="font-semibold cursor-pointer text-sm sm:text-base leading-tight"
+                {tradingStrategies.map((strategy) => (
+                  <div
+                    key={strategy.id}
+                    className="w-full flex-shrink-0 h-32 sm:h-36 p-3 sm:p-4 cursor-pointer hover:bg-muted/20 transition-colors"
+                    onClick={() => setSelectedStrategy(strategy.id)}
                   >
-                    {strategy.name}
-                  </Label>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-relaxed">
-                    {strategy.description}
-                  </p>
-                </div>
+                    <div
+                      className={`flex gap-3 sm:gap-4 h-full ${
+                        isMobile ? 'flex-col' : 'items-center'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-3 h-3 rounded-full border-2 transition-colors ${
+                            selectedStrategy === strategy.id
+                              ? 'bg-primary border-primary'
+                              : 'border-muted-foreground/30'
+                          }`}
+                        >
+                          {selectedStrategy === strategy.id && (
+                            <div className="w-full h-full rounded-full bg-background scale-50" />
+                          )}
+                        </div>
+                        <Label className="font-semibold cursor-pointer text-sm sm:text-base leading-tight">
+                          {strategy.name}
+                        </Label>
+                      </div>
+                      <p
+                        className={`text-xs sm:text-sm text-muted-foreground leading-relaxed ${
+                          isMobile ? 'mt-1 flex-1' : 'flex-1'
+                        }`}
+                      >
+                        {strategy.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </RadioGroup>
+            </div>
+
+            {/* 아래쪽 화살표 */}
+            <div
+              onClick={goToNextStrategy}
+              className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 cursor-pointer group transition-all duration-300 ease-in-out hover:scale-125 active:scale-95 z-10 text-muted-foreground/0 hover:text-muted-foreground/60"
+              aria-label="Next strategy"
+              role="button"
+              tabIndex={0}
+            >
+              <ChevronDown className="" size={100} strokeWidth="1px" />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -159,14 +247,6 @@ export default function StrategyPage() {
         <CardContent className="space-y-4">
           {/* 선택된 전략에 맞는 컴포넌트 렌더링 */}
           {strategyComponentMap[selectedStrategy]}
-
-          {/* 검색 결과 표시 영역 */}
-          <div className="border rounded-lg p-4 sm:p-6 min-h-[120px] bg-muted/20">
-            <p className="text-muted-foreground text-center text-sm sm:text-base">
-              Adjustment로 검색된 주식이 checkbox와 함께 나와 매매할 주식을
-              선택할 수 있습니다.
-            </p>
-          </div>
         </CardContent>
       </Card>
 

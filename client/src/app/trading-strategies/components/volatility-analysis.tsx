@@ -152,6 +152,7 @@ export function VolatilityAnalysis() {
     null
   );
   const [stockData, setStockData] = useState<VolatilityStock[]>([]);
+  const [selectedStocks, setSelectedStocks] = useState<Set<string>>(new Set());
 
   // 기본 날짜 설정
   useEffect(() => {
@@ -200,6 +201,8 @@ export function VolatilityAnalysis() {
     setDeclineRate('-20');
     setRecoveryDays('20');
     setVolatilityRate('20');
+    setVolatilityRate('20');
+    setSelectedStocks(new Set());
   };
 
   // 종목 선택
@@ -209,17 +212,39 @@ export function VolatilityAnalysis() {
     );
   };
 
+  // 개별 체크박스 핸들러
+  const handleCheckboxChange = (stockCode: string, checked: boolean) => {
+    setSelectedStocks((prev) => {
+      const newSet = new Set(prev);
+      if (checked) {
+        newSet.add(stockCode);
+      } else {
+        newSet.delete(stockCode);
+      }
+      return newSet;
+    });
+  };
+
+  // 전체 선택/해제 핸들러
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedStocks(new Set(stockData.map((stock) => stock.stockCode)));
+    } else {
+      setSelectedStocks(new Set());
+    }
+  };
+
+  // 전체 선택 상태 확인
+  const isAllSelected =
+    stockData.length > 0 && selectedStocks.size === stockData.length;
+  const isIndeterminate =
+    selectedStocks.size > 0 && selectedStocks.size < stockData.length;
+
   const availableMarkets = COUNTRY_MARKETS[country] || [];
 
   return (
-    <Card className="min-h-[200px] border-0 shadow-lg bg-gradient-to-br from-primary/5 via-background to-primary/5">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-          <Gauge className="h-5 w-5" />
-          변동성 종목 분석
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
+    <Card className="min-h-[200px] border-none bg-transparent">
+      <CardContent className="space-y-6 px-6 py-0">
         <p className="text-muted-foreground text-sm">
           지정된 기간 동안 급락후 반등하는 종목을 찾습니다. 테이블행을 클릭하여
           상세 차트를 확인하세요.
@@ -398,6 +423,17 @@ export function VolatilityAnalysis() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/50">
+                      <th className="p-2 text-center w-12">
+                        <input
+                          type="checkbox"
+                          checked={isAllSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = isIndeterminate;
+                          }}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          className="rounded border-gray-300"
+                        />
+                      </th>
                       <th className="p-2 text-left">순위</th>
                       <th className="p-2 text-left">종목명</th>
                       <th className="p-2 text-center">발생횟수</th>
@@ -418,6 +454,20 @@ export function VolatilityAnalysis() {
                         }`}
                         onClick={() => handleStockSelect(stock)}
                       >
+                        <td className="p-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedStocks.has(stock.stockCode)}
+                            onChange={(e) =>
+                              handleCheckboxChange(
+                                stock.stockCode,
+                                e.target.checked
+                              )
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                            className="rounded border-gray-300"
+                          />
+                        </td>
                         <td className="p-2">{stock.rank}</td>
                         <td className="p-2 font-medium">{stock.stockName}</td>
                         <td className="p-2 text-center">
