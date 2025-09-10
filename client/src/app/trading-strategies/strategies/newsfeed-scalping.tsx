@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { FilteringSection } from '../components/filtering-section';
-import { NewsResultsSection } from '../components/news-results-section';
-import { DartResultsSection } from '../components/dart-results-section';
-import { AIEvaluationSection } from '../components/ai-evaluation-section';
-import { FinalScalpingSection } from '../components/final-scalping-section';
+import { FilteringSection } from '../components/newsfeed-scalping/filtering-section';
+import { NewsResultsSection } from '../components/newsfeed-scalping/news-results-section';
+import { DartResultsSection } from '../components/newsfeed-scalping/dart-results-section';
+import { AIEvaluationSection } from '../components/newsfeed-scalping/ai-evaluation-section';
+import { FinalScalpingSection } from '../components/newsfeed-scalping/final-scalping-section';
 
 
 // 타입 정의
