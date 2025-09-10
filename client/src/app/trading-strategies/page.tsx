@@ -22,11 +22,11 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 
-import { NewsfeedScalping } from './components/newsfeed-scalping';
-import { Multifunction } from './components/multi-function';
-import { AfterhourGapTrading } from './components/afterhour-gap-trading';
+import { NewsfeedScalping } from './strategies/newsfeed-scalping';
+import { Multifunction } from './strategies/multi-function';
+import { AfterhourGapTrading } from './strategies/afterhour-gap-trading';
 import { TradingResult, TradingStrategy } from '@/types/types';
-import { VolatilityAnalysis } from './components/volatility-analysis';
+import { VolatilityAnalysis } from './strategies/volatility-analysis';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 export const tradingStrategies: TradingStrategy[] = [

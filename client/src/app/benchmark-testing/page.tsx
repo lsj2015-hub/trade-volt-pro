@@ -4,7 +4,7 @@ import { SectorAnalysis } from './components/sector-analysis';
 import { PerformanceAnalysis } from './components/performance-analysis';
 import { StockIndexComparison } from './components/stock-index-comparison';
 import { InvestorTradingAnalysis } from './components/investor-trading-analysis';
-import { VolatilityAnalysis } from '../trading-strategies/components/volatility-analysis';
+import { VolatilityAnalysis } from '../trading-strategies/strategies/volatility-analysis';
 
 export default function BenchmarkTestingPage() {
   return (
