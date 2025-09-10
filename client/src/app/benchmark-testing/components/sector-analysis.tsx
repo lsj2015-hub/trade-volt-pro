@@ -232,12 +232,8 @@ const MultiSelectCombobox = ({
 
 export const SectorAnalysis = () => {
   // 기본 상태
-  const [analysisStartDate, setAnalysisStartDate] = useState<Date | undefined>(
-    getDefaultDates().sevenDaysAgo
-  );
-  const [analysisEndDate, setAnalysisEndDate] = useState<Date | undefined>(
-    getDefaultDates().today
-  );
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [selectedMarket, setSelectedMarket] = useState('');
 
   // Multi-Select 상태들
@@ -346,8 +342,8 @@ export const SectorAnalysis = () => {
   const resetFilters = () => {
     const { today: newToday, sevenDaysAgo: newSevenDaysAgo } =
       getDefaultDates();
-    setAnalysisStartDate(newSevenDaysAgo);
-    setAnalysisEndDate(newToday);
+    setStartDate(newSevenDaysAgo);
+    setEndDate(newToday);
     setSelectedMarket('');
     setSelectedIndexes([]);
     setKospiSectorGroup('');
@@ -367,7 +363,7 @@ export const SectorAnalysis = () => {
     }
 
     // 새로운 분석 실행
-    if (!analysisStartDate || !analysisEndDate || !selectedMarket) {
+    if (!startDate || !endDate || !selectedMarket) {
       alert('시작일, 종료일, 시장을 선택해주세요.');
       return;
     }
@@ -381,8 +377,8 @@ export const SectorAnalysis = () => {
 
     setIsLoading(true);
     console.log('섹터 수익률 분석 실행:', {
-      analysisStartDate,
-      analysisEndDate,
+      startDate,
+      endDate,
       selectedMarket,
       selectedIndexes,
       kospiSectorGroup,
@@ -446,27 +442,26 @@ export const SectorAnalysis = () => {
         {/* 기본 설정 + 세부 옵션 통합 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
           <div className="space-y-2">
-            <label className="text-sm font-medium">분석 시작일</label>
             <DatePicker
-              date={analysisStartDate}
-              onSelect={setAnalysisStartDate}
+              date={startDate}
+              onSelect={setStartDate}
               placeholder="시작일"
+              defaultCalendarDate="week-ago"
               className="text-center"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">분석 종료일</label>
             <DatePicker
-              date={analysisEndDate}
-              onSelect={setAnalysisEndDate}
+              date={endDate}
+              onSelect={setEndDate}
               placeholder="종료일"
+              defaultCalendarDate="today"
               className="text-center"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">시장</label>
             <Select value={selectedMarket} onValueChange={handleMarketChange}>
               <SelectTrigger>
                 <SelectValue placeholder="시장 선택..." />

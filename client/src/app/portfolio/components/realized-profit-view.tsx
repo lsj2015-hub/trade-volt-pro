@@ -8,13 +8,7 @@ import {
   ChevronUp,
   Eye,
 } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { format, subMonths } from 'date-fns';
+import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { PortfolioAPI } from '@/lib/portfolio-api';
 import { toast } from 'sonner';
@@ -40,10 +34,8 @@ export const RealizedProfitView = () => {
   >('all');
   const [selectedBroker, setSelectedBroker] = useState<string>('all');
   const [selectedStock, setSelectedStock] = useState<string>('all');
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    subMonths(new Date(), 6)
-  );
-  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   // 데이터 상태
   const [allData, setAllData] = useState<RealizedProfitData[]>([]);
@@ -87,13 +79,11 @@ export const RealizedProfitView = () => {
 
   // 기간별 기본 데이터 필터링 (최우선)
   const getBaseDataByDateRange = useCallback(() => {
-    if (!allData.length) return [];
+    if (!allData.length || !startDate || !endDate) return [];
 
     return allData.filter((item) => {
       const sellDate = new Date(item.sell_date);
-      const dateMatch =
-        (!startDate || sellDate >= startDate) &&
-        (!endDate || sellDate <= endDate);
+      const dateMatch = sellDate >= startDate && sellDate <= endDate;
       return dateMatch;
     });
   }, [allData, startDate, endDate]);
@@ -146,7 +136,7 @@ export const RealizedProfitView = () => {
 
     // 현재 선택된 증권사 기준으로 데이터 필터링
     let filteredByBroker = filteredByMarket;
-    if (selectedBroker !== 'all') {
+    if (selectedBroker !== '' && selectedBroker !== 'all') {
       filteredByBroker = filteredByMarket.filter(
         (item) => item.broker_id.toString() === selectedBroker
       );
@@ -196,12 +186,15 @@ export const RealizedProfitView = () => {
 
       // 증권사 필터
       const brokerMatch =
+        selectedBroker === '' ||
         selectedBroker === 'all' ||
         item.broker_id.toString() === selectedBroker;
 
       // 종목 필터
       const stockMatch =
-        selectedStock === 'all' || item.symbol === selectedStock;
+        selectedStock === '' ||
+        selectedStock === 'all' ||
+        item.symbol === selectedStock;
 
       return dateMatch && marketMatch && brokerMatch && stockMatch;
     });
@@ -232,8 +225,8 @@ export const RealizedProfitView = () => {
     if (isDateChanged) {
       // 기간 변경 시 모든 필터 초기화
       updates.market = 'all';
-      updates.broker = 'all';
-      updates.stock = 'all';
+      updates.broker = '';
+      updates.stock = '';
       needsUpdate = true;
       prevDateRef.current = currentDate;
     } else {
@@ -250,6 +243,7 @@ export const RealizedProfitView = () => {
         b.id.toString()
       );
       if (
+        selectedBroker !== '' &&
         selectedBroker !== 'all' &&
         !availableBrokerIds.includes(selectedBroker)
       ) {
@@ -261,6 +255,7 @@ export const RealizedProfitView = () => {
         (s) => s.symbol
       );
       if (
+        selectedStock !== '' &&
         selectedStock !== 'all' &&
         !availableStockSymbols.includes(selectedStock)
       ) {
@@ -383,18 +378,39 @@ export const RealizedProfitView = () => {
       {/* 필터 섹션 */}
       <Card>
         <CardContent className="p-4 md:p-6">
-          {!dynamicOptions.hasData ? (
+          {!startDate || !endDate ? (
+            // 기간 미설정 메시지
+            <div className="text-center py-8">
+              <div className="text-muted-foreground text-base mb-2">
+                조회할 기간을 설정해주세요
+              </div>
+              <div className="text-sm text-muted-foreground mb-6">
+                시작일과 종료일을 모두 선택하시면 실현손익 데이터가 표시됩니다
+              </div>
+              <div className="max-w-md mx-auto">
+                <div className="grid grid-cols-2 gap-2">
+                  <DatePicker
+                    date={startDate}
+                    onSelect={setStartDate}
+                    placeholder="시작일"
+                    defaultCalendarDate="week-ago"
+                    className="w-full text-sm"
+                  />
+                  <DatePicker
+                    date={endDate}
+                    onSelect={setEndDate}
+                    placeholder="종료일"
+                    defaultCalendarDate="today"
+                    className="w-full text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : !dynamicOptions.hasData ? (
             // 데이터 없음 메시지
             <div className="text-center py-8">
               <div className="text-muted-foreground text-base mb-2">
                 선택한 기간에 매도 기록이 없습니다
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {startDate && endDate
-                  ? `${format(startDate, 'yyyy.MM.dd', {
-                      locale: ko,
-                    })} ~ ${format(endDate, 'yyyy.MM.dd', { locale: ko })}`
-                  : '다른 기간을 선택해보세요'}
               </div>
               <div className="mt-6 max-w-md mx-auto">
                 <label className="text-sm font-semibold mb-2 block">
@@ -405,24 +421,21 @@ export const RealizedProfitView = () => {
                     date={startDate}
                     onSelect={setStartDate}
                     placeholder="시작일"
-                    className="w-full text-sm"
+                    className="w-full text-sm text-center"
                   />
                   <DatePicker
                     date={endDate}
                     onSelect={setEndDate}
                     placeholder="종료일"
-                    className="w-full text-sm"
+                    className="w-full text-sm text-center"
                   />
                 </div>
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 items-end">
-              {/* 시장구분 - disabled 처리만 */}
+              {/* 시장구분  */}
               <div className="lg:col-span-4">
-                <label className="text-sm font-semibold mb-2 block">
-                  시장구분
-                </label>
                 <Tabs
                   value={selectedMarket}
                   onValueChange={(value) => setSelectedMarket(value as any)}
@@ -455,9 +468,6 @@ export const RealizedProfitView = () => {
 
               {/* 증권사 - 데이터 있는 항목만 표시 */}
               <div className="lg:col-span-2">
-                <label className="text-sm font-semibold mb-2 block">
-                  증권사
-                </label>
                 {dynamicOptions.availableBrokers.length === 0 ? (
                   <div className="h-9 px-3 py-2 bg-muted/50 text-muted-foreground text-sm rounded-md border flex items-center justify-center">
                     선택 가능한 증권사 없음
@@ -468,10 +478,10 @@ export const RealizedProfitView = () => {
                     onValueChange={setSelectedBroker}
                   >
                     <SelectTrigger className="text-sm">
-                      <SelectValue placeholder="증권사" />
+                      <SelectValue placeholder="증권사 선택" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">전체</SelectItem>
+                      <SelectItem value="all">증권사 선택</SelectItem>
                       {dynamicOptions.availableBrokers.map((broker) => (
                         <SelectItem
                           key={broker.id}
@@ -487,7 +497,6 @@ export const RealizedProfitView = () => {
 
               {/* 종목 - 데이터 있는 항목만 표시 */}
               <div className="lg:col-span-2">
-                <label className="text-sm font-semibold mb-2 block">종목</label>
                 {dynamicOptions.availableStocks.length === 0 ? (
                   <div className="h-9 px-3 py-2 bg-muted/50 text-muted-foreground text-sm rounded-md border flex items-center justify-center">
                     선택 가능한 종목 없음
@@ -498,10 +507,10 @@ export const RealizedProfitView = () => {
                     onValueChange={setSelectedStock}
                   >
                     <SelectTrigger className="text-sm">
-                      <SelectValue placeholder="종목" />
+                      <SelectValue placeholder="종목 선택" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">전체</SelectItem>
+                      <SelectItem value="all">종목 선택</SelectItem>
                       {dynamicOptions.availableStocks.map((stock) => (
                         <SelectItem key={stock.symbol} value={stock.symbol}>
                           {stock.companyName}
@@ -514,19 +523,20 @@ export const RealizedProfitView = () => {
 
               {/* 기간 */}
               <div className="sm:col-span-2 lg:col-span-4">
-                <label className="text-sm font-semibold mb-2 block">기간</label>
                 <div className="grid grid-cols-2 gap-2">
                   <DatePicker
                     date={startDate}
                     onSelect={setStartDate}
                     placeholder="시작일"
-                    className="w-full text-sm"
+                    defaultCalendarDate="week-ago"
+                    className="w-full text-sm text-center"
                   />
                   <DatePicker
                     date={endDate}
                     onSelect={setEndDate}
                     placeholder="종료일"
-                    className="w-full text-sm"
+                    defaultCalendarDate="today"
+                    className="w-full text-sm text-center"
                   />
                 </div>
               </div>

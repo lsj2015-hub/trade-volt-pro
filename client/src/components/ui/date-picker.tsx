@@ -1,9 +1,8 @@
 'use client';
 
-import * as React from 'react';
+import { useMemo, useState } from 'react';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -19,6 +18,7 @@ interface DatePickerProps {
   onSelect?: (date: Date | undefined) => void;
   placeholder?: string;
   className?: string;
+  defaultCalendarDate?: 'today' | 'week-ago' | Date;
 }
 
 export function DatePicker({
@@ -26,11 +26,35 @@ export function DatePicker({
   onSelect,
   placeholder = '날짜를 선택하세요',
   className,
+  defaultCalendarDate,
 }: DatePickerProps) {
   const isTextCenter = className?.includes('text-center');
+  const [isOpen, setIsOpen] = useState(false);
+
+  // 달력 기본 선택 날짜 계산
+  const getDefaultDate = useMemo(() => {
+    if (defaultCalendarDate === 'today') {
+      return new Date();
+    } else if (defaultCalendarDate === 'week-ago') {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return weekAgo;
+    } else if (defaultCalendarDate instanceof Date) {
+      return defaultCalendarDate;
+    }
+    return undefined;
+  }, [defaultCalendarDate]);
+
+  // Popover가 열릴 때 기본값 설정
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open && !date && getDefaultDate && onSelect) {
+      onSelect(getDefaultDate);
+    }
+  };
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant={'outline'}
@@ -43,19 +67,18 @@ export function DatePicker({
             className
           )}
         >
-          {date ? (
-            format(date, 'yyyy년 MM월 dd일', { locale: ko })
-          ) : (
-            <span>{placeholder}</span>
-          )}
+          {date ? format(date, 'yyyy. MM. dd') : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
           selected={date}
-          onSelect={onSelect}
-          locale={ko}
+          onSelect={(selectedDate) => {
+            onSelect?.(selectedDate);
+            setIsOpen(false); // 날짜 선택 시 Popover 닫기
+          }}
+          defaultMonth={date || getDefaultDate}
         />
       </PopoverContent>
     </Popover>

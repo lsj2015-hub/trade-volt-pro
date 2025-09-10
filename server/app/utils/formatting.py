@@ -2,6 +2,9 @@ import pandas as pd
 from datetime import datetime
 import logging
 
+from app.core.constants import INCOME_KR, BALANCE_KR, CASHFLOW_KR, EXCHANGE_CURRENCY_MAP
+from app.external.exchange_rate_api import exchange_rate_service
+
 logger = logging.getLogger(__name__)
 
 def _classify_unit(value: float) -> tuple[str, float]:
@@ -169,8 +172,6 @@ async def format_analyst_recommendations(info: dict, exchange_code: str) -> dict
 
 async def format_financial_statement_response(df_raw: pd.DataFrame, statement_type: str, symbol: str, exchange_code: str = None) -> dict:
   """재무제표를 API 응답 포맷으로 변환 (다국가 거래소 지원 + 3개년도 제한)"""
-  from app.core.constants import INCOME_KR, BALANCE_KR, CASHFLOW_KR, EXCHANGE_CURRENCY_MAP
-  from app.external.exchange_rate_api import exchange_rate_service
   
   # 최근 3개년도만 선택
   recent_columns = df_raw.columns[-3:] if len(df_raw.columns) >= 3 else df_raw.columns

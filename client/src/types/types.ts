@@ -308,7 +308,7 @@ export interface RealizedProfitResponse {
   data: {
     transactions: RealizedProfitData[];
     metadata: {
-      // exchange_rate_today: number;
+      exchange_rate_today: number;
       available_stocks: Array<{
         symbol: string;
         company_name: string;

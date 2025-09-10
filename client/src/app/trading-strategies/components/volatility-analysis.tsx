@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
 import {
-  Gauge,
   TrendingDown,
   TrendingUp,
   Calendar,
@@ -21,7 +20,6 @@ import {
   Loader2,
   X,
 } from 'lucide-react';
-import { getDefaultDates } from '@/lib/utils';
 import {
   LineChart,
   Line,
@@ -136,8 +134,8 @@ export function VolatilityAnalysis() {
   // 기본 설정 상태
   const [country, setCountry] = useState<string>('');
   const [market, setMarket] = useState<string>('');
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   // 변동성 기준 상태
   const [declineDays, setDeclineDays] = useState<string>('5');
@@ -153,13 +151,6 @@ export function VolatilityAnalysis() {
   );
   const [stockData, setStockData] = useState<VolatilityStock[]>([]);
   const [selectedStocks, setSelectedStocks] = useState<Set<string>>(new Set());
-
-  // 기본 날짜 설정
-  useEffect(() => {
-    const { today, sevenDaysAgo } = getDefaultDates();
-    setStartDate(sevenDaysAgo);
-    setEndDate(today);
-  }, []);
 
   /// 국가 변경시 시장 초기화 (자동 선택하지 않음)
   useEffect(() => {
@@ -192,9 +183,9 @@ export function VolatilityAnalysis() {
     setShowResults(false);
     setSelectedStock(null);
     setStockData([]);
-    const { today, sevenDaysAgo } = getDefaultDates();
-    setStartDate(sevenDaysAgo);
-    setEndDate(today);
+    // const { today, sevenDaysAgo } = getDefaultDates();
+    setStartDate(undefined);
+    setEndDate(undefined);
     setCountry('');
     setMarket('');
     setDeclineDays('5');
@@ -260,7 +251,6 @@ export function VolatilityAnalysis() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pl-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium">국가</label>
               <Select value={country} onValueChange={setCountry}>
                 <SelectTrigger className="[&>span]:w-full [&>span]:text-center">
                   <SelectValue placeholder="국가 선택" />
@@ -274,7 +264,6 @@ export function VolatilityAnalysis() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">시장</label>
               <Select
                 value={market}
                 onValueChange={setMarket}
@@ -301,21 +290,21 @@ export function VolatilityAnalysis() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">시작일</label>
               <DatePicker
                 date={startDate}
                 onSelect={setStartDate}
-                placeholder="시작일 선택"
+                placeholder="시작일"
+                defaultCalendarDate="week-ago"
                 className="text-center"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">종료일</label>
               <DatePicker
                 date={endDate}
                 onSelect={setEndDate}
-                placeholder="종료일 선택"
+                placeholder="종료일"
+                defaultCalendarDate="today"
                 className="text-center"
               />
             </div>

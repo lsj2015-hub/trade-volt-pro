@@ -15,12 +15,8 @@ interface NewsSectionProps {
 }
 
 export const NewsSection = ({ selectedStock, onDataUpdate }: NewsSectionProps) => {
-  const [newsStartDate, setNewsStartDate] = useState<Date | undefined>(
-    getDefaultDates().sevenDaysAgo
-  );
-  const [newsEndDate, setNewsEndDate] = useState<Date | undefined>(
-    getDefaultDates().today
-  );
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [newsData, setNewsData] = useState<NewsResponse | null>(null);
   const [newsLoading, setNewsLoading] = useState(false);
   const [showNews, setShowNews] = useState(false);
@@ -40,15 +36,15 @@ export const NewsSection = ({ selectedStock, onDataUpdate }: NewsSectionProps) =
     }
 
     // 뉴스 조회
-    if (!selectedStock || !newsStartDate || !newsEndDate) {
+    if (!selectedStock || !startDate || !endDate) {
       return;
     }
 
     setNewsLoading(true);
 
     try {
-      const startDateStr = newsStartDate.toISOString().split('T')[0];
-      const endDateStr = newsEndDate.toISOString().split('T')[0];
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
 
       const result = await AnalysisAPI.getStockNews(
         selectedStock.symbol,
@@ -240,29 +236,25 @@ export const NewsSection = ({ selectedStock, onDataUpdate }: NewsSectionProps) =
             <div className="flex flex-wrap gap-8 items-end justify-between">
               <div className="flex gap-8 items-end">
                 <div className="w-48">
-                  <label className="text-sm font-medium mb-1 block">
-                    시작일
-                  </label>
                   <DatePicker
-                    date={newsStartDate}
-                    onSelect={setNewsStartDate}
-                    className="text-center justify-center"
+                    date={startDate}
+                    onSelect={setStartDate}
+                    placeholder="시작일"
+                    className="w-full text-sm text-center"
                   />
                 </div>
                 <div className="w-48">
-                  <label className="text-sm font-medium mb-1 block">
-                    종료일
-                  </label>
                   <DatePicker
-                    date={newsEndDate}
-                    onSelect={setNewsEndDate}
-                    className="text-center justify-center"
+                    date={endDate}
+                    onSelect={setEndDate}
+                    placeholder="종료일"
+                    className="w-full text-sm text-center"
                   />
                 </div>
               </div>
               <Button
                 onClick={handleNewsToggle}
-                disabled={newsLoading || !newsStartDate || !newsEndDate}
+                disabled={newsLoading || !startDate || !endDate}
                 variant="basic"
                 className="w-[150px]"
               >

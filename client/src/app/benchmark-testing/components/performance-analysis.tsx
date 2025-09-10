@@ -22,7 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { getDefaultDates } from '../../../lib/utils';
+import { getDefaultDates } from '@/lib/utils';
 
 // 국가별 거래소 매핑
 const COUNTRY_EXCHANGES = {
@@ -195,13 +195,9 @@ export const PerformanceAnalysis = () => {
   // 필터 상태 (기본값 적용)
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedExchange, setSelectedExchange] = useState('');
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    getDefaultDates().sevenDaysAgo
-  );
-  const [endDate, setEndDate] = useState<Date | undefined>(
-    getDefaultDates().today
-  );
-  const [stockCount, setStockCount] = useState(10);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [stockCount, setStockCount] = useState<number | null>(null);
 
   // 결과 상태
   const [activeTab, setActiveTab] = useState('top');
@@ -235,7 +231,7 @@ export const PerformanceAnalysis = () => {
       return;
     }
 
-    if (stockCount < 1 || stockCount > 100) {
+    if (Number(stockCount) < 1 || Number(stockCount) > 100) {
       alert('종목수는 1~100 사이의 값을 입력해주세요.');
       return;
     }
@@ -285,7 +281,6 @@ export const PerformanceAnalysis = () => {
         {/* 필터 영역 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
           <div className="space-y-2">
-            <label className="text-sm font-medium">국가</label>
             <Select value={selectedCountry} onValueChange={handleCountryChange}>
               <SelectTrigger>
                 <SelectValue placeholder="국가 선택..." />
@@ -301,7 +296,6 @@ export const PerformanceAnalysis = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">시장</label>
             <Select
               value={selectedExchange}
               onValueChange={setSelectedExchange}
@@ -321,36 +315,42 @@ export const PerformanceAnalysis = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">시작일</label>
             <DatePicker
               date={startDate}
               onSelect={setStartDate}
               placeholder="시작일"
+              defaultCalendarDate="week-ago"
               className="text-center"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">종료일</label>
             <DatePicker
               date={endDate}
               onSelect={setEndDate}
               placeholder="종료일"
+              defaultCalendarDate="today"
               className="text-center"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">종목수</label>
-            <Input
-              type="number"
-              value={stockCount}
-              onChange={(e) => setStockCount(Number(e.target.value))}
-              placeholder=""
-              min="1"
-              max="100"
-              className="text-center"
-            />
+            <Select
+              value={stockCount?.toString() || ''}
+              onValueChange={(value) => setStockCount(Number(value))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="종목수" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="15">15</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="30">30</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -360,11 +360,7 @@ export const PerformanceAnalysis = () => {
               onClick={handleAnalysis}
               disabled={isLoading}
             >
-              {isLoading
-                ? '분석 중...'
-                : hasResults
-                ? '분석 완료'
-                : '분석 실행'}
+              {isLoading ? '분석 중...' : hasResults ? '초기화' : '분석 실행'}
             </Button>
           </div>
         </div>
@@ -418,7 +414,7 @@ export const PerformanceAnalysis = () => {
                     <TableBody>
                       {SAMPLE_TOP_STOCKS.slice(
                         0,
-                        Math.min(stockCount, SAMPLE_TOP_STOCKS.length)
+                        Math.min(Number(stockCount), SAMPLE_TOP_STOCKS.length)
                       ).map((stock, index) => (
                         <TableRow key={stock.symbol}>
                           <TableCell className="font-medium">
@@ -471,7 +467,10 @@ export const PerformanceAnalysis = () => {
                     <TableBody>
                       {SAMPLE_BOTTOM_STOCKS.slice(
                         0,
-                        Math.min(stockCount, SAMPLE_BOTTOM_STOCKS.length)
+                        Math.min(
+                          Number(stockCount),
+                          SAMPLE_BOTTOM_STOCKS.length
+                        )
                       ).map((stock, index) => (
                         <TableRow key={stock.symbol}>
                           <TableCell className="font-medium">

@@ -88,12 +88,8 @@ interface SelectedIndex {
 
 export const StockIndexComparison = () => {
   // 기본 상태
-  const [analysisStartDate, setAnalysisStartDate] = useState<Date | undefined>(
-    getDefaultDates().sevenDaysAgo
-  );
-  const [analysisEndDate, setAnalysisEndDate] = useState<Date | undefined>(
-    getDefaultDates().today
-  );
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   // 종목 및 지수 선택 상태
   const [selectedStocks, setSelectedStocks] = useState<StockInfo[]>([]);
@@ -234,10 +230,8 @@ export const StockIndexComparison = () => {
 
   // 필터 초기화 함수
   const resetFilters = () => {
-    const { today: newToday, sevenDaysAgo: newSevenDaysAgo } =
-      getDefaultDates();
-    setAnalysisStartDate(newSevenDaysAgo);
-    setAnalysisEndDate(newToday);
+    setStartDate(undefined);
+    setEndDate(undefined);
     setSelectedStocks([]);
     setSelectedCountry('');
     setSelectedIndexes([]);
@@ -257,7 +251,7 @@ export const StockIndexComparison = () => {
     }
 
     // 새로운 분석 실행
-    if (!analysisStartDate || !analysisEndDate) {
+    if (!startDate || !endDate) {
       alert('시작일과 종료일을 선택해주세요.');
       return;
     }
@@ -269,8 +263,8 @@ export const StockIndexComparison = () => {
 
     setIsLoading(true);
     console.log('종목 및 지수 수익률 비교 분석 실행:', {
-      analysisStartDate,
-      analysisEndDate,
+      startDate,
+      endDate,
       selectedStocks,
       selectedCountry,
       selectedIndexes,
@@ -313,27 +307,26 @@ export const StockIndexComparison = () => {
         {/* 기본 설정 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
           <div className="space-y-2">
-            <label className="text-sm font-medium">분석 시작일</label>
             <DatePicker
-              date={analysisStartDate}
-              onSelect={setAnalysisStartDate}
+              date={startDate}
+              onSelect={setStartDate}
               placeholder="시작일"
+              defaultCalendarDate="week-ago"
               className="text-center"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">분석 종료일</label>
             <DatePicker
-              date={analysisEndDate}
-              onSelect={setAnalysisEndDate}
+              date={endDate}
+              onSelect={setEndDate}
               placeholder="종료일"
+              defaultCalendarDate="today"
               className="text-center"
             />
           </div>
 
           <div className="space-y-2 relative">
-            <label className="text-sm font-medium">비교 종목 (최대 5개)</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
@@ -355,7 +348,6 @@ export const StockIndexComparison = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">국가</label>
             <Select value={selectedCountry} onValueChange={handleCountryChange}>
               <SelectTrigger>
                 <SelectValue placeholder="국가 선택..." />

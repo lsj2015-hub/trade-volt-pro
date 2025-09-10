@@ -131,13 +131,13 @@ export class PortfolioAPI {
     data: {
       transactions: RealizedProfitData[];
       metadata: {
-        // exchangeRateToday: number;
-        availableStocks: Array<{
+        exchange_rate_today: number;
+        available_stocks: Array<{
           symbol: string;
           company_name: string;
           company_name_en: string;
         }>;
-        availableBrokers: Array<{
+        available_brokers: Array<{
           id: number;
           name: string;
           display_name: string;
@@ -151,13 +151,13 @@ export class PortfolioAPI {
       data: {
         transactions: RealizedProfitData[];
         metadata: {
-          exchangeRateToday: number;
-          availableStocks: Array<{
+          exchange_rate_today: number;
+          available_stocks: Array<{
             symbol: string;
             company_name: string;
             company_name_en: string;
           }>;
-          availableBrokers: Array<{
+          available_brokers: Array<{
             id: number;
             name: string;
             display_name: string;

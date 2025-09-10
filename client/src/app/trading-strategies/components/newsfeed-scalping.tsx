@@ -4,12 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
+  SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -85,7 +85,7 @@ const DEFAULT_KEYWORDS = [
 
 export const NewsfeedScalping = () => {
   // 상태 관리
-  const [timeRange, setTimeRange] = useState<number>(300);
+  const [timeRange, setTimeRange] = useState<number>(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [customKeywords, setCustomKeywords] = useState<string[]>([]);
   const [newKeyword, setNewKeyword] = useState('');
@@ -399,7 +399,7 @@ export const NewsfeedScalping = () => {
 
   // 초기화 함수
   const handleReset = () => {
-    setTimeRange(300);
+    setTimeRange(0);
     setSelectedKeywords([]);
     setNewKeyword('');
     setNewsResults([]);
@@ -436,22 +436,29 @@ export const NewsfeedScalping = () => {
           <div className="flex flex-col lg:flex-row lg:items-end gap-4 lg:gap-3 px-4 lg:pl-6">
             {/* 시간 범위 */}
             <div className="space-y-2 w-full sm:w-auto">
-              <Label className="text-sm font-medium">몇 초전 뉴스까지</Label>
-              <Input
-                type="number"
-                value={timeRange}
-                onChange={(e) => setTimeRange(Number(e.target.value))}
-                className="w-full sm:w-32 lg:w-24 text-center h-10"
-                placeholder="300"
-              />
+              <Select
+                value={timeRange.toString()}
+                onValueChange={(value) => setTimeRange(Number(value))}
+              >
+                <SelectTrigger className="w-full sm:w-32 lg:w-24 h-10">
+                  <SelectValue placeholder="시간 범위 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">몇 초전</SelectItem>
+                  <SelectItem value="60">1분</SelectItem>
+                  <SelectItem value="120">2분</SelectItem>
+                  <SelectItem value="300">5분</SelectItem>
+                  <SelectItem value="600">10분</SelectItem>
+                  <SelectItem value="1200">20분</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* 키워드 선택 - Dropdown 형태 */}
             <div className="w-full sm:w-64 lg:w-48 space-y-2">
-              <Label className="text-sm font-medium">필터링 키워드</Label>
               <Select>
                 <SelectTrigger className="h-10">
-                  <SelectValue placeholder="키워드를 선택하세요" />
+                  <SelectValue placeholder="필터링 키워드 선택" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
                   <div className="p-2">
@@ -550,13 +557,12 @@ export const NewsfeedScalping = () => {
 
             {/* 사용자 키워드 추가 */}
             <div className="space-y-2 w-full sm:w-auto">
-              <Label className="text-sm font-medium">사용자 키워드 추가</Label>
               <div className="flex gap-2">
                 <Input
                   value={newKeyword}
                   onChange={(e) => setNewKeyword(e.target.value)}
-                  placeholder="새 키워드"
-                  className="flex-1 sm:w-40 lg:w-32 h-10 text-sm"
+                  placeholder="사용자 키워드 추가"
+                  className="flex-1 sm:w-48 lg:w-40 h-10 text-sm"
                   onKeyUp={(e) => e.key === 'Enter' && addCustomKeyword()}
                 />
                 <Button
@@ -575,7 +581,7 @@ export const NewsfeedScalping = () => {
           {selectedKeywords.length > 0 && (
             <div className="space-y-2 px-4 lg:pl-6">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <Label className="text-sm font-medium">선택된 키워드</Label>
+                <span className="text-sm font-medium">선택된 키워드</span>
                 <Button
                   onClick={clearAllSelectedKeywords}
                   variant="ghost"
@@ -608,7 +614,7 @@ export const NewsfeedScalping = () => {
           {/* 사용자 키워드 목록 */}
           {customKeywords.length > 0 && (
             <div className="space-y-2 pl-6">
-              <Label className="text-sm font-medium">내 키워드</Label>
+              <span className="text-sm font-medium">내 키워드</span>
               <div className="flex flex-wrap gap-2">
                 {customKeywords.map((keyword) => (
                   <Badge key={keyword} variant="outline" className="px-3 py-1">
@@ -951,18 +957,53 @@ const AIEvaluationSection = ({
 
                 {/* 평가 항목들 - 모두 column 배치 */}
                 <div className="space-y-3 md:space-y-4">
-                  {/* 각 평가 항목의 패딩을 줄이고 텍스트 크기 조정 */}
                   <div className="bg-blue-50 p-3 md:p-4 rounded-lg border border-blue-200">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
                       <h5 className="font-semibold text-blue-900 text-sm md:text-base">
                         단기 모멘텀 잠재력
                       </h5>
-                      <Badge className="bg-red-500 text-white hover:bg-red-600 text-xs self-start sm:self-auto">
-                        {result.evaluation.단기_모멘텀_잠재력.점수}/5
+                      <Badge className="bg-blue-500 text-white hover:bg-blue-600 text-xs self-start sm:self-auto">
+                        {result.evaluation.단기_모멘텀_잠재력.점수}
                       </Badge>
                     </div>
                     <p className="text-xs md:text-sm text-blue-800">
                       {result.evaluation.단기_모멘텀_잠재력.이유}
+                    </p>
+                  </div>
+                  <div className="bg-yellow-50 p-3 md:p-4 rounded-lg border border-yellow-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
+                      <h5 className="font-semibold text-yellow-900 text-sm md:text-base">
+                        유동성_및_거래량_예상
+                      </h5>
+                      <Badge className="bg-yellow-500 text-white hover:bg-yellow-600 text-xs self-start sm:self-auto">
+                        {result.evaluation.유동성_및_거래량_예상.점수}
+                      </Badge>
+                    </div>
+                    <p className="text-xs md:text-sm text-yellow-800">
+                      {result.evaluation.유동성_및_거래량_예상.이유}
+                    </p>
+                  </div>
+                  <div className="bg-red-50 p-3 md:p-4 rounded-lg border border-red-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
+                      <h5 className="font-semibold text-red-900 text-sm md:text-base">
+                        리스크_요인
+                      </h5>
+                    </div>
+                    <p className="text-xs md:text-sm text-red-800">
+                      {result.evaluation.리스크_요인.이유}
+                    </p>
+                  </div>
+                  <div className="bg-green-50 p-3 md:p-4 rounded-lg border border-green-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
+                      <h5 className="font-semibold text-green-900 text-sm md:text-base">
+                        최종_스캘핑_적합성_판단
+                      </h5>
+                      <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs self-start sm:self-auto">
+                        {result.evaluation.최종_스캘핑_적합성_판단.점수}
+                      </Badge>
+                    </div>
+                    <p className="text-xs md:text-sm text-green-800">
+                      {result.evaluation.최종_스캘핑_적합성_판단.요약}
                     </p>
                   </div>
                   {/* 다른 평가 항목들도 동일하게... */}

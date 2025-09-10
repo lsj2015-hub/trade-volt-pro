@@ -34,12 +34,8 @@ export const PriceHistorySection = ({
   selectedStock,
   onDataUpdate,
 }: PriceHistorySectionProps) => {
-  const [startDate, setStartDate] = useState<Date | undefined>(
-    getDefaultDates().sevenDaysAgo
-  );
-  const [endDate, setEndDate] = useState<Date | undefined>(
-    getDefaultDates().today
-  );
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [priceHistoryData, setPriceHistoryData] =
     useState<PriceHistoryResponse | null>(null);
   const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
@@ -182,7 +178,7 @@ export const PriceHistorySection = ({
                 tick={{ fontSize: 11 }}
                 width={55}
                 stroke="#6b7280"
-                tickFormatter={(value) => `$${value.toFixed(2)}`}
+                tickFormatter={(value) => `${value.toFixed(2)}`}
                 label={{
                   angle: -90,
                   position: 'outside',
@@ -207,19 +203,19 @@ export const PriceHistorySection = ({
                             <span
                               style={{ color: isUp ? '#10b981' : '#ef4444' }}
                             >
-                              ${data.open.toFixed(2)}
+                              {data.open.toFixed(2)}
                             </span>
                           </p>
                           <p>
                             고가:{' '}
                             <span className="text-blue-600">
-                              ${data.high.toFixed(2)}
+                              {data.high.toFixed(2)}
                             </span>
                           </p>
                           <p>
                             저가:{' '}
                             <span className="text-orange-600">
-                              ${data.low.toFixed(2)}
+                              {data.low.toFixed(2)}
                             </span>
                           </p>
                           <p>
@@ -230,7 +226,7 @@ export const PriceHistorySection = ({
                                 fontWeight: 'bold',
                               }}
                             >
-                              ${data.close.toFixed(2)}
+                              {data.close.toFixed(2)}
                             </span>
                           </p>
                           <p>
@@ -238,7 +234,7 @@ export const PriceHistorySection = ({
                             <span
                               style={{ color: isUp ? '#10b981' : '#ef4444' }}
                             >
-                              {isUp ? '▲' : '▼'} $
+                              {isUp ? '▲' : '▼'}
                               {Math.abs(changeAmount).toFixed(2)} (
                               {changePercent > 0 ? '+' : ''}
                               {changePercent.toFixed(2)}%)
@@ -412,23 +408,19 @@ export const PriceHistorySection = ({
             <div className="flex flex-wrap gap-8 items-end justify-between">
               <div className="flex gap-8 items-end">
                 <div className="w-48">
-                  <label className="text-sm font-medium mb-1 block">
-                    시작일
-                  </label>
                   <DatePicker
                     date={startDate}
                     onSelect={setStartDate}
-                    className="text-center justify-center"
+                    placeholder="시작일"
+                    className="w-full text-sm text-center"
                   />
                 </div>
                 <div className="w-48">
-                  <label className="text-sm font-medium mb-1 block">
-                    종료일
-                  </label>
                   <DatePicker
                     date={endDate}
                     onSelect={setEndDate}
-                    className="text-center justify-center"
+                    placeholder="종료일"
+                    className="w-full text-sm text-center"
                   />
                 </div>
               </div>

@@ -186,16 +186,14 @@ const useDebounce = (value: string, delay: number) => {
 export function InvestorTradingAnalysis() {
   // Date states - 기본값 설정
   const [dailyStartDate, setDailyStartDate] = useState<Date | undefined>(
-    getDefaultDates().sevenDaysAgo
+    undefined
   );
-  const [dailyEndDate, setDailyEndDate] = useState<Date | undefined>(
-    getDefaultDates().today
-  );
+  const [dailyEndDate, setDailyEndDate] = useState<Date | undefined>(undefined);
   const [topStocksStartDate, setTopStocksStartDate] = useState<
     Date | undefined
-  >(getDefaultDates().sevenDaysAgo);
+  >(undefined);
   const [topStocksEndDate, setTopStocksEndDate] = useState<Date | undefined>(
-    getDefaultDates().today
+    undefined
   );
 
   // Filter states
@@ -480,25 +478,24 @@ export function InvestorTradingAnalysis() {
           <div className="flex flex-col lg:flex-row items-start lg:items-end gap-4">
             <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">시작일</label>
                 <DatePicker
                   date={dailyStartDate}
                   onSelect={setDailyStartDate}
-                  placeholder=""
+                  placeholder="시작일"
+                  defaultCalendarDate="week-ago"
                   className="text-center"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">종료일</label>
                 <DatePicker
                   date={dailyEndDate}
                   onSelect={setDailyEndDate}
-                  placeholder=""
+                  placeholder="종료일"
+                  defaultCalendarDate="today"
                   className="text-center"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">시장</label>
                 <Select value={dailyMarket} onValueChange={setDailyMarket}>
                   <SelectTrigger>
                     <SelectValue placeholder="거래소 선택..." />
@@ -510,7 +507,6 @@ export function InvestorTradingAnalysis() {
                 </Select>
               </div>
               <div className="space-y-2 relative">
-                <label className="text-sm font-medium">종목</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
@@ -657,25 +653,24 @@ export function InvestorTradingAnalysis() {
           <div className="flex flex-col lg:flex-row items-start lg:items-end gap-4">
             <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">시작일</label>
                 <DatePicker
                   date={topStocksStartDate}
                   onSelect={setTopStocksStartDate}
-                  placeholder=""
+                  placeholder="시작일"
+                  defaultCalendarDate="week-ago"
                   className="text-center"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">종료일</label>
                 <DatePicker
                   date={topStocksEndDate}
                   onSelect={setTopStocksEndDate}
-                  placeholder=""
+                  placeholder="종료일"
+                  defaultCalendarDate="today"
                   className="text-center"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">시장</label>
                 <Select
                   value={topStocksMarket}
                   onValueChange={setTopStocksMarket}
@@ -690,16 +685,22 @@ export function InvestorTradingAnalysis() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">종목수</label>
-                <Input
-                  type="number"
-                  value={topStocksMarket}
-                  onChange={(e) => setTopStocksMarket(e.target.value)}
-                  placeholder="10"
-                  min="1"
-                  max="30"
-                  className="text-center"
-                />
+                <Select
+                  value={topStocksCount || ''}
+                  onValueChange={(value) => setTopStocksCount(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="종목수" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="15">15</SelectItem>
+                    <SelectItem value="20">20</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="30">30</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

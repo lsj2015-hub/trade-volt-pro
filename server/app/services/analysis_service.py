@@ -38,7 +38,7 @@ class AnalysisService:
       }
 
       # 사업개요 번역 처리
-      business_summary_en = yahoo_info.get('long_business_summary', '')
+      business_summary_en = yahoo_info.get('longBusinessSummary', '')
       business_summary_kr = ""
       
       if business_summary_en:

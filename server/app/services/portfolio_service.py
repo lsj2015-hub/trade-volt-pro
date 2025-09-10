@@ -472,7 +472,6 @@ class PortfolioService:
   async def _get_current_price(self, user_id: int, stock_symbol: str, country_code: str) -> float:
     """현재가 조회"""
     try:
-      from app.external.kis_api import kis_api_service
       market_type = "DOMESTIC" if country_code == "KR" else "OVERSEAS"
       price_data = await kis_api_service.get_stock_price(user_id, stock_symbol, market_type)
       return price_data.get("current_price", 0.0)
