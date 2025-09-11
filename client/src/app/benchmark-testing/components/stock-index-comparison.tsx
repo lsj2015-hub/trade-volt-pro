@@ -365,7 +365,11 @@ export const StockIndexComparison = () => {
           <div className="space-y-2">
             <label className="text-sm font-medium">&nbsp;</label>
             <Button
-              className="bg-slate-700 hover:bg-slate-600 w-full"
+              className={`w-full ${
+                hasResults
+                  ? 'bg-white border-2 border-red-500 text-red-500 hover:bg-red-50'
+                  : 'bg-slate-700 hover:bg-slate-600 text-white'
+              }`}
               onClick={handleAnalysis}
               disabled={isLoading}
             >

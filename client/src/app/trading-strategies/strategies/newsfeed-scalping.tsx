@@ -6,8 +6,7 @@ import { FilteringSection } from '../components/newsfeed-scalping/filtering-sect
 import { NewsResultsSection } from '../components/newsfeed-scalping/news-results-section';
 import { DartResultsSection } from '../components/newsfeed-scalping/dart-results-section';
 import { AIEvaluationSection } from '../components/newsfeed-scalping/ai-evaluation-section';
-import { FinalScalpingSection } from '../components/newsfeed-scalping/final-scalping-section';
-
+import { SelectedStock, StrategyComponentProps } from '@/types/types';
 
 // 타입 정의
 interface NewsItem {
@@ -44,7 +43,9 @@ interface AIEvaluation {
   selected?: boolean;
 }
 
-export const NewsfeedScalping = () => {
+export const NewsfeedScalping = ({
+  onSelectedStocksChange,
+}: StrategyComponentProps) => {
   // 상태 관리
   const [timeRange, setTimeRange] = useState<number>(0);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
@@ -58,6 +59,28 @@ export const NewsfeedScalping = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [isDartChecking, setIsDartChecking] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
+
+  // 선택된 AI 결과 변경 시 상위로 전달
+  useEffect(() => {
+    const selectedStockData: SelectedStock[] = aiResults
+      .filter((result) => result.selected)
+      .map((result) => ({
+        id: result.code,
+        symbol: result.code,
+        name: result.company,
+        price: 0, // 뉴스 스캘핑에서는 가격 정보가 없으므로 0
+        strategy: 'Newsfeed Scalping',
+        metadata: {
+          newsTitle: result.newsTitle,
+          dartInfo: result.dartInfo,
+          evaluation: result.evaluation,
+        },
+      }));
+
+    if (onSelectedStocksChange) {
+      onSelectedStocksChange(selectedStockData);
+    }
+  }, [aiResults]);
 
   useEffect(() => {
     loadCustomKeywords();
@@ -237,7 +260,7 @@ export const NewsfeedScalping = () => {
               요약: 'HMM의 실적 부진 뉴스는 단기적으로 모멘텀 스캘핑에 중립적인 영향을 미칠 것으로 보입니다. 실적 부진 자체가 다소 예측 가능성이 있었고, 큰 반사작용은 제한적일 수 있으나, 단기적 전략으로 작은 변동성을 포착할 가능성은 존재합니다.',
             },
           },
-          selected: true,
+          selected: false,
         },
         {
           company: '한화',
@@ -261,7 +284,7 @@ export const NewsfeedScalping = () => {
               요약: '매출 증가에도 불구하고 흑자 전환의 불확실성은 뉴스 모멘텀 스캘핑에 긍정적이지 않습니다. 제한적인 거래량 증가와 변동성을 감안할 때, 이 종목은 스캘핑보다는 중장기적인 시각에서 접근하는 것이 더 나을 수 있습니다.',
             },
           },
-          selected: true,
+          selected: false,
         },
       ];
 
@@ -391,11 +414,6 @@ export const NewsfeedScalping = () => {
                   aiResults={aiResults}
                   onToggleSelection={toggleAIResultSelection}
                 />
-              )}
-
-              {/* 최종 스켈핑 종목 */}
-              {aiResults.length > 0 && (
-                <FinalScalpingSection aiResults={aiResults} />
               )}
             </div>
           )}

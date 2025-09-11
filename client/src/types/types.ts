@@ -554,3 +554,19 @@ export interface LLMQuestionResponse {
   };
   message?: string;
 }
+
+// ====== Trading Strategies 공통 타입 ======
+export interface SelectedStock {
+  id: string;
+  symbol: string;
+  name: string;
+  price: number;
+  strategy: string;
+  metadata?: {
+    [key: string]: any; // 전략별로 다른 추가 정보
+  };
+}
+
+export interface StrategyComponentProps {
+  onSelectedStocksChange?: (stocks: SelectedStock[]) => void;
+}

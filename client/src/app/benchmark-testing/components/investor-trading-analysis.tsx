@@ -548,7 +548,11 @@ export function InvestorTradingAnalysis() {
               <Button
                 onClick={handleDailyQuery}
                 disabled={dailyIsLoading}
-                className="bg-slate-700 hover:bg-slate-600 w-full lg:w-[150px]"
+                className={`w-full lg:w-[150px] ${
+                  dailyHasResults
+                    ? 'bg-white border-2 border-red-500 text-red-500 hover:bg-red-50'
+                    : 'bg-slate-700 hover:bg-slate-600 text-white'
+                }`}
               >
                 {getDailyButtonText()}
               </Button>
@@ -718,7 +722,11 @@ export function InvestorTradingAnalysis() {
               <Button
                 onClick={handleTopStocksQuery}
                 disabled={topStocksIsLoading}
-                className="bg-slate-700 hover:bg-slate-600 w-full lg:w-[150px]"
+                className={`w-full lg:w-[150px] ${
+                  topStocksHasResults
+                    ? 'bg-white border-2 border-red-500 text-red-500 hover:bg-red-50'
+                    : 'bg-slate-700 hover:bg-slate-600 text-white'
+                }`}
               >
                 {getTopStocksButtonText()}
               </Button>

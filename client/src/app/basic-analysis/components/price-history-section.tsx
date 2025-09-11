@@ -427,8 +427,11 @@ export const PriceHistorySection = ({
               <Button
                 onClick={handlePriceHistorySearch}
                 disabled={priceHistoryLoading || !startDate || !endDate}
-                variant="basic"
-                className="w-[150px]"
+                className={`w-[150px] ${
+                  showPriceHistory
+                    ? 'bg-white border-2 border-red-500 text-red-500 hover:bg-red-50'
+                    : 'bg-slate-700 hover:bg-slate-600 text-white'
+                }`}
               >
                 {priceHistoryLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

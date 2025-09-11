@@ -255,8 +255,11 @@ export const NewsSection = ({ selectedStock, onDataUpdate }: NewsSectionProps) =
               <Button
                 onClick={handleNewsToggle}
                 disabled={newsLoading || !startDate || !endDate}
-                variant="basic"
-                className="w-[150px]"
+                className={`w-[150px] ${
+                  showNews
+                    ? 'bg-white border-2 border-red-500 text-red-500 hover:bg-red-50'
+                    : 'bg-slate-700 hover:bg-slate-600 text-white'
+                }`}
               >
                 {newsLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

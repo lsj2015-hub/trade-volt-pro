@@ -1,13 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  TrendingUp,
-  Download,
-  ChevronDown,
-  ChevronUp,
-  Eye,
-} from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -18,8 +12,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import { PortfolioAPI } from '@/lib/portfolio-api';
 import { toast } from 'sonner';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -171,12 +163,13 @@ export const RealizedProfitView = () => {
   const filteredData = useCallback(() => {
     if (!allData.length) return [];
 
+    // 기간이 설정되지 않은 경우 빈 배열 반환
+    if (!startDate || !endDate) return [];
+
     return allData.filter((item) => {
       // 날짜 필터 (최우선)
       const sellDate = new Date(item.sell_date);
-      const dateMatch =
-        (!startDate || sellDate >= startDate) &&
-        (!endDate || sellDate <= endDate);
+      const dateMatch = sellDate >= startDate && sellDate <= endDate;
 
       // 시장구분 필터
       const marketMatch =

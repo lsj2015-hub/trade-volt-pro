@@ -29,38 +29,20 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-
-// 변동성 종목 데이터 타입
-interface VolatilityStock {
-  rank: number;
-  stockName: string;
-  stockCode: string;
-  occurrenceCount: number;
-  lastDeclineDate: string;
-  lastDeclinePrice: number;
-  lastRecoveryDate: string;
-  maxRecoveryRate: number;
-}
-
-// 차트 데이터 타입
-interface ChartData {
-  date: string;
-  price: number;
-  volume: number;
-}
-
-// 국가별 시장 매핑
-const COUNTRY_MARKETS: Record<string, { value: string; label: string }[]> = {
-  korea: [
-    { value: 'kospi', label: 'KOSPI' },
-    { value: 'kosdaq', label: 'KOSDAQ' },
-  ],
-  usa: [
-    { value: 'nyse', label: 'NYSE' },
-    { value: 'nasdaq', label: 'NASDAQ' },
-  ],
-  japan: [{ value: 'tse', label: 'TSE (도쿄)' }],
-};
+import { SelectedStock, StrategyComponentProps } from '@/types/types';
+import {
+  VolatilityResultsSection,
+  VolatilityStock,
+} from '../components/volatility-analysis/volatility-results-section';
+import {
+  ChartData,
+  StockChartSection,
+} from '../components/volatility-analysis/stock-chart-section';
+import {
+  BasicSettingsSection,
+  COUNTRY_MARKETS,
+} from '../components/volatility-analysis/basic-settings-section';
+import { VolatilityCriteriaSection } from '../components/volatility-analysis/volatility-criteria-section';
 
 // 샘플 변동성 종목 데이터
 const sampleVolatilityData: VolatilityStock[] = [
@@ -130,7 +112,9 @@ const sampleChartData: ChartData[] = [
   { date: '08-23', price: 177000, volume: 1000000 },
 ];
 
-export function VolatilityAnalysis() {
+export function VolatilityAnalysis({
+  onSelectedStocksChange,
+}: StrategyComponentProps) {
   // 기본 설정 상태
   const [country, setCountry] = useState<string>('');
   const [market, setMarket] = useState<string>('');
@@ -152,22 +136,32 @@ export function VolatilityAnalysis() {
   const [stockData, setStockData] = useState<VolatilityStock[]>([]);
   const [selectedStocks, setSelectedStocks] = useState<Set<string>>(new Set());
 
-  /// 국가 변경시 시장 초기화 (자동 선택하지 않음)
+  // 선택된 종목 변경 시 상위로 전달하는 useEffect 추가
   useEffect(() => {
-    if (country) {
-      setMarket(''); // 시장을 비워서 사용자가 직접 선택하도록
+    const selectedStockData: SelectedStock[] = stockData
+      .filter((stock) => selectedStocks.has(stock.stockCode))
+      .map((stock) => ({
+        id: stock.stockCode,
+        symbol: stock.stockCode,
+        name: stock.stockName,
+        price: stock.lastDeclinePrice,
+        strategy: 'Volatility Analysis',
+        metadata: {
+          rank: stock.rank,
+          occurrenceCount: stock.occurrenceCount,
+          lastDeclineDate: stock.lastDeclineDate,
+          lastRecoveryDate: stock.lastRecoveryDate,
+          maxRecoveryRate: stock.maxRecoveryRate,
+        },
+      }));
+
+    if (onSelectedStocksChange) {
+      onSelectedStocksChange(selectedStockData);
     }
-  }, [country]);
+  }, [stockData, selectedStocks]);
 
   // 분석 실행
   const handleAnalysis = async () => {
-    // 이미 결과가 있으면 초기화
-    if (showResults) {
-      handleReset();
-      return;
-    }
-
-    // 새로운 분석 실행
     setIsLoading(true);
 
     // 실제 API 호출 시뮬레이션
@@ -183,7 +177,6 @@ export function VolatilityAnalysis() {
     setShowResults(false);
     setSelectedStock(null);
     setStockData([]);
-    // const { today, sevenDaysAgo } = getDefaultDates();
     setStartDate(undefined);
     setEndDate(undefined);
     setCountry('');
@@ -191,7 +184,6 @@ export function VolatilityAnalysis() {
     setDeclineDays('5');
     setDeclineRate('-20');
     setRecoveryDays('20');
-    setVolatilityRate('20');
     setVolatilityRate('20');
     setSelectedStocks(new Set());
   };
@@ -242,288 +234,48 @@ export function VolatilityAnalysis() {
         </p>
 
         {/* 기본 설정 */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-primary" />
-            <label className="text-sm font-semibold text-primary">
-              기본 설정
-            </label>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pl-6">
-            <div className="space-y-2">
-              <Select value={country} onValueChange={setCountry}>
-                <SelectTrigger className="[&>span]:w-full [&>span]:text-center">
-                  <SelectValue placeholder="국가 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="korea">한국</SelectItem>
-                  <SelectItem value="usa">미국</SelectItem>
-                  <SelectItem value="japan">일본</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Select
-                value={market}
-                onValueChange={setMarket}
-                disabled={!country}
-              >
-                <SelectTrigger className="[&>span]:w-full [&>span]:text-center">
-                  <SelectValue
-                    placeholder={
-                      country ? '시장 선택' : '먼저 국가를 선택하세요'
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableMarkets.map((marketOption) => (
-                    <SelectItem
-                      key={marketOption.value}
-                      value={marketOption.value}
-                    >
-                      {marketOption.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <DatePicker
-                date={startDate}
-                onSelect={setStartDate}
-                placeholder="시작일"
-                defaultCalendarDate="week-ago"
-                className="text-center"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <DatePicker
-                date={endDate}
-                onSelect={setEndDate}
-                placeholder="종료일"
-                defaultCalendarDate="today"
-                className="text-center"
-              />
-            </div>
-          </div>
-        </div>
+        <BasicSettingsSection
+          country={country}
+          setCountry={setCountry}
+          market={market}
+          setMarket={setMarket}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+        />
 
         {/* 변동성 기준 */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <TrendingDown className="h-4 w-4 text-red-500" />
-            <label className="text-sm font-semibold text-red-600">
-              변동성 기준
-            </label>
-          </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 flex-wrap pl-6">
-            <div className="grid grid-cols-2 sm:flex sm:items-end gap-4 w-full sm:w-auto">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-red-600">
-                  하락기간(일)
-                </label>
-                <Input
-                  type="number"
-                  value={declineDays}
-                  onChange={(e) => setDeclineDays(e.target.value)}
-                  className="w-full sm:w-20 text-center border-red-200 focus:border-red-400"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-red-600">
-                  하락률(%)
-                </label>
-                <Input
-                  type="number"
-                  value={declineRate}
-                  onChange={(e) => setDeclineRate(e.target.value)}
-                  className="w-full sm:w-20 text-center border-red-200 focus:border-red-400"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-green-600">
-                  반등기간(일)
-                </label>
-                <Input
-                  type="number"
-                  value={recoveryDays}
-                  onChange={(e) => setRecoveryDays(e.target.value)}
-                  className="w-full sm:w-20 text-center border-green-200 focus:border-green-400"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-green-600">
-                  반등률(%)
-                </label>
-                <Input
-                  type="number"
-                  value={volatilityRate}
-                  onChange={(e) => setVolatilityRate(e.target.value)}
-                  className="w-full sm:w-20 text-center border-green-200 focus:border-green-400"
-                />
-              </div>
-            </div>
-
-            <div className="w-full sm:w-auto mt-4 sm:mt-0">
-              <Button
-                onClick={handleAnalysis}
-                disabled={isLoading}
-                className="bg-slate-700 hover:bg-slate-600 w-full sm:w-auto"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    분석 중...
-                  </>
-                ) : showResults ? (
-                  <>
-                    <X className="h-4 w-4 mr-2" />
-                    초기화
-                  </>
-                ) : (
-                  <>
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    분석 실행
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <VolatilityCriteriaSection
+          declineDays={declineDays}
+          setDeclineDays={setDeclineDays}
+          declineRate={declineRate}
+          setDeclineRate={setDeclineRate}
+          recoveryDays={recoveryDays}
+          setRecoveryDays={setRecoveryDays}
+          volatilityRate={volatilityRate}
+          setVolatilityRate={setVolatilityRate}
+          isLoading={isLoading}
+          showResults={showResults}
+          onAnalysis={handleAnalysis}
+          onReset={handleReset}
+        />
 
         {/* 결과 표시 영역 */}
-        <div className="border rounded-lg bg-muted/20">
-          {!showResults ? (
-            <div className="p-6 text-center">
-              <p className="text-muted-foreground">
-                조건을 선택하여 조회하면 요청한 데이터가 여기로 나옵니다.
-              </p>
-            </div>
-          ) : (
-            <div className="p-4 space-y-4">
-              {/* 결과 테이블 */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="p-2 text-center w-12">
-                        <input
-                          type="checkbox"
-                          checked={isAllSelected}
-                          ref={(el) => {
-                            if (el) el.indeterminate = isIndeterminate;
-                          }}
-                          onChange={(e) => handleSelectAll(e.target.checked)}
-                          className="rounded border-gray-300"
-                        />
-                      </th>
-                      <th className="p-2 text-left">순위</th>
-                      <th className="p-2 text-left">종목명</th>
-                      <th className="p-2 text-center">발생횟수</th>
-                      <th className="p-2 text-center">최근하락일</th>
-                      <th className="p-2 text-right">하락일종가</th>
-                      <th className="p-2 text-center">최대반등일</th>
-                      <th className="p-2 text-right">최대반등률(%)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stockData.map((stock) => (
-                      <tr
-                        key={stock.stockCode}
-                        className={`border-b hover:bg-muted/30 cursor-pointer transition-colors ${
-                          selectedStock?.stockCode === stock.stockCode
-                            ? 'bg-primary/10'
-                            : ''
-                        }`}
-                        onClick={() => handleStockSelect(stock)}
-                      >
-                        <td className="p-2 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedStocks.has(stock.stockCode)}
-                            onChange={(e) =>
-                              handleCheckboxChange(
-                                stock.stockCode,
-                                e.target.checked
-                              )
-                            }
-                            onClick={(e) => e.stopPropagation()}
-                            className="rounded border-gray-300"
-                          />
-                        </td>
-                        <td className="p-2">{stock.rank}</td>
-                        <td className="p-2 font-medium">{stock.stockName}</td>
-                        <td className="p-2 text-center">
-                          {stock.occurrenceCount}
-                        </td>
-                        <td className="p-2 text-center text-red-600">
-                          {stock.lastDeclineDate}
-                        </td>
-                        <td className="p-2 text-right">
-                          {stock.lastDeclinePrice.toLocaleString()}원
-                        </td>
-                        <td className="p-2 text-center text-green-600">
-                          {stock.lastRecoveryDate}
-                        </td>
-                        <td className="p-2 text-right text-green-600 font-semibold">
-                          +{stock.maxRecoveryRate}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        <VolatilityResultsSection
+          showResults={showResults}
+          stockData={stockData}
+          selectedStocks={selectedStocks}
+          setSelectedStocks={setSelectedStocks}
+          selectedStock={selectedStock}
+          onStockSelect={handleStockSelect}
+        />
 
-              {/* 선택된 종목 차트 */}
-              {selectedStock && (
-                <div className="mt-6 p-4 border rounded-lg bg-background">
-                  <div className="flex items-center gap-2 mb-4">
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                    <h4 className="font-semibold">
-                      {selectedStock.stockName} ({selectedStock.stockCode}) 주가
-                      차트
-                    </h4>
-                  </div>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={sampleChartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                        <YAxis
-                          tick={{ fontSize: 12 }}
-                          tickFormatter={(value) =>
-                            `${(value / 1000).toFixed(0)}K`
-                          }
-                        />
-                        <Tooltip
-                          formatter={(value: number) => [
-                            `${value.toLocaleString()}원`,
-                            '주가',
-                          ]}
-                          labelFormatter={(label) => `날짜: ${label}`}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="price"
-                          stroke="#2563eb"
-                          strokeWidth={2}
-                          dot={{ fill: '#2563eb', strokeWidth: 2, r: 3 }}
-                          activeDot={{ r: 5 }}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        {/* 선택된 종목 차트 */}
+        <StockChartSection
+          selectedStock={selectedStock}
+          chartData={sampleChartData}
+        />
       </CardContent>
     </Card>
   );

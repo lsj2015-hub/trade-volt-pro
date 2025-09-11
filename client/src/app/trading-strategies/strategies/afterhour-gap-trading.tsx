@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { FilteringSection } from '../components/after-gap-trading/filtering-section';
 import { StockResultsSection } from '../components/after-gap-trading/stock-results-section';
-import { FinalSelectionSection } from '../components/after-gap-trading/final-selection-section';
+import { SelectedStock, StrategyComponentProps } from '@/types/types';
 
 // 타입 정의
 interface StockData {
@@ -19,7 +19,9 @@ interface StockData {
   selected?: boolean;
 }
 
-export const AfterhourGapTrading = () => {
+export const AfterhourGapTrading = ({
+  onSelectedStocksChange,
+}: StrategyComponentProps) => {
   // 상태 관리
   const [afterHourReturnMin, setAfterHourReturnMin] = useState<number>(0);
   const [afterHourReturnMax, setAfterHourReturnMax] = useState<number>(100);
@@ -61,6 +63,29 @@ export const AfterhourGapTrading = () => {
 
     return () => clearInterval(interval);
   }, [selectedReportTimes]);
+
+  // 선택된 종목 변경 시 상위로 전달하는 useEffect 추가
+  useEffect(() => {
+    const selectedStockData: SelectedStock[] = stockData
+      .filter((stock) => stock.selected)
+      .map((stock) => ({
+        id: stock.id,
+        symbol: stock.symbol,
+        name: stock.name,
+        price: stock.closePrice,
+        strategy: 'After Hour Gap Trading',
+        metadata: {
+          afterHourReturn: stock.afterHourReturn,
+          marketReturn: stock.marketReturn,
+          marketVolStrength: stock.marketVolStrength,
+          afterHourVolStrength: stock.afterHourVolStrength,
+        },
+      }));
+
+    if (onSelectedStocksChange) {
+      onSelectedStocksChange(selectedStockData);
+    }
+  }, [stockData]);
 
   const searchStocks = async () => {
     setIsSearching(true);
@@ -211,11 +236,6 @@ export const AfterhourGapTrading = () => {
                 onToggleSelection={toggleStockSelection}
                 onToggleAllSelection={toggleAllStockSelection}
               />
-
-              {/* 최종 선택 종목 */}
-              {hasSelectedStocks && (
-                <FinalSelectionSection stockData={stockData} />
-              )}
             </div>
           )}
         </div>
