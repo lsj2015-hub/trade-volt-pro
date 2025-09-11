@@ -15,6 +15,8 @@ interface VolatilityCriteriaSectionProps {
   showResults: boolean;
   onAnalysis: () => void;
   onReset: () => void;
+  isBasicSettingsComplete: boolean;
+  isAllFiltersValid: boolean;
 }
 
 export const VolatilityCriteriaSection = ({
@@ -30,6 +32,8 @@ export const VolatilityCriteriaSection = ({
   showResults,
   onAnalysis,
   onReset,
+  isBasicSettingsComplete,
+  isAllFiltersValid,
 }: VolatilityCriteriaSectionProps) => {
   const handleAnalysisClick = () => {
     if (showResults) {
@@ -57,6 +61,7 @@ export const VolatilityCriteriaSection = ({
               type="number"
               value={declineDays}
               onChange={(e) => setDeclineDays(e.target.value)}
+              disabled={!isBasicSettingsComplete}
               className="w-full sm:w-20 text-center border-red-200 focus:border-red-400"
             />
           </div>
@@ -69,6 +74,7 @@ export const VolatilityCriteriaSection = ({
               type="number"
               value={declineRate}
               onChange={(e) => setDeclineRate(e.target.value)}
+              disabled={!isBasicSettingsComplete}
               className="w-full sm:w-20 text-center border-red-200 focus:border-red-400"
             />
           </div>
@@ -81,6 +87,7 @@ export const VolatilityCriteriaSection = ({
               type="number"
               value={recoveryDays}
               onChange={(e) => setRecoveryDays(e.target.value)}
+              disabled={!isBasicSettingsComplete}
               className="w-full sm:w-20 text-center border-green-200 focus:border-green-400"
             />
           </div>
@@ -93,6 +100,7 @@ export const VolatilityCriteriaSection = ({
               type="number"
               value={volatilityRate}
               onChange={(e) => setVolatilityRate(e.target.value)}
+              disabled={!isBasicSettingsComplete}
               className="w-full sm:w-20 text-center border-green-200 focus:border-green-400"
             />
           </div>
@@ -101,8 +109,12 @@ export const VolatilityCriteriaSection = ({
         <div className="w-full sm:w-auto mt-4 sm:mt-0">
           <Button
             onClick={handleAnalysisClick}
-            disabled={isLoading}
-            className="bg-slate-700 hover:bg-slate-600 w-full sm:w-auto"
+            disabled={isLoading || !isAllFiltersValid}
+            className={`w-full sm:w-auto ${
+              showResults
+                ? 'bg-white border-2 border-red-500 text-red-500 hover:bg-red-50'
+                : 'bg-slate-700 hover:bg-slate-600 text-white'
+            }`}
           >
             {isLoading ? (
               <>
@@ -125,4 +137,4 @@ export const VolatilityCriteriaSection = ({
       </div>
     </div>
   );
-}
+};

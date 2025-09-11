@@ -2,9 +2,10 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, Loader2, Search } from 'lucide-react';
-import { StockInfo, AnalysisInfoType, AnalysisData } from '@/types/types';
+import { Building2, Loader2 } from 'lucide-react';
+import { StockInfo, AnalysisData } from '@/types/types';
 import { CompanyInfoDisplay } from './company-info-display';
+import { AnalysisInfo, AnalysisInfoType } from '@/types/enum';
 
 interface CompanyInfoTabsProps {
   selectedStock: StockInfo | null;
@@ -24,12 +25,20 @@ const CompanyInfoTabs = ({
   onInfoSelect,
 }: CompanyInfoTabsProps) => {
   const infoTypes = [
-    { key: 'company-summary', label: 'Company Summary', icon: '🏢' },
-    { key: 'financial-summary', label: 'Financial Summary', icon: '💰' },
-    { key: 'investment-index', label: 'Investment Index', icon: '📊' },
-    { key: 'market-info', label: 'Market Info', icon: '📈' },
-    { key: 'analyst-opinion', label: 'Analyst Opinion', icon: '👥' },
-    { key: 'major-executors', label: 'Major Executors', icon: '👔' },
+    { key: AnalysisInfo.COMPANY_SUMMARY, label: 'Company Summary', icon: '🏢' },
+    {
+      key: AnalysisInfo.FINANCIAL_SUMMARY,
+      label: 'Financial Summary',
+      icon: '💰',
+    },
+    {
+      key: AnalysisInfo.INVESTMENT_INDEX,
+      label: 'Investment Index',
+      icon: '📊',
+    },
+    { key: AnalysisInfo.MARKET_INFO, label: 'Market Info', icon: '📈' },
+    { key: AnalysisInfo.ANALYST_OPINION, label: 'Analyst Opinion', icon: '👥' },
+    { key: AnalysisInfo.MAJOR_EXECUTORS, label: 'Major Executors', icon: '👔' },
   ] as const;
 
   return (
@@ -64,12 +73,13 @@ const CompanyInfoTabs = ({
                   <div className="text-left">
                     <div className="font-medium">{label}</div>
                     <div className="text-xs opacity-70">
-                      {key === 'company-summary' && '회사 개요'}
-                      {key === 'financial-summary' && '재무 요약'}
-                      {key === 'investment-index' && '투자 지표'}
-                      {key === 'market-info' && '시장 정보'}
-                      {key === 'analyst-opinion' && '애널리스트 의견'}
-                      {key === 'major-executors' && '주요 임원'}
+                      {key === AnalysisInfo.COMPANY_SUMMARY && '회사 개요'}
+                      {key === AnalysisInfo.FINANCIAL_SUMMARY && '재무 요약'}
+                      {key === AnalysisInfo.INVESTMENT_INDEX && '투자 지표'}
+                      {key === AnalysisInfo.MARKET_INFO && '시장 정보'}
+                      {key === AnalysisInfo.ANALYST_OPINION &&
+                        '애널리스트 의견'}
+                      {key === AnalysisInfo.MAJOR_EXECUTORS && '주요 임원'}
                     </div>
                   </div>
                   {loading && selectedInfo === key && (

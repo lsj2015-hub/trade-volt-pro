@@ -7,7 +7,7 @@ export interface VolatilityStock {
   lastDeclineDate: string;
   lastDeclinePrice: number;
   lastRecoveryDate: string;
-  maxRecoveryRate: number;
+  minRecoveryRate: number;
 }
 
 interface VolatilityResultsSectionProps {
@@ -86,7 +86,7 @@ export const VolatilityResultsSection = ({
                   <th className="p-2 text-center">발생횟수</th>
                   <th className="p-2 text-center">최근하락일</th>
                   <th className="p-2 text-right">하락일종가</th>
-                  <th className="p-2 text-center">최대반등일</th>
+                  <th className="p-2 text-right">최대반등일</th>
                   <th className="p-2 text-right">최대반등률(%)</th>
                 </tr>
               </thead>
@@ -124,11 +124,11 @@ export const VolatilityResultsSection = ({
                     <td className="p-2 text-right">
                       {stock.lastDeclinePrice.toLocaleString()}원
                     </td>
-                    <td className="p-2 text-center text-green-600">
+                    <td className="p-2 text-right text-green-600">
                       {stock.lastRecoveryDate}
                     </td>
                     <td className="p-2 text-right text-green-600 font-semibold">
-                      +{stock.maxRecoveryRate}%
+                      +{stock.minRecoveryRate}%
                     </td>
                   </tr>
                 ))}
@@ -139,4 +139,4 @@ export const VolatilityResultsSection = ({
       )}
     </div>
   );
-}
+};

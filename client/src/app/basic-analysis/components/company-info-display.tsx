@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  AnalysisInfoType,
   AnalysisData,
   CompanySummary,
   FinancialSummary,
@@ -10,16 +9,20 @@ import {
   AnalystOpinion,
   MajorExecutors,
 } from '@/types/types';
+import { AnalysisInfo, AnalysisInfoType } from '@/types/enum';
 
 interface CompanyInfoDisplayProps {
   infoType: AnalysisInfoType;
   data: AnalysisData;
 }
 
-export const CompanyInfoDisplay = ({ infoType, data }: CompanyInfoDisplayProps) => {
+export const CompanyInfoDisplay = ({
+  infoType,
+  data,
+}: CompanyInfoDisplayProps) => {
   // 정보 유형별 렌더링
   switch (infoType) {
-    case 'company-summary':
+    case AnalysisInfo.COMPANY_SUMMARY:
       const companyData = data as CompanySummary;
       return (
         <div className="space-y-4">
@@ -67,7 +70,7 @@ export const CompanyInfoDisplay = ({ infoType, data }: CompanyInfoDisplayProps) 
         </div>
       );
 
-    case 'financial-summary':
+    case AnalysisInfo.FINANCIAL_SUMMARY:
       const financialData = data as FinancialSummary;
       return (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -100,7 +103,7 @@ export const CompanyInfoDisplay = ({ infoType, data }: CompanyInfoDisplayProps) 
         </div>
       );
 
-    case 'investment-index':
+    case AnalysisInfo.INVESTMENT_INDEX:
       const indexData = data as InvestmentIndex;
       return (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -127,7 +130,7 @@ export const CompanyInfoDisplay = ({ infoType, data }: CompanyInfoDisplayProps) 
         </div>
       );
 
-    case 'market-info':
+    case AnalysisInfo.MARKET_INFO:
       const marketData = data as MarketInfo;
       return (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -160,7 +163,7 @@ export const CompanyInfoDisplay = ({ infoType, data }: CompanyInfoDisplayProps) 
         </div>
       );
 
-    case 'analyst-opinion':
+    case AnalysisInfo.ANALYST_OPINION:
       const analystData = data as AnalystOpinion;
       return (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -189,7 +192,7 @@ export const CompanyInfoDisplay = ({ infoType, data }: CompanyInfoDisplayProps) 
         </div>
       );
 
-    case 'major-executors':
+    case AnalysisInfo.MAJOR_EXECUTORS:
       const executorData = data as MajorExecutors;
 
       if (

@@ -26,25 +26,8 @@ import { NewsfeedScalping } from './strategies/newsfeed-scalping';
 import { AfterhourGapTrading } from './strategies/afterhour-gap-trading';
 import { VolatilityAnalysis } from './strategies/volatility-analysis';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { SelectedStock, TradingResult, TradingStrategy } from '@/types/types';
-
-export const tradingStrategies: TradingStrategy[] = [
-  {
-    id: 'news-scalping',
-    name: 'Newsfeed Scalping Trading',
-    description: 'AI가 뉴스를 분석하여 급등 가능성이 있는 종목을 스캘핑합니다.',
-  },
-  {
-    id: 'volatility-momentum',
-    name: 'Volatility Momentum Strategy',
-    description: '일정 기간 급락과 급등의 패턴을 가진 종목을 선별합니다.',
-  },
-  {
-    id: 'afterhour-gap-trading',
-    name: 'After Hour Gap Trading',
-    description: '시간외 급등주를 찾아 다음날 시초가에 매도하는 전략',
-  },
-];
+import { SelectedStock, TradingResult } from '@/types/types';
+import { tradingStrategies } from '@/constants/strategies';
 
 const tradingResults: TradingResult[] = [
   {
@@ -303,11 +286,11 @@ export default function StrategyPage() {
                       {/* 전략 배지 */}
                       <div className="absolute top-2 right-2">
                         <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full font-medium">
-                          {stock.strategy === 'After Hour Gap Trading'
+                          {stock.strategy === 'afterhour-gap-trading'
                             ? '갭트레이딩'
-                            : stock.strategy === 'Volatility Analysis'
+                            : stock.strategy === 'volatility-momentum'
                             ? '변동성분석'
-                            : stock.strategy === 'Newsfeed Scalping'
+                            : stock.strategy === 'newsfeed-scalping'
                             ? '뉴스스캘핑'
                             : '멀티'}
                         </span>
@@ -349,13 +332,13 @@ export default function StrategyPage() {
                           {/* 추가 메타데이터 표시 */}
                           {stock.metadata && (
                             <div className="text-right">
-                              {stock.strategy === 'After Hour Gap Trading' &&
+                              {stock.strategy === 'afterhour-gap-trading' &&
                                 stock.metadata.afterHourReturn && (
                                   <div className="text-xs text-green-600 font-medium">
                                     +{stock.metadata.afterHourReturn}%
                                   </div>
                                 )}
-                              {stock.strategy === 'Volatility Analysis' &&
+                              {stock.strategy === 'volatility-momentum' &&
                                 stock.metadata.maxRecoveryRate && (
                                   <div className="text-xs text-green-600 font-medium">
                                     최대반등 +{stock.metadata.maxRecoveryRate}%

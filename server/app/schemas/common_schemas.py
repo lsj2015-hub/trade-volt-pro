@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from enum import Enum
@@ -511,3 +511,50 @@ class LLMQuestionResponse(BaseModel):
   conversation_history: List[ChatMessage] = Field(description="업데이트된 대화 히스토리")
   context_used: Dict[str, bool] = Field(description="사용된 컨텍스트 데이터 유형")
   message: Optional[str] = None
+  
+# ==========================================
+# 📋 Request/Response Schemas (클라이언트 타입과 일치)
+# ==========================================
+
+class VolatilityAnalysisRequest(BaseModel):
+  """변동성 분석 요청 - 클라이언트 BaseStrategyRequest + 추가 필드"""
+  country: str          # 국가 코드 (KR, US 등)
+  market: str           # 시장 코드 (KOSPI, KOSDAQ, NYSE 등)
+  start_date: str       # 시작일 (YYYY-MM-DD)
+  end_date: str         # 종료일 (YYYY-MM-DD)
+  decline_days: int     # 하락기간(일)
+  decline_rate: float   # 하락률(%)
+  recovery_days: int    # 회복기간(일) - 클라이언트는 recovery_days 사용
+  recovery_rate: float  # 회복률(%) - 클라이언트는 recovery_rate 사용
+  
+  @validator('start_date', 'end_date')
+  def validate_date_format(cls, v):
+    try:
+      datetime.strptime(v, '%Y. %m. %d')
+      return v
+    except ValueError:
+      raise ValueError('날짜 형식은 YYYY-MM-DD 이어야 합니다.')
+
+class VolatilityStockResult(BaseModel):
+  """변동성 분석 결과 종목 - 클라이언트 타입과 정확히 일치"""
+  rank: int
+  stock_name: str
+  stock_code: str
+  occurrence_count: int
+  last_decline_date: str
+  last_decline_price: float
+  last_recovery_date: str
+  min_recovery_rate: float
+
+class VolatilityAnalysisResponse(BaseModel):
+  """변동성 분석 응답 - 클라이언트 BaseStrategyResponse 구조 준수"""
+  success: bool
+  strategy_type: Optional[str] = "volatility-analysis"
+  country: str
+  market: str
+  start_date: str
+  end_date: str
+  result_count: int
+  data: List[VolatilityStockResult]
+  message: str
+  criteria: Dict[str, Any]  # 분석 기준 정보

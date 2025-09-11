@@ -7,6 +7,7 @@ import { NewsResultsSection } from '../components/newsfeed-scalping/news-results
 import { DartResultsSection } from '../components/newsfeed-scalping/dart-results-section';
 import { AIEvaluationSection } from '../components/newsfeed-scalping/ai-evaluation-section';
 import { SelectedStock, StrategyComponentProps } from '@/types/types';
+import { Strategy } from '@/types/enum';
 
 // 타입 정의
 interface NewsItem {
@@ -69,7 +70,7 @@ export const NewsfeedScalping = ({
         symbol: result.code,
         name: result.company,
         price: 0, // 뉴스 스캘핑에서는 가격 정보가 없으므로 0
-        strategy: 'Newsfeed Scalping',
+        strategy: Strategy.NEWSFEED_SCALPING,
         metadata: {
           newsTitle: result.newsTitle,
           dartInfo: result.dartInfo,

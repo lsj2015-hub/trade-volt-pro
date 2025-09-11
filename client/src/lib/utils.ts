@@ -1,23 +1,25 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { CommissionCalculationParams, CommissionResult } from '@/types/types';
+import { EXCHANGE_METADATA } from '@/constants/exchanges';
+import { ExchangeCodeType } from '@/types/enum';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// 통화 표시 함수
-export const getCurrencySymbol = (currency: string) => {
-  const symbols: Record<string, string> = {
-    KRW: '₩',
-    USD: '$',
-    JPY: '¥',
-    EUR: '€',
-    GBP: '£',
-    HKD: 'HK$',
-    CNY: '¥',
-  };
-  return symbols[currency] || currency;
+// 거래소 기반 통화 심볼 조회
+export const getCurrencySymbolByExchange = (exchangeCode: ExchangeCodeType) =>
+  EXCHANGE_METADATA[exchangeCode]?.currencySymbol || '$';
+
+// 거래소 기반 국기 이모지 조회
+export const getCountryFlag = (exchangeCode: ExchangeCodeType) =>
+  EXCHANGE_METADATA[exchangeCode]?.flag || '🌐';
+
+// 거래소 기반 가격 포맷팅
+export const formatPrice = (amount: number, exchangeCode: ExchangeCodeType) => {
+  const { currencySymbol } = EXCHANGE_METADATA[exchangeCode];
+  return `${currencySymbol}${amount.toLocaleString()}`;
 };
 
 /**

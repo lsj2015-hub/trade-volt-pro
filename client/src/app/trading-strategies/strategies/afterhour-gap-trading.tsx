@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { FilteringSection } from '../components/after-gap-trading/filtering-section';
 import { StockResultsSection } from '../components/after-gap-trading/stock-results-section';
 import { SelectedStock, StrategyComponentProps } from '@/types/types';
+import { Strategy } from '@/types/enum';
 
 // 타입 정의
 interface StockData {
@@ -73,7 +74,7 @@ export const AfterhourGapTrading = ({
         symbol: stock.symbol,
         name: stock.name,
         price: stock.closePrice,
-        strategy: 'After Hour Gap Trading',
+        strategy: Strategy.AFTERHOUR_GAP_TRADING,
         metadata: {
           afterHourReturn: stock.afterHourReturn,
           marketReturn: stock.marketReturn,

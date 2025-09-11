@@ -1,35 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { DatePicker } from '@/components/ui/date-picker';
-import {
-  TrendingDown,
-  TrendingUp,
-  Calendar,
-  BarChart3,
-  Loader2,
-  X,
-} from 'lucide-react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
-import { SelectedStock, StrategyComponentProps } from '@/types/types';
+  SelectedStock,
+  StrategyAPIError,
+  StrategyComponentProps,
+  VolatilityAnalysisResponse,
+} from '@/types/types';
 import {
   VolatilityResultsSection,
   VolatilityStock,
@@ -43,6 +21,8 @@ import {
   COUNTRY_MARKETS,
 } from '../components/volatility-analysis/basic-settings-section';
 import { VolatilityCriteriaSection } from '../components/volatility-analysis/volatility-criteria-section';
+import { StrategyAPI } from '@/lib/strategy-api';
+import { Strategy } from '@/types/enum';
 
 // 샘플 변동성 종목 데이터
 const sampleVolatilityData: VolatilityStock[] = [
@@ -54,7 +34,7 @@ const sampleVolatilityData: VolatilityStock[] = [
     lastDeclineDate: '2025-08-20',
     lastDeclinePrice: 145000,
     lastRecoveryDate: '2025-08-23',
-    maxRecoveryRate: 28.5,
+    minRecoveryRate: 28.5,
   },
   {
     rank: 2,
@@ -64,7 +44,7 @@ const sampleVolatilityData: VolatilityStock[] = [
     lastDeclineDate: '2025-08-19',
     lastDeclinePrice: 52000,
     lastRecoveryDate: '2025-08-22',
-    maxRecoveryRate: 22.3,
+    minRecoveryRate: 22.3,
   },
   {
     rank: 3,
@@ -74,7 +54,7 @@ const sampleVolatilityData: VolatilityStock[] = [
     lastDeclineDate: '2025-08-18',
     lastDeclinePrice: 380000,
     lastRecoveryDate: '2025-08-21',
-    maxRecoveryRate: 18.7,
+    minRecoveryRate: 18.7,
   },
   {
     rank: 4,
@@ -84,7 +64,7 @@ const sampleVolatilityData: VolatilityStock[] = [
     lastDeclineDate: '2025-08-17',
     lastDeclinePrice: 185000,
     lastRecoveryDate: '2025-08-20',
-    maxRecoveryRate: 15.2,
+    minRecoveryRate: 15.2,
   },
   {
     rank: 5,
@@ -94,7 +74,7 @@ const sampleVolatilityData: VolatilityStock[] = [
     lastDeclineDate: '2025-08-16',
     lastDeclinePrice: 750000,
     lastRecoveryDate: '2025-08-19',
-    maxRecoveryRate: 12.8,
+    minRecoveryRate: 12.8,
   },
 ];
 
@@ -125,10 +105,14 @@ export function VolatilityAnalysis({
   const [declineDays, setDeclineDays] = useState<string>('5');
   const [declineRate, setDeclineRate] = useState<string>('-20');
   const [recoveryDays, setRecoveryDays] = useState<string>('20');
-  const [volatilityRate, setVolatilityRate] = useState<string>('20');
+  const [recoveryRate, setRecoveryRate] = useState<string>('20');
 
   // UI 상태
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [results, setResults] = useState<VolatilityAnalysisResponse | null>(
+    null
+  );
   const [showResults, setShowResults] = useState(false);
   const [selectedStock, setSelectedStock] = useState<VolatilityStock | null>(
     null
@@ -145,13 +129,13 @@ export function VolatilityAnalysis({
         symbol: stock.stockCode,
         name: stock.stockName,
         price: stock.lastDeclinePrice,
-        strategy: 'Volatility Analysis',
+        strategy: Strategy.VOLATILITY_MOMENTUM,
         metadata: {
           rank: stock.rank,
           occurrenceCount: stock.occurrenceCount,
           lastDeclineDate: stock.lastDeclineDate,
           lastRecoveryDate: stock.lastRecoveryDate,
-          maxRecoveryRate: stock.maxRecoveryRate,
+          maxRecoveryRate: stock.minRecoveryRate,
         },
       }));
 
@@ -160,16 +144,75 @@ export function VolatilityAnalysis({
     }
   }, [stockData, selectedStocks]);
 
+  // 필터 검증 로직 추가
+  const isBasicSettingsComplete = useMemo(() => {
+    return !!(country && market && startDate && endDate && startDate < endDate);
+  }, [country, market, startDate, endDate]);
+
+  const isAllFiltersValid = useMemo(() => {
+    return (
+      isBasicSettingsComplete &&
+      !!(
+        declineDays &&
+        parseInt(declineDays) > 0 &&
+        declineRate &&
+        parseFloat(declineRate) < 0 &&
+        recoveryDays &&
+        parseInt(recoveryDays) > 0 &&
+        recoveryRate &&
+        parseFloat(recoveryRate) > 0
+      )
+    );
+  }, [
+    isBasicSettingsComplete,
+    declineDays,
+    declineRate,
+    recoveryDays,
+    recoveryRate,
+  ]);
+
   // 분석 실행
   const handleAnalysis = async () => {
-    setIsLoading(true);
+    // 입력 검증
+    if (!startDate || !endDate) {
+      setError('시작일과 종료일을 모두 선택해주세요.');
+      return;
+    }
 
-    // 실제 API 호출 시뮬레이션
-    setTimeout(() => {
-      setStockData(sampleVolatilityData);
-      setShowResults(true);
+    if (startDate >= endDate) {
+      setError('종료일은 시작일보다 늦어야 합니다.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    setResults(null);
+
+    try {
+      // 현재 입력된 값들을 사용해서 API 호출
+      const result = await StrategyAPI.runVolatilityAnalysis({
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        decline_days: Number(declineDays), // 하락기간(일) state
+        decline_rate: Number(declineRate), // 하락률(%) state
+        recovery_days: Number(recoveryDays), // 반등기간(일) state
+        recovery_rate: Number(recoveryRate), // 반등률(%) state
+        country: country,
+        market: market,
+      });
+
+      setResults(result);
+      console.log('변동성 분석 결과:', result);
+    } catch (error) {
+      if (error instanceof StrategyAPIError) {
+        setError(error.message);
+      } else {
+        setError('변동성 분석 중 오류가 발생했습니다.');
+      }
+      console.error('변동성 분석 에러:', error);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   // 초기화
@@ -184,7 +227,7 @@ export function VolatilityAnalysis({
     setDeclineDays('5');
     setDeclineRate('-20');
     setRecoveryDays('20');
-    setVolatilityRate('20');
+    setRecoveryRate('20');
     setSelectedStocks(new Set());
   };
 
@@ -253,12 +296,14 @@ export function VolatilityAnalysis({
           setDeclineRate={setDeclineRate}
           recoveryDays={recoveryDays}
           setRecoveryDays={setRecoveryDays}
-          volatilityRate={volatilityRate}
-          setVolatilityRate={setVolatilityRate}
+          volatilityRate={recoveryRate}
+          setVolatilityRate={setRecoveryRate}
           isLoading={isLoading}
           showResults={showResults}
           onAnalysis={handleAnalysis}
           onReset={handleReset}
+          isBasicSettingsComplete={isBasicSettingsComplete}
+          isAllFiltersValid={isAllFiltersValid}
         />
 
         {/* 결과 표시 영역 */}

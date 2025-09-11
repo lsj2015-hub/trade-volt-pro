@@ -1,3 +1,16 @@
+import {
+  CountryFlagType,
+  CountryCodeType,
+  CurrencySymbolType,
+  CurrencyType,
+  MarketType,
+  RegionType,
+  TransactionType,
+  ExchangeCodeType,
+  StrategyType,
+  AnalysisInfoType,
+} from './enum';
+
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
@@ -9,6 +22,37 @@ declare global {
 // ====== API 응답 및 에러 관련 타입 ======
 
 export type ApiStatus = 'loading' | 'connected' | 'error';
+
+export interface ExchangeMetadata {
+  code: ExchangeCodeType;
+  name: string;
+  nameEn: string;
+  country: CountryCodeType; // 🔄 enum으로 변경
+  countryName: string;
+  currency: CurrencyType;
+  currencySymbol: CurrencySymbolType; // 🔄 enum으로 변경
+  flag: CountryFlagType; // 🔄 enum으로 변경
+  timezone: string; // string 유지
+  marketHours: string; // string 유지
+  region: RegionType; // 🔄 enum으로 변경
+  marketType: MarketType;
+  isActive: boolean;
+}
+
+// 통화 메타데이터 인터페이스
+export interface CurrencyMetadata {
+  code: CurrencyType;
+  name: string;
+  nameEn: string;
+  symbol: CurrencyType;
+  country: string;
+  countryCode: CountryCodeType;
+  countryName: string;
+  decimalPlaces: number;
+  isActive: boolean;
+  region: RegionType;
+  isCrypto: boolean;
+}
 
 // ====== 사용자 인증 관련 타입 ======
 export interface User {
@@ -52,17 +96,17 @@ export interface AuthContextType extends AuthState {
   refreshUser: () => Promise<void>;
 }
 
-// ====== 종목 검색 관련 타입 ======
+// ======== 종목 검색 관련 타입 =======
 
 export interface StockInfo {
   symbol: string; // 종목코드
   company_name: string; // 종목명
   company_name_en: string; // 영문 종목명
   corp_cord: string; // Dart 회사 조회 코드
-  country_code: string; // 국가 코드
+  country_code: CountryCodeType; // 국가 코드
   exchange_code: string; // 거래소 코드
-  currency: string; // 거래통화
-  market_type: 'DOMESTIC' | 'OVERSEAS'; // 시장 구분
+  currency: CurrencyType; // 거래통화
+  market_type: MarketType; // 국내/해외 구분
 }
 
 export interface StockSearchModalProps {
@@ -72,6 +116,7 @@ export interface StockSearchModalProps {
 }
 
 // ====== 포트폴리오 관련 타입 ======
+
 export interface StockData {
   symbol: string;
   company_name: string;
@@ -85,37 +130,14 @@ export interface StockData {
   total_gain_percent: number;
 }
 
-export type CurrencyType = 'KRW' | 'USD';
-
-// ====== UI 컴포넌트 관련 타입 ======
-
-// ======  Strategy ======
-
-export interface TradingStrategy {
-  id: string;
-  name: string;
-  description: string;
-}
-
-export interface TradingResult {
-  stock: string;
-  buy_price: number;
-  sell_price: number;
-  quantity: number;
-  profit: number;
-  return_rate: number;
-}
-
-// ====== 공통 UI 요소 타입 ======
-
 // Transaction 관련 타입들
 export interface TransactionCreateRequest {
   symbol: string;
   quantity: number;
   price: number;
   broker_id: number;
-  transaction_type: 'BUY' | 'SELL';
-  market_type: 'DOMESTIC' | 'OVERSEAS';
+  transaction_type: TransactionType; // Buy/Sell
+  market_type: MarketType; // 국내/해외 구분
   transaction_date: string; // ISO 8601 format
   notes?: string;
   commission?: number;
@@ -128,7 +150,7 @@ export interface TransactionResponse {
   user_id: number;
   broker_id: number;
   stock_id: number;
-  transaction_type: string;
+  transaction_type: TransactionType;
   quantity: number;
   price: number;
   commission: number;
@@ -152,8 +174,8 @@ export interface BrokerResponse {
 // Commission 관련 타입
 export interface CommissionRateRequest {
   broker_id: number;
-  market_type: 'DOMESTIC' | 'OVERSEAS';
-  transaction_type: 'BUY' | 'SELL';
+  market_type: MarketType;
+  transaction_type: TransactionType;
 }
 
 export interface CommissionRateResponse {
@@ -168,7 +190,7 @@ export interface CommissionCalculationParams {
   price_per_share: number;
   fee_rate: number; // 서버에서 받은 수수료율
   transaction_tax_rate: number; // 서버에서 받은 거래세율
-  transaction_type: 'BUY' | 'SELL';
+  transaction_type: TransactionType;
 }
 
 export interface CommissionResult {
@@ -201,7 +223,7 @@ export interface PortfolioSummaryResponse {
 
 export interface StockPriceResponse {
   symbol: string;
-  market_type: string;
+  market_type: MarketType;
   current_price: number;
   previous_close: number;
   daily_return_rate: number;
@@ -289,7 +311,7 @@ export interface RealizedProfitData {
   company_name_en: string;
   broker: string;
   broker_id: number;
-  market_type: 'DOMESTIC' | 'OVERSEAS';
+  market_type: MarketType;
   sell_date: string;
   shares: number;
   sell_price: number;
@@ -297,7 +319,7 @@ export interface RealizedProfitData {
   realized_profit: number;
   realized_profit_percent: number;
   realized_profit_krw: number;
-  currency: 'KRW' | 'USD';
+  currency: CurrencyType; // KRW/USD
   exchange_rate: number;
   commission: number;
   transaction_tax: number;
@@ -324,13 +346,6 @@ export interface RealizedProfitResponse {
 }
 
 // ====== Analysis 관련 타입 ======
-export type AnalysisInfoType =
-  | 'company-summary'
-  | 'financial-summary'
-  | 'investment-index'
-  | 'market-info'
-  | 'analyst-opinion'
-  | 'major-executors';
 
 export interface AnalysisResponse {
   symbol: string;
@@ -429,7 +444,7 @@ export class AnalysisAPIError extends Error {
 export interface AnalysisParams {
   symbol: string;
   info_type: AnalysisInfoType;
-  country_code?: string;
+  country_code?: CountryCodeType;
   company_name?: string;
   exchange_code?: string;
 }
@@ -555,13 +570,16 @@ export interface LLMQuestionResponse {
   message?: string;
 }
 
-// ====== Trading Strategies 공통 타입 ======
+// ============================================================================
+// Trading Strategies 공통 타입
+// ============================================================================
+
 export interface SelectedStock {
   id: string;
   symbol: string;
   name: string;
   price: number;
-  strategy: string;
+  strategy: StrategyType;
   metadata?: {
     [key: string]: any; // 전략별로 다른 추가 정보
   };
@@ -569,4 +587,144 @@ export interface SelectedStock {
 
 export interface StrategyComponentProps {
   onSelectedStocksChange?: (stocks: SelectedStock[]) => void;
+}
+
+// Strategy API 관련 타입
+
+export interface BaseStrategyRequest {
+  country: string;
+  market: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface BaseStrategyResponse<T = any> {
+  success: boolean;
+  strategy_type?: StrategyType;
+  country: string;
+  market: string;
+  start_date: string;
+  end_date: string;
+  result_count: number;
+  data: T[];
+  message: string;
+}
+
+export class StrategyAPIError extends Error {
+  constructor(
+    message: string,
+    public status?: number,
+    public errorCode?: string,
+    public strategyType?: StrategyType
+  ) {
+    super(message);
+    this.name = 'StrategyAPIError';
+  }
+}
+
+// Volatility Analysis Strategy
+
+export interface VolatilityAnalysisRequest extends BaseStrategyRequest {
+  decline_days: number;
+  decline_rate: number;
+  recovery_days: number;
+  recovery_rate: number;
+}
+
+export interface VolatilityStockResult {
+  rank: number;
+  stock_name: string;
+  stock_code: string;
+  occurrence_count: number;
+  last_decline_date: string;
+  last_decline_price: number;
+  last_recovery_date: string;
+  min_recovery_rate: number;
+}
+
+export interface VolatilityAnalysisResponse
+  extends BaseStrategyResponse<VolatilityStockResult> {
+  criteria: {
+    decline_days: number;
+    decline_rate: number;
+    recovery_days: number;
+    recovery_rate: number;
+  };
+}
+
+// 프론트엔드에서 사용하는 변환된 타입
+export interface VolatilityStock {
+  rank: number;
+  stockName: string;
+  stockCode: string;
+  occurrenceCount: number;
+  lastDeclineDate: string;
+  lastDeclinePrice: number;
+  lastRecoveryDate: string;
+  minRecoveryRate: number;
+}
+
+// Afterhour Gap Trading Strategy (향후 구현)
+
+export interface AfterhourGapRequest extends BaseStrategyRequest {
+  gap_threshold: number;
+  volume_threshold: number;
+  // 추가 필터 필드들...
+}
+
+export interface GapStockResult {
+  rank: number;
+  stock_name: string;
+  stock_code: string;
+  gap_percentage: number;
+  volume_ratio: number;
+  // 추가 결과 필드들...
+}
+
+export interface AfterhourGapResponse
+  extends BaseStrategyResponse<GapStockResult> {
+  criteria: {
+    gap_threshold: number;
+    volume_threshold: number;
+  };
+}
+
+// Newsfeed Scalping Strategy (향후 구현)
+
+export interface NewsfeedScalpingRequest extends BaseStrategyRequest {
+  sentiment_threshold: number;
+  news_count_threshold: number;
+  // 추가 필터 필드들...
+}
+
+export interface NewsfeedStockResult {
+  rank: number;
+  stock_name: string;
+  stock_code: string;
+  sentiment_score: number;
+  news_count: number;
+  // 추가 결과 필드들...
+}
+
+export interface NewsfeedScalpingResponse
+  extends BaseStrategyResponse<NewsfeedStockResult> {
+  criteria: {
+    sentiment_threshold: number;
+    news_count_threshold: number;
+  };
+}
+
+export interface TradingStrategy {
+  id: StrategyType;
+  name: string;
+  description: string;
+}
+
+export interface TradingResult {
+  stock: string;
+  buy_price: number;
+  sell_price: number;
+  quantity: number;
+  profit: number;
+  return_rate: number;
 }
