@@ -8,6 +8,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+
+
 // 거래소 기반 통화 심볼 조회
 export const getCurrencySymbolByExchange = (exchangeCode: ExchangeCodeType) =>
   EXCHANGE_METADATA[exchangeCode]?.currencySymbol || '$';

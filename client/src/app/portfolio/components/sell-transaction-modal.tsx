@@ -20,7 +20,7 @@ import { TradingAPI, TradingAPIError } from '@/lib/trading-api';
 import { usePortfolio } from '@/contexts/portfolio-context';
 import {
   calculateCommissionWithDefaults,
-  getCurrencySymbol,
+  getCurrencySymbolByExchange,
 } from '@/lib/utils';
 
 interface SellTransactionModalProps {
@@ -177,7 +177,7 @@ export const SellTransactionModal = ({
     (parseFloat(formData.shares) || 0) *
     (parseFloat(formData.pricePerShare) || 0);
   const currencySymbol = stockInfo
-    ? getCurrencySymbol(stockInfo.currency)
+    ? getCurrencySymbolByExchange(stockInfo.exchange_code)
     : '₩';
   const maxQuantity = lotInfo?.net_quantity || 0;
 

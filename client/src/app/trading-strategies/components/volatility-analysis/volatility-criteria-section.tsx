@@ -44,77 +44,88 @@ export const VolatilityCriteriaSection = ({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
         <TrendingDown className="h-4 w-4 text-red-500" />
         <label className="text-sm font-semibold text-red-600">
           변동성 기준
         </label>
       </div>
-      <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 flex-wrap pl-6">
-        <div className="grid grid-cols-2 sm:flex sm:items-end gap-4 w-full sm:w-auto">
+
+      <div className="pl-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+          {/* 하락 기준 */}
           <div className="space-y-2">
-            <label className="text-xs font-medium text-red-600">
-              하락기간(일)
+            <label className="text-xs font-semibold text-red-600">
+              하락 기간
             </label>
             <Input
               type="number"
               value={declineDays}
               onChange={(e) => setDeclineDays(e.target.value)}
               disabled={!isBasicSettingsComplete}
-              className="w-full sm:w-20 text-center border-red-200 focus:border-red-400"
+              className="text-center border-red-200 focus:border-red-400"
+              placeholder="일"
+              min="1"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-red-600">
-              하락률(%)
-            </label>
+            <label className="text-xs font-semibold text-red-600">하락률</label>
             <Input
               type="number"
               value={declineRate}
               onChange={(e) => setDeclineRate(e.target.value)}
               disabled={!isBasicSettingsComplete}
-              className="w-full sm:w-20 text-center border-red-200 focus:border-red-400"
+              className="text-center border-red-200 focus:border-red-400"
+              placeholder="%"
+              step="0.1"
             />
           </div>
 
+          {/* 반등 기준 */}
           <div className="space-y-2">
-            <label className="text-xs font-medium text-green-600">
-              반등기간(일)
+            <label className="text-xs font-semibold text-green-600">
+              반등 기간
             </label>
             <Input
               type="number"
               value={recoveryDays}
               onChange={(e) => setRecoveryDays(e.target.value)}
               disabled={!isBasicSettingsComplete}
-              className="w-full sm:w-20 text-center border-green-200 focus:border-green-400"
+              className="text-center border-green-200 focus:border-green-400"
+              placeholder="일"
+              min="1"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-medium text-green-600">
-              반등률(%)
+            <label className="text-xs font-semibold text-green-600">
+              반등률
             </label>
             <Input
               type="number"
               value={volatilityRate}
               onChange={(e) => setVolatilityRate(e.target.value)}
               disabled={!isBasicSettingsComplete}
-              className="w-full sm:w-20 text-center border-green-200 focus:border-green-400"
+              className="text-center border-green-200 focus:border-green-400"
+              placeholder="%"
+              step="0.1"
             />
           </div>
         </div>
 
-        <div className="w-full sm:w-auto mt-4 sm:mt-0">
+        {/* 분석 실행 버튼 */}
+        <div className="flex justify-center">
           <Button
             onClick={handleAnalysisClick}
             disabled={isLoading || !isAllFiltersValid}
-            className={`w-full sm:w-auto ${
+            size="lg"
+            className={
               showResults
                 ? 'bg-white border-2 border-red-500 text-red-500 hover:bg-red-50'
                 : 'bg-slate-700 hover:bg-slate-600 text-white'
-            }`}
+            }
           >
             {isLoading ? (
               <>

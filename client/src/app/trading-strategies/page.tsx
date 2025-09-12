@@ -28,6 +28,7 @@ import { VolatilityAnalysis } from './strategies/volatility-analysis';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { SelectedStock, TradingResult } from '@/types/types';
 import { tradingStrategies } from '@/constants/strategies';
+import { Strategy } from '../../types/enum';
 
 const tradingResults: TradingResult[] = [
   {
@@ -79,13 +80,11 @@ export default function StrategyPage() {
     };
 
     switch (selectedStrategy) {
-      case 'news-scalping':
+      case Strategy.NEWSFEED_SCALPING:
         return <NewsfeedScalping {...commonProps} />;
-      case 'volatility-momentum':
+      case Strategy.VOLATILITY_MOMENTUM:
         return <VolatilityAnalysis {...commonProps} />;
-      // case 'multi-function':
-      //   return <Multifunction {...commonProps} />;
-      case 'afterhour-gap-trading':
+      case Strategy.AFTERHOUR_GAP_TRADING:
         return <AfterhourGapTrading {...commonProps} />;
       default:
         return null;
@@ -286,11 +285,11 @@ export default function StrategyPage() {
                       {/* 전략 배지 */}
                       <div className="absolute top-2 right-2">
                         <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full font-medium">
-                          {stock.strategy === 'afterhour-gap-trading'
+                          {stock.strategy === Strategy.AFTERHOUR_GAP_TRADING
                             ? '갭트레이딩'
-                            : stock.strategy === 'volatility-momentum'
+                            : stock.strategy === Strategy.VOLATILITY_MOMENTUM
                             ? '변동성분석'
-                            : stock.strategy === 'newsfeed-scalping'
+                            : stock.strategy === Strategy.NEWSFEED_SCALPING
                             ? '뉴스스캘핑'
                             : '멀티'}
                         </span>
@@ -315,12 +314,7 @@ export default function StrategyPage() {
                             </div>
                             <div className="text-lg font-bold text-gray-900">
                               {stock.price > 0 ? (
-                                <>
-                                  {stock.price.toLocaleString()}
-                                  <span className="text-sm font-normal text-gray-500 ml-1">
-                                    원
-                                  </span>
-                                </>
+                                <>{stock.price.toLocaleString()}</>
                               ) : (
                                 <span className="text-sm text-gray-400">
                                   가격 미제공
@@ -341,7 +335,8 @@ export default function StrategyPage() {
                               {stock.strategy === 'volatility-momentum' &&
                                 stock.metadata.maxRecoveryRate && (
                                   <div className="text-xs text-green-600 font-medium">
-                                    최대반등 +{stock.metadata.maxRecoveryRate}%
+                                    최대반등 +
+                                    {stock.metadata.maxRecoveryRate.toFixed(2)}%
                                   </div>
                                 )}
                             </div>

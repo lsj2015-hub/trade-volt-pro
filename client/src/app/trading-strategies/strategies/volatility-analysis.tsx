@@ -4,97 +4,29 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   SelectedStock,
+  StockChartRequest,
   StrategyAPIError,
   StrategyComponentProps,
   VolatilityAnalysisResponse,
-} from '@/types/types';
-import {
-  VolatilityResultsSection,
   VolatilityStock,
-} from '../components/volatility-analysis/volatility-results-section';
+} from '@/types/types';
+import { VolatilityResultsSection } from '../components/volatility-analysis/volatility-results-section';
 import {
-  ChartData,
   StockChartSection,
+  LocalChartData,
 } from '../components/volatility-analysis/stock-chart-section';
-import {
-  BasicSettingsSection,
-  COUNTRY_MARKETS,
-} from '../components/volatility-analysis/basic-settings-section';
+import { BasicSettingsSection } from '../components/volatility-analysis/basic-settings-section';
 import { VolatilityCriteriaSection } from '../components/volatility-analysis/volatility-criteria-section';
 import { StrategyAPI } from '@/lib/strategy-api';
 import { Strategy } from '@/types/enum';
 
-// 샘플 변동성 종목 데이터
-const sampleVolatilityData: VolatilityStock[] = [
-  {
-    rank: 1,
-    stockName: '셀트리온',
-    stockCode: '068270',
-    occurrenceCount: 3,
-    lastDeclineDate: '2025-08-20',
-    lastDeclinePrice: 145000,
-    lastRecoveryDate: '2025-08-23',
-    minRecoveryRate: 28.5,
-  },
-  {
-    rank: 2,
-    stockName: '카카오',
-    stockCode: '035720',
-    occurrenceCount: 2,
-    lastDeclineDate: '2025-08-19',
-    lastDeclinePrice: 52000,
-    lastRecoveryDate: '2025-08-22',
-    minRecoveryRate: 22.3,
-  },
-  {
-    rank: 3,
-    stockName: 'LG화학',
-    stockCode: '051910',
-    occurrenceCount: 2,
-    lastDeclineDate: '2025-08-18',
-    lastDeclinePrice: 380000,
-    lastRecoveryDate: '2025-08-21',
-    minRecoveryRate: 18.7,
-  },
-  {
-    rank: 4,
-    stockName: 'NAVER',
-    stockCode: '035420',
-    occurrenceCount: 1,
-    lastDeclineDate: '2025-08-17',
-    lastDeclinePrice: 185000,
-    lastRecoveryDate: '2025-08-20',
-    minRecoveryRate: 15.2,
-  },
-  {
-    rank: 5,
-    stockName: '삼성바이오로직스',
-    stockCode: '207940',
-    occurrenceCount: 1,
-    lastDeclineDate: '2025-08-16',
-    lastDeclinePrice: 750000,
-    lastRecoveryDate: '2025-08-19',
-    minRecoveryRate: 12.8,
-  },
-];
-
-// 샘플 차트 데이터
-const sampleChartData: ChartData[] = [
-  { date: '08-14', price: 152000, volume: 1200000 },
-  { date: '08-15', price: 148000, volume: 1500000 },
-  { date: '08-16', price: 144000, volume: 1800000 },
-  { date: '08-17', price: 138000, volume: 2200000 },
-  { date: '08-18', price: 142000, volume: 1900000 },
-  { date: '08-19', price: 156000, volume: 1700000 },
-  { date: '08-20', price: 162000, volume: 1400000 },
-  { date: '08-21', price: 168000, volume: 1300000 },
-  { date: '08-22', price: 172000, volume: 1100000 },
-  { date: '08-23', price: 177000, volume: 1000000 },
-];
-
 export function VolatilityAnalysis({
   onSelectedStocksChange,
 }: StrategyComponentProps) {
+  // ============================================================================
+  // 상태 관리
+  // ============================================================================
+
   // 기본 설정 상태
   const [country, setCountry] = useState<string>('');
   const [market, setMarket] = useState<string>('');
@@ -110,41 +42,21 @@ export function VolatilityAnalysis({
   // UI 상태
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
-  const [results, setResults] = useState<VolatilityAnalysisResponse | null>(
-    null
-  );
   const [showResults, setShowResults] = useState(false);
+
+  // 데이터 상태
+  const [stockData, setStockData] = useState<VolatilityStock[]>([]);
+  const [selectedStocks, setSelectedStocks] = useState<Set<string>>(new Set());
   const [selectedStock, setSelectedStock] = useState<VolatilityStock | null>(
     null
   );
-  const [stockData, setStockData] = useState<VolatilityStock[]>([]);
-  const [selectedStocks, setSelectedStocks] = useState<Set<string>>(new Set());
+  const [chartData, setChartData] = useState<LocalChartData[]>([]);
+  const [isLoadingChart, setIsLoadingChart] = useState(false);
 
-  // 선택된 종목 변경 시 상위로 전달하는 useEffect 추가
-  useEffect(() => {
-    const selectedStockData: SelectedStock[] = stockData
-      .filter((stock) => selectedStocks.has(stock.stockCode))
-      .map((stock) => ({
-        id: stock.stockCode,
-        symbol: stock.stockCode,
-        name: stock.stockName,
-        price: stock.lastDeclinePrice,
-        strategy: Strategy.VOLATILITY_MOMENTUM,
-        metadata: {
-          rank: stock.rank,
-          occurrenceCount: stock.occurrenceCount,
-          lastDeclineDate: stock.lastDeclineDate,
-          lastRecoveryDate: stock.lastRecoveryDate,
-          maxRecoveryRate: stock.minRecoveryRate,
-        },
-      }));
+  // ============================================================================
+  // 검증 및 계산된 값들
+  // ============================================================================
 
-    if (onSelectedStocksChange) {
-      onSelectedStocksChange(selectedStockData);
-    }
-  }, [stockData, selectedStocks]);
-
-  // 필터 검증 로직 추가
   const isBasicSettingsComplete = useMemo(() => {
     return !!(country && market && startDate && endDate && startDate < endDate);
   }, [country, market, startDate, endDate]);
@@ -171,9 +83,41 @@ export function VolatilityAnalysis({
     recoveryRate,
   ]);
 
-  // 분석 실행
+  // ============================================================================
+  // 부수 효과 (Effects)
+  // ============================================================================
+
+  // 선택된 종목들을 상위 컴포넌트로 전달
+  useEffect(() => {
+    const selectedStockData: SelectedStock[] = stockData
+      .filter((stock) => selectedStocks.has(stock.stockCode))
+      .map((stock) => ({
+        id: stock.stockCode,
+        symbol: stock.stockCode,
+        name: stock.stockName,
+        price: stock.lastDeclineEndPrice,
+        strategy: Strategy.VOLATILITY_MOMENTUM,
+        metadata: {
+          rank: stock.rank,
+          occurrenceCount: stock.occurrenceCount,
+          lastDeclineEndDate: stock.lastDeclineEndDate,
+          lastDeclineRate: stock.lastDeclineRate,
+          maxRecoveryDate: stock.maxRecoveryDate,
+          maxRecoveryRate: stock.maxRecoveryRate,
+          maxRecoveryDeclineRate: stock.maxRecoveryDeclineRate,
+          patternPeriods: stock.patternPeriods,
+        },
+      }));
+
+    onSelectedStocksChange?.(selectedStockData);
+  }, [stockData, selectedStocks, onSelectedStocksChange]);
+
+  // ============================================================================
+  // 핸들러 함수들
+  // ============================================================================
+
+  // 변동성 분석 실행
   const handleAnalysis = async () => {
-    // 입력 검증
     if (!startDate || !endDate) {
       setError('시작일과 종료일을 모두 선택해주세요.');
       return;
@@ -186,95 +130,197 @@ export function VolatilityAnalysis({
 
     setIsLoading(true);
     setError('');
-    setResults(null);
 
     try {
-      // 현재 입력된 값들을 사용해서 API 호출
+      console.log('🔍 변동성 분석 API 요청:', {
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        decline_days: Number(declineDays),
+        decline_rate: Number(declineRate),
+        recovery_days: Number(recoveryDays),
+        recovery_rate: Number(recoveryRate),
+        country,
+        market,
+      });
+
       const result = await StrategyAPI.runVolatilityAnalysis({
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],
-        decline_days: Number(declineDays), // 하락기간(일) state
-        decline_rate: Number(declineRate), // 하락률(%) state
-        recovery_days: Number(recoveryDays), // 반등기간(일) state
-        recovery_rate: Number(recoveryRate), // 반등률(%) state
+        decline_days: Number(declineDays),
+        decline_rate: Number(declineRate),
+        recovery_days: Number(recoveryDays),
+        recovery_rate: Number(recoveryRate),
         country: country,
         market: market,
       });
 
-      setResults(result);
-      console.log('변동성 분석 결과:', result);
+      console.log('✅ 변동성 분석 API 응답:', {
+        success: result.success,
+        result_count: result.result_count,
+        data_sample: result.data.slice(0, 2), // 처음 2개만 로그
+      });
+
+      // API 응답을 VolatilityStock 형식으로 변환
+      const convertedData: VolatilityStock[] = result.data.map((item: any) => ({
+        rank: item.rank,
+        stockName: item.stock_name,
+        stockCode: item.stock_code,
+        occurrenceCount: item.occurrence_count,
+        lastDeclineEndDate: item.last_decline_end_date,
+        lastDeclineEndPrice: item.last_decline_end_price,
+        lastDeclineRate: item.last_decline_rate,
+        maxRecoveryDate: item.max_recovery_date,
+        maxRecoveryPrice: item.max_recovery_price,
+        maxRecoveryRate: item.max_recovery_rate,
+        maxRecoveryDeclineRate: item.max_recovery_decline_rate,
+        patternPeriods: item.pattern_periods.map((period: any) => ({
+          startDate: period.start_date,
+          endDate: period.end_date,
+          declineRate: period.decline_rate,
+          recoveryRate: period.recovery_rate,
+        })),
+      }));
+
+      setStockData(convertedData);
+      setShowResults(true);
+      setSelectedStock(null); // 기존 선택 초기화
+      setChartData([]); // 기존 차트 데이터 초기화
     } catch (error) {
+      console.error('❌ 변동성 분석 에러:', error);
       if (error instanceof StrategyAPIError) {
         setError(error.message);
       } else {
         setError('변동성 분석 중 오류가 발생했습니다.');
       }
-      console.error('변동성 분석 에러:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 초기화
+  // 차트 데이터 가져오기
+  const fetchChartData = async (stock: VolatilityStock) => {
+    if (!startDate || !endDate) return;
+
+    setIsLoadingChart(true);
+
+    try {
+      const requestData: StockChartRequest = {
+        symbol: stock.stockCode,
+        start_date: startDate.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        market_type: country === 'KR' ? 'DOMESTIC' : 'OVERSEAS',
+      };
+
+      console.log('📊 차트 데이터 API 요청:', requestData);
+
+      const result = await StrategyAPI.getStockChartData(requestData);
+
+      console.log('✅ 차트 데이터 API 응답:', {
+        success: result.success,
+        symbol: result.symbol,
+        data_count: result.data_count,
+        date_range:
+          result.chart_data?.length > 0
+            ? {
+                first: result.chart_data[0]?.date,
+                last: result.chart_data[result.chart_data.length - 1]?.date,
+              }
+            : null,
+      });
+
+      // API 응답을 LocalChartData 형식으로 변환 후 정렬
+      const convertedChartData: LocalChartData[] = result.chart_data
+        .map((item: any) => ({
+          originalDate: item.date, // YYYYMMDD 형식 (정렬용)
+          date: `${item.date.substring(2, 4)}/${item.date.substring(
+            4,
+            6
+          )}/${item.date.substring(6, 8)}`, // YY/MM/DD 형식 (표시용)
+          price: parseFloat(item.close_price),
+          volume: parseInt(item.volume),
+        }))
+        .sort((a, b) => a.originalDate.localeCompare(b.originalDate));
+
+      console.log('🔄 변환된 차트 데이터:', {
+        count: convertedChartData.length,
+        first: convertedChartData[0],
+        last: convertedChartData[convertedChartData.length - 1],
+      });
+
+      setChartData(convertedChartData);
+    } catch (error) {
+      console.error('❌ 차트 데이터 로딩 에러:', error);
+      setChartData([]);
+    } finally {
+      setIsLoadingChart(false);
+    }
+  };
+
+  // 종목 선택 핸들러
+  const handleStockSelect = async (stock: VolatilityStock) => {
+    const isAlreadySelected = selectedStock?.stockCode === stock.stockCode;
+    const newSelectedStock = isAlreadySelected ? null : stock;
+
+    setSelectedStock(newSelectedStock);
+
+    if (newSelectedStock) {
+      await fetchChartData(newSelectedStock);
+    } else {
+      setChartData([]);
+    }
+  };
+
+  // 초기화 핸들러
   const handleReset = () => {
+    // UI 상태 초기화
     setShowResults(false);
-    setSelectedStock(null);
+    setError('');
+
+    // 데이터 초기화
     setStockData([]);
-    setStartDate(undefined);
-    setEndDate(undefined);
+    setSelectedStock(null);
+    setSelectedStocks(new Set());
+    setChartData([]);
+
+    // 폼 데이터는 유지 (사용자 편의성을 위해)
+    // 만약 폼도 초기화하려면 아래 주석을 해제하세요
+    /*
     setCountry('');
     setMarket('');
+    setStartDate(undefined);
+    setEndDate(undefined);
     setDeclineDays('5');
     setDeclineRate('-20');
     setRecoveryDays('20');
     setRecoveryRate('20');
-    setSelectedStocks(new Set());
+    */
   };
 
-  // 종목 선택
-  const handleStockSelect = (stock: VolatilityStock) => {
-    setSelectedStock(
-      selectedStock?.stockCode === stock.stockCode ? null : stock
-    );
-  };
-
-  // 개별 체크박스 핸들러
-  const handleCheckboxChange = (stockCode: string, checked: boolean) => {
-    setSelectedStocks((prev) => {
-      const newSet = new Set(prev);
-      if (checked) {
-        newSet.add(stockCode);
-      } else {
-        newSet.delete(stockCode);
-      }
-      return newSet;
-    });
-  };
-
-  // 전체 선택/해제 핸들러
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedStocks(new Set(stockData.map((stock) => stock.stockCode)));
-    } else {
-      setSelectedStocks(new Set());
-    }
-  };
-
-  // 전체 선택 상태 확인
-  const isAllSelected =
-    stockData.length > 0 && selectedStocks.size === stockData.length;
-  const isIndeterminate =
-    selectedStocks.size > 0 && selectedStocks.size < stockData.length;
-
-  const availableMarkets = COUNTRY_MARKETS[country] || [];
+  // ============================================================================
+  // 렌더링
+  // ============================================================================
 
   return (
     <Card className="min-h-[200px] border-none bg-transparent">
       <CardContent className="space-y-6 px-6 py-0">
-        <p className="text-muted-foreground text-sm">
-          지정된 기간 동안 급락후 반등하는 종목을 찾습니다. 테이블행을 클릭하여
-          상세 차트를 확인하세요.
-        </p>
+        {/* 페이지 설명 */}
+        <div className="space-y-2">
+          <p className="text-muted-foreground text-sm">
+            지정된 기간 동안 급락 후 반등하는 패턴을 보이는 종목을 찾습니다.
+          </p>
+          <p className="text-muted-foreground text-xs">
+            💡 <strong>사용법:</strong> 기본 설정과 변동성 기준을 입력한 후
+            분석을 실행하세요. 결과 테이블에서 종목을 클릭하면 상세 차트를
+            확인할 수 있습니다.
+          </p>
+        </div>
+
+        {/* 에러 메시지 */}
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
+            ⚠️ {error}
+          </div>
+        )}
 
         {/* 기본 설정 */}
         <BasicSettingsSection
@@ -306,7 +352,7 @@ export function VolatilityAnalysis({
           isAllFiltersValid={isAllFiltersValid}
         />
 
-        {/* 결과 표시 영역 */}
+        {/* 분석 결과 테이블 */}
         <VolatilityResultsSection
           showResults={showResults}
           stockData={stockData}
@@ -319,7 +365,8 @@ export function VolatilityAnalysis({
         {/* 선택된 종목 차트 */}
         <StockChartSection
           selectedStock={selectedStock}
-          chartData={sampleChartData}
+          chartData={chartData}
+          isLoading={isLoadingChart}
         />
       </CardContent>
     </Card>

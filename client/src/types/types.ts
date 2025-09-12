@@ -104,7 +104,7 @@ export interface StockInfo {
   company_name_en: string; // 영문 종목명
   corp_cord: string; // Dart 회사 조회 코드
   country_code: CountryCodeType; // 국가 코드
-  exchange_code: string; // 거래소 코드
+  exchange_code: ExchangeCodeType; // 거래소 코드
   currency: CurrencyType; // 거래통화
   market_type: MarketType; // 국내/해외 구분
 }
@@ -622,7 +622,30 @@ export class StrategyAPIError extends Error {
   }
 }
 
+export interface TradingStrategy {
+  id: StrategyType;
+  name: string;
+  description: string;
+}
+
+export interface TradingResult {
+  stock: string;
+  buy_price: number;
+  sell_price: number;
+  quantity: number;
+  profit: number;
+  return_rate: number;
+}
+
 // Volatility Analysis Strategy
+
+// 패턴 구간 정보 인터페이스
+export interface PatternPeriod {
+  startDate: string;
+  endDate: string;
+  declineRate: number;
+  recoveryRate: number;
+}
 
 export interface VolatilityAnalysisRequest extends BaseStrategyRequest {
   decline_days: number;
@@ -636,10 +659,25 @@ export interface VolatilityStockResult {
   stock_name: string;
   stock_code: string;
   occurrence_count: number;
-  last_decline_date: string;
-  last_decline_price: number;
-  last_recovery_date: string;
-  min_recovery_rate: number;
+
+  // 최근 패턴 정보
+  last_decline_end_date: string;
+  last_decline_end_price: number;
+  last_decline_rate: number;
+
+  // 최대 반등률 패턴 정보
+  max_recovery_date: string;
+  max_recovery_price: number;
+  max_recovery_rate: number;
+  max_recovery_decline_rate: number;
+
+  // 패턴 구간 정보
+  pattern_periods: Array<{
+    start_date: string;
+    end_date: string;
+    decline_rate: number;
+    recovery_rate: number;
+  }>;
 }
 
 export interface VolatilityAnalysisResponse
@@ -658,73 +696,48 @@ export interface VolatilityStock {
   stockName: string;
   stockCode: string;
   occurrenceCount: number;
-  lastDeclineDate: string;
-  lastDeclinePrice: number;
-  lastRecoveryDate: string;
-  minRecoveryRate: number;
+
+  // 가장 최근 패턴 정보
+  lastDeclineEndDate: string; // 하락완료일
+  lastDeclineEndPrice: number; // 하락완료일종가
+  lastDeclineRate: number; // 최근하락률 (새 컬럼)
+
+  // 최고 성과 패턴 정보
+  maxRecoveryDate: string; // 최대반등완료일
+  maxRecoveryPrice: number; // 최대반등완료일종가
+  maxRecoveryRate: number; // 최대반등률
+  maxRecoveryDeclineRate: number; // 최대반등시 하락률 (새 컬럼)
+
+  // 차트용 패턴 정보
+  patternPeriods: PatternPeriod[]; // 패턴 구간들
 }
 
-// Afterhour Gap Trading Strategy (향후 구현)
-
-export interface AfterhourGapRequest extends BaseStrategyRequest {
-  gap_threshold: number;
-  volume_threshold: number;
-  // 추가 필터 필드들...
+// 차트 데이터 타입
+export interface ChartData {
+  date: string;
+  price: number;
+  volume: number;
 }
 
-export interface GapStockResult {
-  rank: number;
-  stock_name: string;
-  stock_code: string;
-  gap_percentage: number;
-  volume_ratio: number;
-  // 추가 결과 필드들...
+// 차트 데이터 가져오기 인터페이스
+export interface StockChartRequest {
+  symbol: string;
+  start_date: string;
+  end_date: string;
+  market_type: 'DOMESTIC' | 'OVERSEAS';
 }
 
-export interface AfterhourGapResponse
-  extends BaseStrategyResponse<GapStockResult> {
-  criteria: {
-    gap_threshold: number;
-    volume_threshold: number;
-  };
-}
-
-// Newsfeed Scalping Strategy (향후 구현)
-
-export interface NewsfeedScalpingRequest extends BaseStrategyRequest {
-  sentiment_threshold: number;
-  news_count_threshold: number;
-  // 추가 필터 필드들...
-}
-
-export interface NewsfeedStockResult {
-  rank: number;
-  stock_name: string;
-  stock_code: string;
-  sentiment_score: number;
-  news_count: number;
-  // 추가 결과 필드들...
-}
-
-export interface NewsfeedScalpingResponse
-  extends BaseStrategyResponse<NewsfeedStockResult> {
-  criteria: {
-    sentiment_threshold: number;
-    news_count_threshold: number;
-  };
-}
-
-export interface TradingStrategy {
-  id: StrategyType;
-  name: string;
-  description: string;
-}
-
-export interface TradingResult {
-  stock: string;
-  buy_price: number;
-  sell_price: number;
-  quantity: number;
-  profit: number;
-  return_rate: number;
+export interface StockChartResponse {
+  success: boolean;
+  symbol: string;
+  period: string;
+  data_count: number;
+  chart_data: Array<{
+    date: string;
+    open_price: string;
+    high_price: string;
+    low_price: string;
+    close_price: string;
+    volume: string;
+  }>;
 }

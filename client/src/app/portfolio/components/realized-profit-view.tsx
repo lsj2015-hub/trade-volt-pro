@@ -321,30 +321,14 @@ export const RealizedProfitView = () => {
     );
   }
 
-  // 통화 포맷팅 (통합된 KRW 기준)
-  const formatCurrency = (
-    amount: number,
-    forDisplay: 'krw' | 'original' = 'krw'
-  ) => {
-    if (forDisplay === 'krw') {
-      return `₩${Math.round(amount).toLocaleString()}`;
-    }
-    return `₩${Math.round(amount).toLocaleString()}`;
-  };
-
-  const formatOriginalCurrency = (
-    amount: number,
-    currency: string,
-    exchangeRate?: number
-  ) => {
-    if (currency === 'USD') {
-      return `$${amount.toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
-    }
-    return `₩${Math.round(amount).toLocaleString()}`;
-  };
+  // TODO: 추후 server에서 RealizedProfitData에서 exchange_code를 추가해서 각국의 실제 통화데이터 가져올 수 있게 수정
+  const formatCurrency = (amount: number, currency = 'KRW') =>
+    currency === 'USD'
+      ? `$${amount.toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })}`
+      : `₩${Math.round(amount).toLocaleString()}`;
 
   const exportToCsv = () => {
     console.log('CSV 내보내기');
@@ -610,7 +594,6 @@ export const RealizedProfitView = () => {
                 key={item.id}
                 item={item}
                 formatCurrency={formatCurrency}
-                formatOriginalCurrency={formatOriginalCurrency}
               />
             ))}
           </div>
@@ -623,7 +606,6 @@ export const RealizedProfitView = () => {
                   key={item.id}
                   item={item}
                   formatCurrency={formatCurrency}
-                  formatOriginalCurrency={formatOriginalCurrency}
                 />
               ))}
             </div>
@@ -634,7 +616,6 @@ export const RealizedProfitView = () => {
             <RealizedProfitDesktopTable
               items={currentFilteredData}
               formatCurrency={formatCurrency}
-              formatOriginalCurrency={formatOriginalCurrency}
             />
           </div>
         </div>

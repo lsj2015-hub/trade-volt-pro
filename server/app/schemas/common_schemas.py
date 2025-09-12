@@ -480,7 +480,7 @@ class NewsTranslateResponse(BaseModel):
   target_lang: str
   message: Optional[str] = None
 
-# ========== AI Chat 관련 ==========
+# ================== AI Chat 관련 ==================
 
 class ChatMessage(BaseModel):
   """개별 채팅 메시지"""
@@ -512,9 +512,7 @@ class LLMQuestionResponse(BaseModel):
   context_used: Dict[str, bool] = Field(description="사용된 컨텍스트 데이터 유형")
   message: Optional[str] = None
   
-# ==========================================
-# 📋 Request/Response Schemas (클라이언트 타입과 일치)
-# ==========================================
+# ================== VolatilityAnalysis Schemas ==================
 
 class VolatilityAnalysisRequest(BaseModel):
   """변동성 분석 요청 - 클라이언트 BaseStrategyRequest + 추가 필드"""
@@ -530,21 +528,38 @@ class VolatilityAnalysisRequest(BaseModel):
   @validator('start_date', 'end_date')
   def validate_date_format(cls, v):
     try:
-      datetime.strptime(v, '%Y. %m. %d')
+      datetime.strptime(v, '%Y-%m-%d')
       return v
     except ValueError:
       raise ValueError('날짜 형식은 YYYY-MM-DD 이어야 합니다.')
 
+class PatternPeriod(BaseModel):
+  """패턴 구간 정보"""
+  start_date: str = Field(..., description="패턴 시작일 (YYYYMMDD)")
+  end_date: str = Field(..., description="패턴 종료일 (YYYYMMDD)")
+  decline_rate: float = Field(..., description="하락률 (%)")
+  recovery_rate: float = Field(..., description="반등률 (%)")
+
 class VolatilityStockResult(BaseModel):
-  """변동성 분석 결과 종목 - 클라이언트 타입과 정확히 일치"""
+  """변동성 분석 결과 종목 - 수정된 구조"""
   rank: int
   stock_name: str
   stock_code: str
   occurrence_count: int
-  last_decline_date: str
-  last_decline_price: float
-  last_recovery_date: str
-  min_recovery_rate: float
+  
+  # 가장 최근 패턴 정보
+  last_decline_end_date: str = Field(..., description="최근 하락완료일")
+  last_decline_end_price: float = Field(..., description="최근 하락완료가격")
+  last_decline_rate: float = Field(..., description="최근 하락률 (%)")
+  
+  # 최대 반등률 패턴 정보
+  max_recovery_date: str = Field(..., description="최대반등완료일")
+  max_recovery_price: float = Field(..., description="최대반등완료일종가")
+  max_recovery_rate: float = Field(..., description="최대반등률 (%)")
+  max_recovery_decline_rate: float = Field(..., description="최대반등시 하락률 (%)")
+  
+  # 차트 강조용 패턴 데이터
+  pattern_periods: List[PatternPeriod] = Field(..., description="모든 패턴 구간")
 
 class VolatilityAnalysisResponse(BaseModel):
   """변동성 분석 응답 - 클라이언트 BaseStrategyResponse 구조 준수"""
@@ -558,3 +573,39 @@ class VolatilityAnalysisResponse(BaseModel):
   data: List[VolatilityStockResult]
   message: str
   criteria: Dict[str, Any]  # 분석 기준 정보
+
+criteria: Dict[str, Any]  # 분석 기준 정보
+
+# ================== Stock Chart Data Schemas ==================
+
+class StockChartRequest(BaseModel):
+  """주식 차트 데이터 요청"""
+  symbol: str = Field(..., description="종목 코드")
+  start_date: str = Field(..., description="시작일 (YYYY-MM-DD)")
+  end_date: str = Field(..., description="종료일 (YYYY-MM-DD)")
+  market_type: str = Field(..., description="시장 유형 (DOMESTIC/OVERSEAS)")
+  
+  @validator('start_date', 'end_date')
+  def validate_date_format(cls, v):
+    try:
+      datetime.strptime(v, '%Y-%m-%d')
+      return v
+    except ValueError:
+      raise ValueError('날짜 형식은 YYYY-MM-DD 이어야 합니다.')
+
+class StockChartData(BaseModel):
+  """개별 차트 데이터"""
+  date: str = Field(..., description="날짜 (YYYYMMDD)")
+  open_price: str = Field(..., description="시가")
+  high_price: str = Field(..., description="고가")
+  low_price: str = Field(..., description="저가")
+  close_price: str = Field(..., description="종가")
+  volume: str = Field(..., description="거래량")
+
+class StockChartResponse(BaseModel):
+  """주식 차트 데이터 응답"""
+  success: bool = Field(default=True, description="성공 여부")
+  symbol: str = Field(..., description="종목 코드")
+  period: str = Field(..., description="조회 기간")
+  data_count: int = Field(..., description="데이터 개수")
+  chart_data: List[StockChartData] = Field(..., description="차트 데이터 목록")

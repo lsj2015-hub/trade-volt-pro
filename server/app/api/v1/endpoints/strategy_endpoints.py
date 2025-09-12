@@ -8,59 +8,16 @@ from pydantic import BaseModel, validator
 from app.config.database import get_sync_session
 from app.core.dependencies import get_current_user
 from app.models.user import User
+from app.services.strategy_service import strategy_service
+from app.schemas.common_schemas import (
+  VolatilityAnalysisRequest, VolatilityStockResult, VolatilityAnalysisResponse, 
+  PatternPeriod
+)
+from app.external.kis_api import kis_api_service
+from app.crud.strategy_crud import strategy_crud
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-# ==========================================
-# 📋 Request/Response Schemas (클라이언트 타입과 일치)
-# ==========================================
-
-class VolatilityAnalysisRequest(BaseModel):
-  """변동성 분석 요청 - 클라이언트 BaseStrategyRequest + 추가 필드"""
-  country: str          # 국가 코드 (KR, US 등)
-  market: str           # 시장 코드 (KOSPI, KOSDAQ, NYSE 등)
-  start_date: str       # 시작일 (YYYY-MM-DD)
-  end_date: str         # 종료일 (YYYY-MM-DD)
-  decline_days: int     # 하락기간(일)
-  decline_rate: float   # 하락률(%)
-  recovery_days: int    # 회복기간(일) - 클라이언트는 recovery_days 사용
-  recovery_rate: float  # 회복률(%) - 클라이언트는 recovery_rate 사용
-  
-  @validator('start_date', 'end_date')
-  def validate_date_format(cls, v):
-    try:
-      datetime.strptime(v, '%Y-%m-%d')
-      return v
-    except ValueError:
-      raise ValueError('날짜 형식은 YYYY-MM-DD 이어야 합니다.')
-
-class VolatilityStockResult(BaseModel):
-  """변동성 분석 결과 종목 - 클라이언트 타입과 정확히 일치"""
-  rank: int
-  stock_name: str
-  stock_code: str
-  occurrence_count: int
-  last_decline_date: str
-  last_decline_price: float
-  last_recovery_date: str
-  min_recovery_rate: float
-
-class VolatilityAnalysisResponse(BaseModel):
-  """변동성 분석 응답"""
-  success: bool
-  country: str
-  market: str
-  start_date: str
-  end_date: str
-  result_count: int
-  data: List[VolatilityStockResult]
-  message: str
-  criteria: Dict[str, Any]  # 분석 기준 정보
-
-# ==========================================
-# 🎯 Strategy Endpoints
-# ==========================================
 
 @router.post("/volatility-analysis", response_model=VolatilityAnalysisResponse)
 async def run_volatility_analysis(
@@ -99,8 +56,8 @@ async def run_volatility_analysis(
     if request.recovery_rate <= 0:
       raise HTTPException(status_code=400, detail="회복률은 양수여야 합니다.")
     
-    # ✅ 실제 변동성 분석 로직 실행 (Mock 데이터)
-    stock_results = await _execute_volatility_analysis(request)
+    # ✅ 실제 변동성 분석 로직 실행 (DB + KIS API)
+    stock_results = await _execute_volatility_analysis(request, current_user.id)
     
     # 실행 시간 계산
     execution_time = int((datetime.now() - start_time).total_seconds() * 1000)
@@ -132,146 +89,170 @@ async def run_volatility_analysis(
     raise HTTPException(status_code=500, detail="변동성 분석 중 오류가 발생했습니다.")
 
 # ==========================================
-# 🔧 Helper Functions - Mock Data (향후 KIS API로 교체)
+# 🔧 Helper Functions - 실제 분석 로직 (KIS API + DB 연동)
 # ==========================================
 
-async def _execute_volatility_analysis(request: VolatilityAnalysisRequest) -> List[VolatilityStockResult]:
+async def _execute_volatility_analysis(request: VolatilityAnalysisRequest, user_id: int) -> List[VolatilityStockResult]:
   """
-  변동성 분석 실행 함수 (현재 Mock 데이터)
-  TODO: KIS OpenAPI와 연동하여 실제 시장 데이터 분석으로 교체
+  실제 변동성 분석 실행 (KIS API + DB 연동)
+  
+  Args:
+    request: 변동성 분석 요청 데이터
+    user_id: 사용자 ID (KIS API 토큰용)
+  
+  Returns:
+    List[VolatilityStockResult]: 분석 결과 종목 리스트
   """
   
-  # 🇰🇷 한국 시장 Mock 데이터
-  if request.country.upper() == 'KR':
-    korean_mock_data = [
-      VolatilityStockResult(
-        rank=1,
-        stock_name="삼성전자",
-        stock_code="005930",
-        occurrence_count=3,
-        last_decline_date="2025-01-15",
-        last_decline_price=82000.0,
-        last_recovery_date="2025-01-22", 
-        min_recovery_rate=15.2
-      ),
-      VolatilityStockResult(
-        rank=2,
-        stock_name="SK하이닉스",
-        stock_code="000660",
-        occurrence_count=2,
-        last_decline_date="2025-01-16",
-        last_decline_price=195000.0,
-        last_recovery_date="2025-01-24",
-        min_recovery_rate=22.8
-      ),
-      VolatilityStockResult(
-        rank=3,
-        stock_name="LG에너지솔루션",
-        stock_code="373220",
-        occurrence_count=4,
-        last_decline_date="2025-01-14",
-        last_decline_price=320000.0,
-        last_recovery_date="2025-01-21",
-        min_recovery_rate=18.7
-      ),
-      VolatilityStockResult(
-        rank=4,
-        stock_name="카카오",
-        stock_code="035720",
-        occurrence_count=2,
-        last_decline_date="2025-01-17",
-        last_decline_price=45000.0,
-        last_recovery_date="2025-01-25",
-        min_recovery_rate=25.3
-      ),
-      VolatilityStockResult(
-        rank=5,
-        stock_name="NAVER",
-        stock_code="035420",
-        occurrence_count=1,
-        last_decline_date="2025-01-18",
-        last_decline_price=165000.0,
-        last_recovery_date="2025-01-26",
-        min_recovery_rate=12.1
-      )
-    ]
+  try:
+    # 날짜 변환
+    start_date = datetime.strptime(request.start_date, '%Y-%m-%d').date()
+    end_date = datetime.strptime(request.end_date, '%Y-%m-%d').date()
     
-    # 시장별 필터링 (KOSPI vs KOSDAQ)
-    if request.market.upper() == "KOSDAQ":
-      # KOSDAQ 종목만 반환 (예시로 카카오만)
-      filtered_data = [stock for stock in korean_mock_data if stock.stock_code in ["035720"]]
-    else:
-      # KOSPI 종목들 반환
-      filtered_data = [stock for stock in korean_mock_data if stock.stock_code not in ["035720"]]
-  
-  # 🇺🇸 미국 시장 Mock 데이터  
-  elif request.country.upper() == 'US':
-    us_mock_data = [
-      VolatilityStockResult(
-        rank=1,
-        stock_name="Apple Inc.",
-        stock_code="AAPL",
-        occurrence_count=2,
-        last_decline_date="2025-01-15",
-        last_decline_price=185.50,
-        last_recovery_date="2025-01-23",
-        min_recovery_rate=14.8
-      ),
-      VolatilityStockResult(
-        rank=2,
-        stock_name="Tesla Inc.",
-        stock_code="TSLA",
-        occurrence_count=3,
-        last_decline_date="2025-01-16",
-        last_decline_price=210.20,
-        last_recovery_date="2025-01-24",
-        min_recovery_rate=28.4
-      ),
-      VolatilityStockResult(
-        rank=3,
-        stock_name="Microsoft Corporation",
-        stock_code="MSFT",
-        occurrence_count=1,
-        last_decline_date="2025-01-17",
-        last_decline_price=380.00,
-        last_recovery_date="2025-01-25",
-        min_recovery_rate=11.7
-      ),
-      VolatilityStockResult(
-        rank=4,
-        stock_name="NVIDIA Corporation",
-        stock_code="NVDA",
-        occurrence_count=2,
-        last_decline_date="2025-01-18",
-        last_decline_price=850.00,
-        last_recovery_date="2025-01-26",
-        min_recovery_rate=19.2
-      )
-    ]
+    logger.info(f"변동성 분석 실행: user_id={user_id}, 기간={start_date}~{end_date}")
     
-    # 미국은 시장 구분 없이 모든 데이터 반환
-    filtered_data = us_mock_data
-  
-  # 🌏 기타 국가 (빈 배열 반환)
-  else:
-    logger.warning(f"지원하지 않는 국가 코드: {request.country}")
-    filtered_data = []
-  
-  # 📊 조건별 필터링 (실제로는 더 복잡한 로직)
-  final_results = []
-  for stock in filtered_data:
-    # Mock에서는 모든 조건을 만족한다고 가정
-    # 실제 구현에서는 decline_rate, recovery_rate 조건 체크
-    meets_decline_criteria = abs(stock.min_recovery_rate) >= abs(request.decline_rate)
-    meets_recovery_criteria = stock.min_recovery_rate >= request.recovery_rate
+    # 실제 변동성 분석 수행 (DB에서 종목 리스트, KIS API에서 주가 데이터)
+    analysis_results = await strategy_service.analyze_volatility_patterns(
+      user_id=user_id,
+      country=request.country,
+      market=request.market,
+      start_date=start_date,
+      end_date=end_date,
+      decline_days=request.decline_days,
+      decline_rate=request.decline_rate,
+      recovery_days=request.recovery_days,
+      recovery_rate=request.recovery_rate
+    )
     
-    if meets_decline_criteria and meets_recovery_criteria:
-      final_results.append(stock)
+    # VolatilityStockResult 형태로 변환
+    stock_results = []
+    for result in analysis_results:
+      # PatternPeriod 리스트 생성
+      pattern_periods = []
+      for period in result["pattern_periods"]:
+        pattern_periods.append(PatternPeriod(
+          start_date=period["start_date"],
+          end_date=period["end_date"],
+          decline_rate=period["decline_rate"],
+          recovery_rate=period["recovery_rate"]
+        ))
+
+      stock_results.append(VolatilityStockResult(
+        rank=result["rank"],
+        stock_name=result["stock_name"],
+        stock_code=result["stock_code"],
+        occurrence_count=result["occurrence_count"],
+        
+        # 최근 패턴
+        last_decline_end_date=result["last_decline_end_date"],
+        last_decline_end_price=result["last_decline_end_price"],
+        last_decline_rate=result["last_decline_rate"],
+        
+        # 최대 반등률 패턴
+        max_recovery_date=result["max_recovery_date"],
+        max_recovery_price=result["max_recovery_price"],
+        max_recovery_rate=result["max_recovery_rate"],
+        max_recovery_decline_rate=result["max_recovery_decline_rate"],
+        
+        # 패턴 구간
+        pattern_periods=pattern_periods
+      ))
+    
+    logger.info(f"변동성 분석 변환 완료: {len(stock_results)}개 종목")
+    return stock_results
+    
+  except Exception as e:
+    logger.error(f"변동성 분석 실행 실패: user_id={user_id}, error={str(e)}", exc_info=True)
+    raise HTTPException(
+      status_code=500, 
+      detail=f"변동성 분석 중 오류가 발생했습니다: {str(e)}"
+    )
   
-  # 순위 재정렬 (occurrence_count 기준 내림차순)
-  final_results.sort(key=lambda x: x.occurrence_count, reverse=True)
-  for i, stock in enumerate(final_results, 1):
-    stock.rank = i
+# 파일 끝 부분에 추가
+@router.get("/debug/db-status")
+async def check_db_status(current_user: User = Depends(get_current_user)):
+  """DB 상태 확인 (디버깅용)"""
   
-  logger.info(f"Mock 분석 완료: 국가={request.country}, 시장={request.market}, 결과={len(final_results)}개")
-  return final_results
+  try:
+    # 1. Country 테이블 확인
+    countries = await strategy_crud.get_all_countries()
+    
+    # 2. Exchange 테이블 확인  
+    exchanges = await strategy_crud.get_all_exchanges()
+    
+    # 3. Stock 테이블 확인
+    stocks = await strategy_crud.get_all_stocks_sample(limit=10)
+    
+    return {
+      "countries_count": len(countries),
+      "countries": [{"code": c.country_code, "name": c.country_name} for c in countries],
+      "exchanges_count": len(exchanges),
+      "exchanges": [{"code": e.exchange_code, "name": e.exchange_name} for e in exchanges], 
+      "stocks_count": len(stocks),
+      "sample_stocks": [{"symbol": s.symbol, "name": s.company_name, "country": s.country_code, "exchange": s.exchange_code} for s in stocks]
+    }
+    
+  except Exception as e:
+    return {"error": str(e)}  
+
+@router.post("/stock-chart-data", response_model=dict)
+async def get_stock_chart_data(
+  request: dict,
+  current_user: User = Depends(get_current_user),
+  db: Session = Depends(get_sync_session)
+):
+  """
+  종목별 차트 데이터 조회 (변동성 분석 차트용)
+  
+  - KIS API를 통해 실제 주가 데이터를 조회합니다
+  - 프론트엔드 차트 표시용 데이터를 반환합니다
+  """
+  try:
+    symbol = request.get("symbol")
+    start_date = request.get("start_date")
+    end_date = request.get("end_date")
+    market_type = request.get("market_type", "DOMESTIC")
+    
+    if not all([symbol, start_date, end_date]):
+      raise HTTPException(status_code=400, detail="symbol, start_date, end_date는 필수입니다.")
+    
+    logger.info(f"차트 데이터 조회: user_id={current_user.id}, symbol={symbol}")
+    
+    # KIS API에서 차트 데이터 조회
+    chart_result = await kis_api_service.get_daily_chart_data(
+      user_id=current_user.id,
+      symbol=symbol,
+      start_date=start_date.replace("-", ""),
+      end_date=end_date.replace("-", ""),
+      market_type=market_type
+    )
+    
+    chart_data = chart_result.get("chart_data", [])
+    
+    # 응답 형식 변환
+    response_data = []
+    for item in chart_data:
+      response_data.append({
+        "date": item["date"],
+        "open_price": str(item["open_price"]),
+        "high_price": str(item["high_price"]),
+        "low_price": str(item["low_price"]),
+        "close_price": str(item["close_price"]),
+        "volume": str(item["volume"])
+      })
+    
+    period = f"{start_date}~{end_date}"
+    
+    return {
+      "success": True,
+      "symbol": symbol,
+      "period": period,
+      "data_count": len(response_data),
+      "chart_data": response_data
+    }
+    
+  except HTTPException:
+    raise
+  except Exception as e:
+    logger.error(f"차트 데이터 조회 오류: user_id={current_user.id}, error={str(e)}", exc_info=True)
+    raise HTTPException(status_code=500, detail="차트 데이터 조회 중 오류가 발생했습니다.")

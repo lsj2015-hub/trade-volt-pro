@@ -30,7 +30,7 @@ import { useAddLot } from '@/contexts/add-lot-context';
 import {
   calculateCommission,
   calculateCommissionWithDefaults,
-  getCurrencySymbol,
+  getCurrencySymbolByExchange,
 } from '@/lib/utils';
 
 interface AddLotModalProps {
@@ -289,7 +289,7 @@ export const AddLotModal = ({
     (parseFloat(formData.shares) || 0) *
     (parseFloat(formData.cost_per_share) || 0);
   const currencySymbol = selectedStock
-    ? getCurrencySymbol(selectedStock.currency)
+    ? getCurrencySymbolByExchange(selectedStock.exchange_code)
     : '₩';
 
   return (

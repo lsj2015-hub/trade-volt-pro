@@ -1,4 +1,6 @@
 import {
+  StockChartRequest,
+  StockChartResponse,
   VolatilityAnalysisRequest,
   VolatilityAnalysisResponse,
 } from '@/types/types';
@@ -98,5 +100,29 @@ export class StrategyAPI {
       );
     }
   }
-  
+
+  static async getStockChartData(
+    request: StockChartRequest
+  ): Promise<StockChartResponse> {
+    try {
+      const result = await this.request<StockChartResponse>(
+        '/api/v1/strategy/stock-chart-data',
+        {
+          method: 'POST',
+          body: JSON.stringify(request),
+        }
+      );
+
+      return result;
+    } catch (error) {
+      if (error instanceof StrategyAPIError) {
+        throw error;
+      }
+      throw new StrategyAPIError(
+        `차트 데이터 조회 중 오류가 발생했습니다: ${
+          error instanceof Error ? error.message : '알 수 없는 오류'
+        }`
+      );
+    }
+  }
 }

@@ -135,6 +135,54 @@ export const COUNTRY_TO_FLAG_MAP = {
   [CountryCode.VIETNAM]: CountryFlag.VIETNAM,
 } as const;
 
+// 국가별 거래소 매핑 (Trading Strategy용)
+export const COUNTRY_MARKETS: Record<string, { value: string; label: string }[]> = {
+  // 🇰🇷 한국
+  [CountryCode.KOREA]: [
+    { value: ExchangeCode.KOSPI, label: 'KOSPI (코스피)' },
+    { value: ExchangeCode.KOSDAQ, label: 'KOSDAQ (코스닥)' },
+  ],
+  
+  // 🇺🇸 미국
+  [CountryCode.USA]: [
+    { value: ExchangeCode.NYSE, label: 'NYSE (뉴욕증권거래소)' },
+    { value: ExchangeCode.NASDAQ, label: 'NASDAQ (나스닥)' },
+    { value: ExchangeCode.AMEX, label: 'AMEX (아메리칸증권거래소)' },
+  ],
+  
+  // 🇯🇵 일본
+  [CountryCode.JAPAN]: [
+    { value: ExchangeCode.TSE, label: 'TSE (도쿄증권거래소)' },
+  ],
+  
+  // 🇨🇳 중국
+  [CountryCode.CHINA]: [
+    { value: ExchangeCode.SHS, label: 'SHS (상하이증권거래소)' },
+    { value: ExchangeCode.SZS, label: 'SZS (심천증권거래소)' },
+  ],
+  
+  // 🇭🇰 홍콩
+  [CountryCode.HONG_KONG]: [
+    { value: ExchangeCode.HKS, label: 'HKS (홍콩증권거래소)' },
+  ],
+  
+  // 🇻🇳 베트남
+  [CountryCode.VIETNAM]: [
+    { value: ExchangeCode.HNX, label: 'HNX (하노이증권거래소)' },
+    { value: ExchangeCode.HSX, label: 'HSX (호치민증권거래소)' },
+  ],
+};
+
+// 국가별 표시명 매핑 (Trading Strategy용)
+export const COUNTRY_DISPLAY_NAMES: Record<string, string> = {
+  [CountryCode.KOREA]: '한국 🇰🇷',
+  [CountryCode.USA]: '미국 🇺🇸',
+  [CountryCode.JAPAN]: '일본 🇯🇵', 
+  [CountryCode.CHINA]: '중국 🇨🇳',
+  [CountryCode.HONG_KONG]: '홍콩 🇭🇰',
+  [CountryCode.VIETNAM]: '베트남 🇻🇳',
+};
+
 // ==========================================
 // 🔧 기본 타입 검증 함수들 (가벼운 것만)
 // ==========================================
@@ -184,3 +232,5 @@ export const getAllMarketTypes = (): MarketType[] => Object.values(Market);
 export const getAllTransactionTypes = (): TransactionType[] => Object.values(Transaction);
 export const getAllExchanges = (): ExchangeCodeType[] => Object.values(ExchangeCode);
 export const getAllStrategies = (): StrategyType[] => Object.values(Strategy);
+export const getMarketsByCountry = (countryCode: string) =>
+  COUNTRY_MARKETS[countryCode] || [];

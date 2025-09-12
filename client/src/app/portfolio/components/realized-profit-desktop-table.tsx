@@ -1,24 +1,17 @@
 import { format } from "date-fns"
 import { ko } from 'date-fns/locale';
-import { RealizedProfitData } from "@/types/types";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { RealizedProfitData } from '@/types/types';
+import { Badge } from '@/components/ui/badge';
 
 // 데스크탑 테이블 컴포넌트
 interface RealizedProfitDesktopTableProps {
   items: RealizedProfitData[];
-  formatCurrency: (amount: number, forDisplay?: 'krw' | 'original') => string;
-  formatOriginalCurrency: (
-    amount: number,
-    currency: string,
-    exchangeRate?: number
-  ) => string;
+  formatCurrency: (amount: number, currency?: string) => string;
 }
 
 export const RealizedProfitDesktopTable = ({
   items,
   formatCurrency,
-  formatOriginalCurrency,
 }: RealizedProfitDesktopTableProps) => (
   <div className="w-full">
     {/* Card 대신 직접 div 사용 */}
@@ -91,10 +84,10 @@ export const RealizedProfitDesktopTable = ({
                   {item.shares.toLocaleString()}주
                 </td>
                 <td className="px-3 py-4 text-right text-sm whitespace-nowrap">
-                  {formatOriginalCurrency(item.sell_price, item.currency)}
+                  {formatCurrency(item.sell_price, item.currency)}
                 </td>
                 <td className="px-3 py-4 text-right text-sm whitespace-nowrap">
-                  {formatOriginalCurrency(item.avg_cost, item.currency)}
+                  {formatCurrency(item.avg_cost, item.currency)}
                 </td>
                 <td
                   className={`px-3 py-4 text-right text-sm font-semibold whitespace-nowrap ${
@@ -103,7 +96,7 @@ export const RealizedProfitDesktopTable = ({
                       : 'text-red-600'
                   }`}
                 >
-                  {formatCurrency(item.realized_profit_krw)}
+                  {formatCurrency(item.realized_profit, item.currency)}
                 </td>
                 <td
                   className={`px-3 py-4 text-right text-sm font-semibold whitespace-nowrap ${

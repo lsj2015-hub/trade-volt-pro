@@ -577,22 +577,22 @@ class PortfolioService:
         profit_item = {
           "id": str(row["id"]),
           "symbol": row["symbol"],
-          "company_name": company_name,           # ✅
-          "company_name_en": company_name_en,     # ✅
+          "company_name": company_name,           
+          "company_name_en": company_name_en,     
           "broker": row["broker_name"],
-          "broker_id": row["broker_id"],          # ✅
-          "market_type": market_type_value,       # ✅
-          "sell_date": row["transaction_date"].isoformat(),  # ✅
+          "broker_id": row["broker_id"],          
+          "market_type": market_type_value,       
+          "sell_date": row["transaction_date"].isoformat(),  
           "shares": int(row["quantity"]),
-          "sell_price": float(row["price"]),      # ✅
-          "avg_cost": float(row["avg_cost_at_transaction"]) if row["avg_cost_at_transaction"] else 0.0,  # ✅
-          "realized_profit": float(row["total_realized_profit"]) if row["total_realized_profit"] else 0.0,  # ✅
-          "realized_profit_percent": round(realized_profit_percent, 2),  # ✅
-          "realized_profit_krw": round(realized_profit_krw, 0),  # ✅
+          "sell_price": float(row["price"]),      
+          "avg_cost": float(row["avg_cost_at_transaction"]) if row["avg_cost_at_transaction"] else 0.0,  
+          "realized_profit": float(row["total_realized_profit"]) if row["total_realized_profit"] else 0.0,  
+          "realized_profit_percent": round(realized_profit_percent, 2),  
+          "realized_profit_krw": round(realized_profit_krw, 0),  
           "currency": row["currency"],
-          "exchange_rate": float(row["exchange_rate"]) if row["exchange_rate"] else exchange_rate,  # ✅
+          "exchange_rate": float(row["exchange_rate"]) if row["exchange_rate"] else exchange_rate,  
           "commission": float(row["commission"]) if row["commission"] else 0.0,
-          "transaction_tax": float(row["transaction_tax"]) if row["transaction_tax"] else 0.0  # ✅
+          "transaction_tax": float(row["transaction_tax"]) if row["transaction_tax"] else 0.0  
         }
         transactions.append(profit_item)
         

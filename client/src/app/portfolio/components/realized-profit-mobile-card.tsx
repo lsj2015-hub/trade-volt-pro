@@ -7,18 +7,12 @@ import { Badge } from "@/components/ui/badge";
 // 모바일 카드 컴포넌트
 interface RealizedProfitMobileCardProps {
   item: RealizedProfitData;
-  formatCurrency: (amount: number, forDisplay?: 'krw' | 'original') => string;
-  formatOriginalCurrency: (
-    amount: number,
-    currency: string,
-    exchangeRate?: number
-  ) => string;
+  formatCurrency: (amount: number, currency?: string) => string;
 }
 
 export const RealizedProfitMobileCard = ({
   item,
   formatCurrency,
-  formatOriginalCurrency,
 }: RealizedProfitMobileCardProps) => (
   <Card className="border shadow-sm">
     <CardContent className="p-4 md:p-5">
@@ -62,7 +56,7 @@ export const RealizedProfitMobileCard = ({
           <div>
             <div className="text-xs text-muted-foreground mb-1">매도가격</div>
             <div className="font-medium">
-              {formatOriginalCurrency(item.sell_price, item.currency)}
+              {formatCurrency(item.sell_price, item.currency)}
             </div>
           </div>
         </div>
@@ -83,20 +77,22 @@ export const RealizedProfitMobileCard = ({
               {formatCurrency(item.realized_profit_krw)}
             </div>
           </div>
-          <div>
-            <div className="text-xs text-muted-foreground mb-1">
-              원화 손익 ({item.currency})
+          {item.market_type === 'OVERSEAS' && (
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">
+                외화 실현손익 ({item.currency})
+              </div>
+              <div className="text-sm">
+                {formatCurrency(item.realized_profit, item.currency)}
+              </div>
             </div>
-            <div className="text-sm">
-              {formatOriginalCurrency(item.realized_profit, item.currency)}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* 평단가 정보 */}
         <div className="text-center text-sm text-muted-foreground border-t pt-2">
-          평단가: {formatOriginalCurrency(item.avg_cost, item.currency)}→
-          매도가: {formatOriginalCurrency(item.sell_price, item.currency)}
+          평단가: {formatCurrency(item.avg_cost, item.currency)}→ 매도가:{' '}
+          {formatCurrency(item.sell_price, item.currency)}
         </div>
       </div>
     </CardContent>
