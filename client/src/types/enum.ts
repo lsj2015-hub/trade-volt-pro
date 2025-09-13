@@ -183,6 +183,54 @@ export const COUNTRY_DISPLAY_NAMES: Record<string, string> = {
   [CountryCode.VIETNAM]: '베트남 🇻🇳',
 };
 
+// 국가별 통화 매핑 (필터링용)
+export const COUNTRY_TO_CURRENCY_MAP: Record<string, CurrencyType> = {
+  [CountryCode.KOREA]: Currency.KRW,
+  [CountryCode.USA]: Currency.USD,
+  [CountryCode.JAPAN]: Currency.JPY,
+  [CountryCode.CHINA]: Currency.CNY,
+  [CountryCode.HONG_KONG]: Currency.HKD,
+  [CountryCode.VIETNAM]: Currency.VND,
+};
+
+// 국가별 필터링 기본값 (시가총액, 거래대금 - 억 단위)
+export const COUNTRY_FILTER_DEFAULTS: Record<
+  string,
+  { marketCap: number; tradingVolume: number }
+> = {
+  // 🇰🇷 한국: 시총 5,000억원, 거래대금 1,000억원
+  [CountryCode.KOREA]: {
+    marketCap: 5000,
+    tradingVolume: 1000,
+  },
+
+  // 🇺🇸 미국: 시총 50억달러, 거래대금 5억달러
+  [CountryCode.USA]: {
+    marketCap: 50,
+    tradingVolume: 5,
+  },
+  // 🇯🇵 일본 시총 5000억엔, 거래대금 50억엔
+  [CountryCode.JAPAN]: {
+    marketCap: 5000,
+    tradingVolume: 50,
+  },
+  // 🇨🇳 중국 시총 5000억위안, 거래대금 50억위안
+  [CountryCode.CHINA]: {
+    marketCap: 500,
+    tradingVolume: 20,
+  },
+  // 🇭🇰 홍콩 시총 5000억 홍콩달러, 거래대금 50억 홍콩달러
+  [CountryCode.HONG_KONG]: {
+    marketCap: 500,
+    tradingVolume: 5,
+  },
+  // 🇻🇳 베트남 값없음
+  [CountryCode.VIETNAM]: {
+    marketCap: 0,
+    tradingVolume: 0,
+  },
+};
+
 // ==========================================
 // 🔧 기본 타입 검증 함수들 (가벼운 것만)
 // ==========================================
@@ -234,3 +282,12 @@ export const getAllExchanges = (): ExchangeCodeType[] => Object.values(ExchangeC
 export const getAllStrategies = (): StrategyType[] => Object.values(Strategy);
 export const getMarketsByCountry = (countryCode: string) =>
   COUNTRY_MARKETS[countryCode] || [];
+// 국가별 통화 심볼 가져오기
+export const getCurrencySymbolByCountry = (countryCode: string): string => {
+  const currency = COUNTRY_TO_CURRENCY_MAP[countryCode];
+  return CURRENCY_TO_SYMBOL_MAP[currency] || '₩';
+};
+// 국가별 필터링 기본값 가져오기
+export const getFilterDefaultsByCountry = (countryCode: string) => {
+  return COUNTRY_FILTER_DEFAULTS[countryCode] || COUNTRY_FILTER_DEFAULTS[CountryCode.KOREA];
+};

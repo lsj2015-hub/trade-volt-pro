@@ -53,7 +53,7 @@ export const VolatilityCriteriaSection = ({
       </div>
 
       <div className="pl-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {/* 하락 기준 */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-red-600">
@@ -79,12 +79,12 @@ export const VolatilityCriteriaSection = ({
               disabled={!isBasicSettingsComplete}
               className="text-center border-red-200 focus:border-red-400"
               placeholder="%"
-              step="0.1"
+              step="1"
             />
           </div>
 
           {/* 반등 기준 */}
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-1 col-span-2">
             <label className="text-xs font-semibold text-green-600">
               반등 기간
             </label>
@@ -99,7 +99,7 @@ export const VolatilityCriteriaSection = ({
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 md:col-span-1 col-span-1">
             <label className="text-xs font-semibold text-green-600">
               반등률
             </label>
@@ -110,40 +110,43 @@ export const VolatilityCriteriaSection = ({
               disabled={!isBasicSettingsComplete}
               className="text-center border-green-200 focus:border-green-400"
               placeholder="%"
-              step="0.1"
+              step="1"
             />
           </div>
-        </div>
 
-        {/* 분석 실행 버튼 */}
-        <div className="flex justify-center">
-          <Button
-            onClick={handleAnalysisClick}
-            disabled={isLoading || !isAllFiltersValid}
-            size="lg"
-            className={
-              showResults
-                ? 'bg-white border-2 border-red-500 text-red-500 hover:bg-red-50'
-                : 'bg-slate-700 hover:bg-slate-600 text-white'
-            }
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                분석 중...
-              </>
-            ) : showResults ? (
-              <>
-                <X className="h-4 w-4 mr-2" />
-                초기화
-              </>
-            ) : (
-              <>
-                <BarChart3 className="h-4 w-4 mr-2" />
-                분석 실행
-              </>
-            )}
-          </Button>
+          {/* 분석 실행 버튼 */}
+          <div className="space-y-2 lg:col-span-1 md:col-span-4 col-span-1 flex flex-col">
+            <label className="text-xs font-semibold text-transparent">
+              실행
+            </label>
+            <Button
+              onClick={handleAnalysisClick}
+              disabled={isLoading || !isAllFiltersValid}
+              size="default"
+              className={
+                showResults
+                  ? 'bg-white border-2 border-red-500 text-red-500 hover:bg-red-50 h-10'
+                  : 'bg-slate-700 hover:bg-slate-600 text-white h-10'
+              }
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  분석 중...
+                </>
+              ) : showResults ? (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  초기화
+                </>
+              ) : (
+                <>
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  분석 실행
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

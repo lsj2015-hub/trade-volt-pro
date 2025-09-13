@@ -18,7 +18,7 @@ interface DatePickerProps {
   onSelect?: (date: Date | undefined) => void;
   placeholder?: string;
   className?: string;
-  defaultCalendarDate?: 'today' | 'week-ago' | Date;
+  defaultCalendarDate?: 'today' | 'week-ago' | 'month-ago' | Date;
 }
 
 export function DatePicker({
@@ -39,6 +39,10 @@ export function DatePicker({
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       return weekAgo;
+    } else if (defaultCalendarDate === 'month-ago') {
+      const monthAgo = new Date();
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      return monthAgo;
     } else if (defaultCalendarDate instanceof Date) {
       return defaultCalendarDate;
     }

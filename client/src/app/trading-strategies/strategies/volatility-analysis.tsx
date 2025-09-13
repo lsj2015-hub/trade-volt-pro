@@ -30,13 +30,19 @@ export function VolatilityAnalysis({
   // 기본 설정 상태
   const [country, setCountry] = useState<string>('');
   const [market, setMarket] = useState<string>('');
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [marketCap, setMarketCap] = useState<string>('');
+  const [tradingVolume, setTradingVolume] = useState<string>('');
+  const [startDate, setStartDate] = useState<Date | undefined>(() => {
+    const monthAgo = new Date();
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+    return monthAgo;
+  });
+  const [endDate, setEndDate] = useState<Date | undefined>(() => new Date());
 
   // 변동성 기준 상태
   const [declineDays, setDeclineDays] = useState<string>('5');
   const [declineRate, setDeclineRate] = useState<string>('-20');
-  const [recoveryDays, setRecoveryDays] = useState<string>('20');
+  const [recoveryDays, setRecoveryDays] = useState<string>('5');
   const [recoveryRate, setRecoveryRate] = useState<string>('20');
 
   // UI 상태
@@ -53,9 +59,7 @@ export function VolatilityAnalysis({
   const [chartData, setChartData] = useState<LocalChartData[]>([]);
   const [isLoadingChart, setIsLoadingChart] = useState(false);
 
-  // ============================================================================
   // 검증 및 계산된 값들
-  // ============================================================================
 
   const isBasicSettingsComplete = useMemo(() => {
     return !!(country && market && startDate && endDate && startDate < endDate);
@@ -82,10 +86,6 @@ export function VolatilityAnalysis({
     recoveryDays,
     recoveryRate,
   ]);
-
-  // ============================================================================
-  // 부수 효과 (Effects)
-  // ============================================================================
 
   // 선택된 종목들을 상위 컴포넌트로 전달
   useEffect(() => {
@@ -284,16 +284,17 @@ export function VolatilityAnalysis({
 
     // 폼 데이터는 유지 (사용자 편의성을 위해)
     // 만약 폼도 초기화하려면 아래 주석을 해제하세요
-    /*
+
     setCountry('');
     setMarket('');
+    setMarketCap('');
+    setTradingVolume('');
     setStartDate(undefined);
     setEndDate(undefined);
     setDeclineDays('5');
     setDeclineRate('-20');
     setRecoveryDays('20');
     setRecoveryRate('20');
-    */
   };
 
   // ============================================================================
@@ -328,6 +329,10 @@ export function VolatilityAnalysis({
           setCountry={setCountry}
           market={market}
           setMarket={setMarket}
+          marketCap={marketCap}
+          setMarketCap={setMarketCap}
+          tradingVolume={tradingVolume}
+          setTradingVolume={setTradingVolume}
           startDate={startDate}
           setStartDate={setStartDate}
           endDate={endDate}

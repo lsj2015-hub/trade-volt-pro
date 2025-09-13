@@ -135,7 +135,7 @@ class StrategyCRUD:
     self,
     country_identifier: str,
     market_identifier: str,
-    limit: int = 50
+    limit: Optional[int] = None
   ) -> List[Dict]:
     """변동성 분석용 종목 리스트 조회 (전체 프로세스를 CRUD에서 처리)"""
     
