@@ -516,14 +516,16 @@ class LLMQuestionResponse(BaseModel):
 
 class VolatilityAnalysisRequest(BaseModel):
   """변동성 분석 요청 - 클라이언트 BaseStrategyRequest + 추가 필드"""
-  country: str          # 국가 코드 (KR, US 등)
-  market: str           # 시장 코드 (KOSPI, KOSDAQ, NYSE 등)
-  start_date: str       # 시작일 (YYYY-MM-DD)
-  end_date: str         # 종료일 (YYYY-MM-DD)
-  decline_days: int     # 하락기간(일)
-  decline_rate: float   # 하락률(%)
-  recovery_days: int    # 회복기간(일) - 클라이언트는 recovery_days 사용
-  recovery_rate: float  # 회복률(%) - 클라이언트는 recovery_rate 사용
+  country: str = Field(..., description="국가 코드 (KR, US 등)")
+  market: str = Field(..., description="시장 코드 (KOSPI, KOSDAQ, NYSE 등)")
+  start_date: str = Field(..., description="시작일 (YYYY-MM-DD)")
+  end_date: str = Field(..., description="종료일 (YYYY-MM-DD)")
+  decline_days: int = Field(..., gt=0, description="하락기간(일)")
+  decline_rate: float = Field(..., lt=0, description="하락률(%)")
+  recovery_days: int = Field(..., gt=0, description="회복기간(일)")
+  recovery_rate: float = Field(..., gt=0, description="회복률(%)")
+  market_cap: Optional[float] = Field(None, ge=0, description="시가총액 필터 (억원/백만달러)")
+  trading_volume: Optional[float] = Field(None, ge=0, description="거래대금 필터 (억원/백만달러)")
   
   @validator('start_date', 'end_date')
   def validate_date_format(cls, v):
@@ -557,6 +559,10 @@ class VolatilityStockResult(BaseModel):
   max_recovery_price: float = Field(..., description="최대반등완료일종가")
   max_recovery_rate: float = Field(..., description="최대반등률 (%)")
   max_recovery_decline_rate: float = Field(..., description="최대반등시 하락률 (%)")
+
+  # 시가총액과 거래대금
+  market_cap: Optional[float] = Field(None, ge=0, description="시가총액 필터 (억원/백만달러)")
+  trading_volume: Optional[float] = Field(None, ge=0, description="거래대금 필터 (억원/백만달러)")
   
   # 차트 강조용 패턴 데이터
   pattern_periods: List[PatternPeriod] = Field(..., description="모든 패턴 구간")

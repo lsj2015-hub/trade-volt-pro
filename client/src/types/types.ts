@@ -652,6 +652,8 @@ export interface VolatilityAnalysisRequest extends BaseStrategyRequest {
   decline_rate: number;
   recovery_days: number;
   recovery_rate: number;
+  market_cap: number; // 시가총액 필터 (억 단위)
+  trading_volume: number; // 거래대금 필터 (억 단위)
 }
 
 export interface VolatilityStockResult {

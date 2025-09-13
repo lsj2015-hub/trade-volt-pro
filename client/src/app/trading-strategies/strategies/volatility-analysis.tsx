@@ -23,10 +23,6 @@ import { Strategy } from '@/types/enum';
 export function VolatilityAnalysis({
   onSelectedStocksChange,
 }: StrategyComponentProps) {
-  // ============================================================================
-  // 상태 관리
-  // ============================================================================
-
   // 기본 설정 상태
   const [country, setCountry] = useState<string>('');
   const [market, setMarket] = useState<string>('');
@@ -152,6 +148,8 @@ export function VolatilityAnalysis({
         recovery_rate: Number(recoveryRate),
         country: country,
         market: market,
+        market_cap: Number(marketCap),
+        trading_volume: Number(tradingVolume),
       });
 
       console.log('✅ 변동성 분석 API 응답:', {
